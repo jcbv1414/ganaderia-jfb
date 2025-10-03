@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>JFB Ganadería Inteligente</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+    html, body {
+      height: 100%; margin: 0; font-family: 'Poppins', sans-serif;
+      background-color: #0a0a14; color: #ffffff; overflow-x: hidden;
+      scroll-behavior: smooth;
+    }
+    .vista{ display:none !important; height:0; overflow:hidden; }
+    .vista.activa{ display:flex !important; height:auto; }
+    .main-container{
+      min-height:100vh; width:100%; display:flex; align-items:center;
+      justify-content:center; padding:20px;
+    }
+    .background-wrapper{
+      position:fixed; top:0; left:0; width:100%; height:100%;
+      background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);
+      z-index:-1; overflow:hidden;
+    }
+    
+    /* ✔ RESTAURADO: Animación de las partículas flotantes */
+    @keyframes move-particles { from{transform:translateY(0)} to{transform:translateY(-2000px)} }
+    .particles{ position:absolute; width:1px; height:1px; border-radius:50%; background:white; animation:move-particles 60s linear infinite; }
+    .p1{ box-shadow:0 0 10px 0 white; top:30%; left:25%; animation-duration:50s; }
+    .p2{ box-shadow:0 0 10px 1px white; top:70%; left:70%; animation-duration:40s; }
+    .p3{ box-shadow:0 0 5px 0 white; top:10%; left:90%; animation-duration:70s; }
+    .p4{ box-shadow:0 0 8px 0 white; top:50%; left:10%; animation-duration:35s; }
+    .p5{ box-shadow:0 0 12px 1px white; top:80%; left:45%; animation-duration:65s; }
+    .p6{ box-shadow:0 0 7px 0 white; top:20%; left:5%; animation-duration:80s; }
+    .p7{ box-shadow:0 0 9px 1px white; top:90%; left:85%; animation-duration:45s; }
+    .p8{ box-shadow:0 0 6px 0 white; top:60%; left:95%; animation-duration:60s; }
+    
+    #app{ width:100%; position:relative; z-index:1; }
+    .app-content{ max-width:1200px; margin:auto; }
+    .glass-panel{
+      background: rgba(10,10,20,.4); backdrop-filter: blur(8px); border-radius: 20px;
+      border: 1px solid rgba(255,255,255,.1); padding: 2rem;
+      box-shadow: 0 8px 32px 0 rgba(0,0,0,.37);
+    }
+    h1,h2,h3{ background:linear-gradient(90deg,#4facfe,#00f2fe); -webkit-background-clip:text; -webkit-text-fill-color:transparent; font-weight:600; }
+    
+    input,select,textarea{
+      background-color: rgba(255,255,255,.05) !important;
+      border: 1px solid rgba(255,255,255,.2) !important; color:white !important;
+      border-radius:10px !important; padding: 0.9rem; font-size: 1rem; width:100%;
+      transition: box-shadow 0.3s ease, border-color 0.3s ease;
+    }
+    input::placeholder, textarea::placeholder{ color:#a7a7a7 !important; }
+    select option{ background-color:#1b2735; color:white; }
+    
+    /* ✔ MEJORA: Borde con gradiente al seleccionar un campo */
+    input:focus,select:focus,textarea:focus{ 
+      outline:none !important; 
+      border-color: rgba(0, 242, 254, 0.5) !important;
+      box-shadow: 0 0 0 2px rgba(79, 172, 254, 0.4), 0 0 15px rgba(0, 242, 254, 0.3) !important;
+    }
+    
+    .btn{
+      display:inline-block; padding:12px 30px; font-size:1em; text-decoration:none; color:#fff;
+      border:2px solid #00f2fe; border-radius:50px; background:transparent; transition: all .3s ease; 
+      cursor:pointer; position:relative; overflow:hidden; z-index:1;
+    }
+    .btn::before{ content:''; position:absolute; top:0; left:-100%; width:100%; height:100%; background:linear-gradient(90deg,#4facfe,#00f2fe); transition:.35s; z-index:-1; }
+    .btn:hover::before{ left:0; }
+    
+    /* ✔ MEJORA: Resplandor más pronunciado en botones */
+    .btn:hover{ 
+      color:#0a0a14; 
+      border-color:transparent; 
+      transform:translateY(-3px); 
+      box-shadow: 0 10px 25px rgba(0, 242, 254, 0.4); 
+    }
+    .btn:disabled{ cursor:not-allowed; background:#334155; border-color:#475569; color:#94a3b8; transform: none; box-shadow: none; }
+    .btn:disabled::before{ display:none; }
+
+    .btn-logout{ background:transparent; border-color:#fb7185; color:#fb7185; }
+    .btn-logout:hover{ background:#be123c; color:white; border-color:#be123c; box-shadow:0 5px 15px rgba(251,113,133,.4); }
+    .btn-logout:hover::before{ display:none; }
+
+    .nav-link{ color:#00f2fe; cursor:pointer; text-decoration:underline; transition:color .3s; }
+    .nav-link:hover{ color:#4facfe; }
+    .info-box{ background:rgba(0,242,254,.1); padding:1rem; border-radius:10px; border-left:4px solid #00f2fe; }
+    
+    .logo{ 
+      max-width:160px; margin:0 auto 1.5rem auto; 
+      filter:drop-shadow(0 0 15px rgba(0,191,255,.7));
+      animation: pulse-glow 4s infinite ease-in-out;
+    }
+    /* ✔ MEJORA: Animación de "respiración" para el logo */
+    @keyframes pulse-glow {
+        0%, 100% { filter: drop-shadow(0 0 15px rgba(0, 191, 255, 0.7)); transform: scale(1); }
+        50% { filter: drop-shadow(0 0 25px rgba(79, 172, 254, 1)); transform: scale(1.03); }
+    }
+
+    .vaca-card{ background: rgba(255,255,255,.05); }
+  </style>
+</head>
+<body>
+  <div class="background-wrapper">
+    <div class="particles p1"></div><div class="particles p2"></div><div class="particles p3"></div>
+    <div class="particles p4"></div><div class="particles p5"></div><div class="particles p6"></div>
+    <div class="particles p7"></div><div class="particles p8"></div>
+  </div>
+
+  <div id="app">
+    <div id="vista-login" class="vista activa main-container">
+      <div class="glass-panel w-full max-w-md text-center">
+        <img src="/assets/logo.png" alt="Logo JFB Ganadería" class="logo">
+        <h1 class="text-4xl mb-4">Bienvenido</h1>
+        <p class="text-gray-400 mb-8">Inicia sesión para gestionar tu ganado.</p>
+        <form id="form-login" class="space-y-6">
+          <input type="email" id="login-email" placeholder="Correo Electrónico" required>
+          <input type="password" id="login-password" placeholder="Contraseña" required>
+          <button type="submit" class="w-full btn">Ingresar</button>
+        </form>
+        <p id="login-mensaje" class="text-red-400 mt-4 text-sm h-4"></p>
+        <p class="mt-6 text-sm text-gray-400">¿No tienes cuenta?
+          <span id="link-a-registro" class="nav-link">Regístrate aquí</span>
+        </p>
+      </div>
+    </div>
+
+    <div id="vista-registro" class="vista main-container">
+      <div class="glass-panel w-full max-w-lg text-center">
+        <img src="/assets/logo.png" alt="Logo JFB Ganadería" class="logo">
+        <h1 class="text-4xl mb-4">Crear Cuenta</h1>
+        <p class="text-gray-400 mb-8">Completa el formulario para unirte.</p>
+        <form id="form-registro" class="space-y-4 text-left">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-sm mb-1 text-gray-300">Nombre Completo</label>
+              <input type="text" id="registro-nombre" required>
+            </div>
+            <div>
+              <label class="block text-sm mb-1 text-gray-300">Correo Electrónico</label>
+              <input type="email" id="registro-email" required>
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm mb-1 text-gray-300">Contraseña</label>
+            <input type="password" id="registro-password" required>
+          </div>
+          <div>
+            <label class="block text-sm mb-1 text-gray-300">Rol</label>
+            <select id="registro-rol" required>
+              <option value="">Selecciona tu rol...</option>
+              <option value="propietario">Soy Propietario de ganado</option>
+              <option value="mvz">Soy Veterinario (MVZ)</option>
+            </select>
+          </div>
+          <div id="campo-rancho" class="hidden">
+            <label class="block text-sm mb-1 text-gray-300">Nombre del Rancho</label>
+            <input type="text" id="registro-rancho">
+          </div>
+          <button type="submit" class="w-full btn !mt-6">Registrarme</button>
+        </form>
+        <p id="registro-mensaje" class="text-center mt-4 text-sm h-4"></p>
+        <p class="mt-6 text-sm text-gray-400">¿Ya tienes cuenta?
+          <span id="link-a-login" class="nav-link">Inicia sesión</span>
+        </p>
+      </div>
+    </div>
+
+    <div id="vista-propietario" class="vista p-4 sm:p-8 flex-col items-start app-content">
+      <header class="w-full flex flex-wrap justify-between items-center mb-8 gap-4">
+        <div>
+          <h1 class="text-4xl">Panel de Propietario</h1>
+          <p class="text-gray-400">Bienvenido, <span id="nombre-propietario" class="font-semibold text-white"></span></p>
+        </div>
+        <button id="btn-logout-propietario" class="btn btn-logout">Salir</button>
+      </header>
+      <div id="info-rancho-propietario" class="w-full info-box mb-8"></div>
+      <div class="w-full grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div class="glass-panel">
+          <h2 class="text-2xl mb-4">Agregar Nueva Vaca</h2>
+          <form id="form-agregar-vaca" class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium mb-1">N° de Arete / SINIIGA</label>
+              <input type="text" id="vaca-arete" required>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1">Nombre</label>
+              <input type="text" id="vaca-nombre" required>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1">Raza</label>
+              <input type="text" id="vaca-raza" placeholder="Empieza a escribir..." autocomplete="off">
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1">Fecha de Nacimiento</label>
+              <input type="date" id="vaca-fecha" required>
+            </div>
+            <button type="submit" class="w-full btn">Agregar Vaca</button>
+            <p id="vaca-mensaje" class="text-center mt-2 text-sm h-4"></p>
+          </form>
+        </div>
+        <div class="glass-panel">
+          <h2 class="text-2xl mb-4">Mis Vacas</h2>
+          <div id="lista-vacas" class="space-y-3 max-h-96 overflow-y-auto pr-2"></div>
+        </div>
+      </div>
+    </div>
+    
+    <div id="vista-mvz" class="vista p-4 sm:p-8 flex-col items-start app-content">
+      <header class="w-full flex justify-between items-center mb-8">
+        <div>
+          <h1 class="text-4xl">Panel de MVZ</h1>
+          <p class="text-gray-400">Bienvenido, <span id="nombre-mvz" class="font-semibold text-white"></span></p>
+        </div>
+        <button id="btn-logout-mvz" class="btn btn-logout">Salir</button>
+      </header>
+
+      <div id="mvz-seleccion-modo" class="w-full flex justify-center items-center" style="min-height: 60vh;">
+        <div class="glass-panel text-center w-full max-w-lg">
+          <h2 class="text-2xl mb-4">Selecciona tu modo de trabajo</h2>
+          <p class="text-gray-400 mb-8">Puedes acceder a un rancho o trabajar de forma independiente.</p>
+          <div class="flex flex-col md:flex-row gap-6 justify-center">
+            <button id="btn-modo-rancho" class="btn flex-1">Acceder a un Rancho</button>
+            <button id="btn-modo-independiente" class="btn flex-1">Trabajo Independiente</button>
+          </div>
+        </div>
+      </div>
+      
+      <div id="mvz-acceso-rancho" class="hidden main-container">
+        <div class="glass-panel text-center w-full max-w-md">
+          <h2 class="text-2xl mb-4">Acceder a Rancho</h2>
+          <p class="text-gray-400 mb-8">Ingresa el código de 6 dígitos del rancho.</p>
+          <form id="form-acceso-rancho" class="space-y-4">
+            <input type="text" id="codigo-rancho" placeholder="XXXXXX" class="w-full text-center tracking-widest text-lg uppercase">
+            <button type="submit" class="w-full btn">Entrar</button>
+          </form>
+          <p id="rancho-mensaje" class="text-red-400 mt-4 text-sm h-4"></p>
+          <p class="mt-6 text-sm"><span id="btn-volver-seleccion1" class="nav-link">Volver a la selección</span></p>
+        </div>
+      </div>
+
+      <div id="mvz-herramientas" class="hidden w-full">
+        <div class="info-box mb-8 flex flex-wrap justify-between items-center gap-4">
+          <div>
+            <p>Modo de Trabajo:</p>
+            <h3 id="modo-trabajo-activo" class="text-2xl -mt-1"></h3>
+          </div>
+          <button id="btn-volver-seleccion2" class="text-sm nav-link">Cambiar de modo</button>
+        </div>
+
+        <div id="panel-rancho-independiente" class="hidden glass-panel mb-8">
+          <div id="form-fijar-rancho">
+            <label for="nombre-rancho-independiente" class="block text-sm font-medium text-gray-300 mb-2">Nombre del Rancho (para este lote):</label>
+            <div class="flex gap-4 items-center">
+              <input type="text" id="nombre-rancho-independiente" placeholder="Ej: Rancho Montana" class="flex-1">
+              <button id="btn-fijar-rancho" type="button" class="btn whitespace-nowrap">Fijar Rancho</button>
+            </div>
+          </div>
+          <div id="rancho-fijado-info" class="hidden">
+            <p>Trabajando para: <strong id="nombre-rancho-fijado" class="text-white text-lg"></strong>
+              <button id="btn-cambiar-rancho-fijado" class="text-sm nav-link ml-4">Cambiar</button>
+            </p>
+          </div>
+        </div>
+        
+        <div class="w-full grid grid-cols-1 lg:grid-cols-5 gap-8">
+          <div class="lg:col-span-3 glass-panel">
+            <div class="flex justify-between items-center mb-4">
+              <h2 class="text-2xl">Registrar Actividad Clínica</h2>
+              <button id="btn-abrir-modal-vaca-mvz" class="nav-link text-sm hidden">+ Agregar Vaca</button>
+            </div>
+            
+            <form id="form-agregar-actividad" class="space-y-4">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm mb-1">Arete / SINIIGA</label>
+                  <input type="text" id="actividad-arete" placeholder="N° de la vaca" required list="lista-aretes-autocompletar" autocomplete="off">
+                  <datalist id="lista-aretes-autocompletar"></datalist> 
+                </div>
+                <div>
+                  <label class="block text-sm mb-1">Raza</label>
+                  <input type="text" id="actividad-raza" placeholder="Empieza a escribir..." autocomplete="off" class="w-full">
+                </div>
+              </div>
+              
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm mb-1">Tipo de Actividad</label>
+                    <select id="actividad-tipo" required>
+                      <option value="" selected>Seleccione un procedimiento...</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="actividad-lote" class="block text-sm mb-1">Número de Lote</label>
+                    <select id="actividad-lote"></select>
+                </div>
+              </div>
+
+              <div id="campos-dinamicos-actividad" class="space-y-4 pt-4 border-t border-white/10"></div>
+              
+              <button type="submit" class="w-full btn">Agregar Vaca al Lote</button>
+              <p id="actividad-mensaje" class="text-center mt-2 text-sm h-4"></p>
+            </form>
+          </div>
+          <div class="lg:col-span-2 glass-panel">
+            <h2 class="text-2xl mb-4">Lote de Trabajo Actual</h2>
+            <div id="lote-actual-lista" class="space-y-2 max-h-80 overflow-y-auto">
+              <p class="text-gray-400">Aún no has agregado vacas a este lote.</p>
+            </div>
+            <button id="btn-finalizar-lote" class="w-full btn mt-6 hidden">Finalizar Lote y Generar PDF</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="modal-historial" class="fixed z-50 inset-0 overflow-y-auto hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+          <div class="fixed inset-0 bg-black/70" id="modal-bg"></div>
+          <div class="relative glass-panel w-full max-w-2xl">
+            <div class="flex justify-between items-center mb-4">
+              <h2 class="text-2xl">Historial Clínico de <span id="modal-nombre-vaca"></span></h2>
+              <button id="btn-cerrar-modal" class="text-2xl leading-none">&times;</button>
+            </div>
+            <div id="modal-contenido-historial" class="space-y-4 max-h-[70vh] overflow-y-auto pr-3"></div>
+          </div>
+        </div>
+    </div>
+
+    <div id="modal-agregar-vaca-mvz" class="fixed z-50 inset-0 overflow-y-auto hidden">
+      <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="fixed inset-0 bg-black/70" id="modal-bg-vaca-mvz"></div>
+        <div class="relative glass-panel w-full max-w-lg">
+          <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl">Agregar Nueva Vaca al Rancho</h2>
+            <button id="btn-cerrar-modal-vaca-mvz" class="text-2xl leading-none">&times;</button>
+          </div>
+          <form id="form-agregar-vaca-mvz" class="space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium mb-1">N° de Arete / SINIIGA</label>
+                <input type="text" id="vaca-arete-mvz" required>
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-1">Nombre</label>
+                <input type="text" id="vaca-nombre-mvz" required>
+              </div>
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1">Raza</label>
+              <input type="text" id="vaca-raza-mvz" placeholder="Empieza a escribir..." autocomplete="off">
+            </div>
+            <div>
+              <label class="block text-sm font-medium mb-1">Fecha de Nacimiento</label>
+              <input type="date" id="vaca-fecha-mvz" required>
+            </div>
+            <button type="submit" class="w-full btn !mt-6">Guardar Vaca</button>
+            <p id="vaca-mensaje-mvz" class="text-center mt-2 text-sm h-4"></p>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="main.js"></script>
+</body>
+</html>
