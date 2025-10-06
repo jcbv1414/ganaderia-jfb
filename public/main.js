@@ -8,13 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let loteActual = [];
   const API_URL = '/api';
 
-  // ===== Funciones Globales (Modal y Lote) =====
-  window.app = {
-  verHistorial: async (vacaId, vacaNombre) => {
-    document.getElementById('modal-nombre-vaca').textContent = vacaNombre;
-    const contenedor = document.getElementById('modal-contenido-historial');
-
-function popularSelectsDeFecha() {
+  function popularSelectsDeFecha() {
     const selDia = document.getElementById('vaca-fecha-dia');
     const selMes = document.getElementById('vaca-fecha-mes');
     const selAno = document.getElementById('vaca-fecha-ano');
@@ -25,7 +19,11 @@ function popularSelectsDeFecha() {
     const anoActual = new Date().getFullYear();
     for (let i = 0; i <= 20; i++) selAno.innerHTML += `<option value="${anoActual - i}">${anoActual - i}</option>`;
 }
-
+  // ===== Funciones Globales (Modal y Lote) =====
+  window.app = {
+  verHistorial: async (vacaId, vacaNombre) => {
+    document.getElementById('modal-nombre-vaca').textContent = vacaNombre;
+    const contenedor = document.getElementById('modal-contenido-historial');
 
   // ===== Vistas =====
   const vistas = {
