@@ -1,8 +1,9 @@
 document.addEventListener('DOMContentLoaded', () => {
   popularSelectsDeFecha();
   // ===== Estado global =====
-  let currentUser = null;
+ let currentUser = null;
   let currentRancho = null;
+  let allVacasPropietario = [];
   let vacasIndex = new Map();
   let independentRanchoName = null;
   let loteActual = [];
@@ -347,7 +348,6 @@ const prettyLabel = (str) => {
 };
 
   // ===== Propietario: Cargar y Agregar Vacas =====
-let allVacasPropietario = []; // Nueva variable global para almacenar todas las vacas del propietario
 
 const cargarVacasPropietario = async () => {
     const ranchoId = currentUser.ranchos[0].id;
