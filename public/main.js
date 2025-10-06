@@ -229,24 +229,31 @@ const prettyLabel = (str) => {
 });
     
     document.getElementById('form-registro').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const data = {
-          nombre: document.getElementById('registro-nombre').value,
-          email: document.getElementById('registro-email').value,
-          password: document.getElementById('registro-password').value,
-          rol: document.getElementById('registro-rol').value,
-          nombreRancho: document.getElementById('registro-rancho').value
-      };
-      try {
-          const res = await fetch(`${API_URL}/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
-          if (!res.ok) throw new Error((await res.json()).message);
-          mostrarMensaje('registro-mensaje', '¡Registro exitoso! Ahora puedes iniciar sesión.', false);
-          e.target.reset();
-          cambiarVista('login');
-      } catch (err) {
-          mostrarMensaje('registro-mensaje', err.message);
-      }
-    });
+    e.preventDefault();
+    try {
+        // 1. Capturamos el formulario directamente.
+        const form = e.target;
+
+        // 2. Creamos FormData. Esto empaqueta automáticamente todos los campos:
+        // el texto (nombre, email, etc.) y el archivo del logo.
+        const formData = new FormData(form);
+
+        // 3. Enviamos el objeto formData. 
+        // ¡OJO! Ya no se especifica el 'header' de Content-Type.
+        const res = await fetch(`${API_URL}/register`, {
+            method: 'POST',
+            body: formData 
+        });
+
+        if (!res.ok) throw new Error((await res.json()).message);
+
+        mostrarMensaje('registro-mensaje', '¡Registro exitoso! Ahora puedes iniciar sesión.', false);
+        form.reset();
+        cambiarVista('login');
+    } catch (err) {
+        mostrarMensaje('registro-mensaje', err.message);
+    }
+});
 
   // ===== Lógica Post-Login =====
   const iniciarSesion = () => {

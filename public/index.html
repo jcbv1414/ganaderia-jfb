@@ -134,7 +134,7 @@
         <img src="/assets/logo.png" alt="Logo JFB Ganadería" class="logo">
         <h1 class="text-4xl mb-4">Crear Cuenta</h1>
         <p class="text-gray-400 mb-8">Completa el formulario para unirte.</p>
-        <form id="form-registro" class="space-y-4 text-left">
+        <form id="form-registro" class="space-y-4 text-left" enctype="multipart/form-data">
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label class="block text-sm mb-1 text-gray-300">Nombre Completo</label>
@@ -157,6 +157,10 @@
               <option value="mvz">Soy Veterinario (MVZ)</option>
             </select>
           </div>
+          <div>
+    <label for="logoInput">Logo del Propietario:</label>
+    <input type="file" id="logoInput" name="logoInput" accept="image/*">
+</div>
           <div id="campo-rancho" class="hidden">
             <label class="block text-sm mb-1 text-gray-300">Nombre del Rancho</label>
             <input type="text" id="registro-rancho">

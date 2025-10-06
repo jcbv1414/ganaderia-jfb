@@ -6,12 +6,13 @@ const fs = require('fs');
 const PDFDocument = require('pdfkit');
 const bcrypt = require('bcryptjs');
 const { createClient } = require('@supabase/supabase-js');
+const multer = requiere('multer')
 
 // ================== CONEXIÓN A SUPABASE ==================
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
-
+const upload = multer({ storage: multer.memoryStorage() });
 // ================== CONFIGURACIÓN DE EXPRESS ==================
 const app = express();
 const PORT = 3000;
@@ -35,8 +36,13 @@ function formatDate(dateString) {
 // ================== ENDPOINTS DE LA API ==================
 
 // --- Autenticación ---
-app.post('/api/register', async (req, res) => {
+// Modificamos la ruta para que use el middleware de multer.
+// upload.single('logoInput') le dice a multer que espere un solo archivo del campo llamado 'logoInput'.
+app.post('/api/register', upload.single('logoInput'), async (req, res) => {
+    // Ahora, los datos de texto vienen en req.body y el archivo en req.file
     const { nombre, email, password, rol, nombreRancho } = req.body;
+    const logoFile = req.file; // El archivo del logo
+
     if (!nombre || !email || !password || !rol) {
         return res.status(400).json({ message: 'Todos los campos principales son requeridos.' });
     }
@@ -48,21 +54,53 @@ app.post('/api/register', async (req, res) => {
         if (existingUser) {
             return res.status(409).json({ message: 'El correo electrónico ya está en uso.' });
         }
+
         const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
         const { data: newUser, error: userError } = await supabase.from('usuarios').insert({ nombre, email: email.toLowerCase(), password: hashedPassword, rol }).select().single();
         if (userError) throw userError;
+
         if (rol === 'propietario') {
+            let logoPublicUrl = null; // Variable para guardar el enlace del logo
+
+            // Si el usuario subió un archivo (logoFile existe)...
+            if (logoFile) {
+                // 1. Creamos un nombre único para el archivo para evitar colisiones.
+                const fileName = `logos/${newUser.id}-${Date.now()}-${logoFile.originalname}`;
+
+                // 2. Subimos el archivo a nuestro bucket 'logos-propietarios' en Supabase.
+                const { error: uploadError } = await supabase.storage
+                    .from('logos-propietarios')
+                    .upload(fileName, logoFile.buffer, {
+                        contentType: logoFile.mimetype,
+                    });
+
+                if (uploadError) throw uploadError;
+
+                // 3. Obtenemos la URL pública del archivo que acabamos de subir.
+                const { data: urlData } = supabase.storage
+                    .from('logos-propietarios')
+                    .getPublicUrl(fileName);
+
+                logoPublicUrl = urlData.publicUrl;
+            }
+
+            // 4. Creamos el rancho y guardamos la URL del logo en la nueva columna.
             const codigoRancho = Math.random().toString(36).substring(2, 8).toUpperCase();
-            const { error: ranchoError } = await supabase.from('ranchos').insert({ nombre: nombreRancho, codigo: codigoRancho, propietario_id: newUser.id });
+            const { error: ranchoError } = await supabase.from('ranchos').insert({
+                nombre: nombreRancho,
+                codigo: codigoRancho,
+                propietario_id: newUser.id,
+                logo_url: logoPublicUrl // Guardamos el enlace (será null si no se subió logo)
+            });
             if (ranchoError) throw ranchoError;
         }
         res.status(201).json({ success: true, message: '¡Usuario registrado exitosamente!' });
     } catch (error) {
-        console.error('Error inesperado en el registro:', error.message);
-        res.status(500).json({ message: 'Ocurrió un error inesperado en el servidor.' });
+        console.error('Error inesperado en el registro:', error);
+        res.status(500).json({ message: 'Ocurrió un error inesperado en el servidor.', details: error.message });
     }
 });
-  
+
 app.post('/api/login', async (req, res) => {
     const { email, password } = req.body;
     try {
