@@ -8,10 +8,10 @@ const bcrypt = require('bcrypt');
 const { createClient } = require('@supabase/supabase-js');
 
 // ================== CONEXIÓN A SUPABASE ==================
-const supabaseUrl = 'https://jzjwvvbtlitibngnhjjh.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp6and2dmJ0bGl0aWJuZ25oampoIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1OTQ5OTYwMSwiZXhwIjoyMDc1MDc1NjAxfQ.np3hVmYXSRXDlpO2wo4jXOFn93D0UtxXAgjVN2oEkl0';
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
-
+s
 // ================== CONFIGURACIÓN DE EXPRESS ==================
 const app = express();
 const PORT = 3000;
