@@ -27,7 +27,6 @@
       z-index:-1; overflow:hidden;
     }
     
-    /* ✔ RESTAURADO: Animación de las partículas flotantes */
     @keyframes move-particles { from{transform:translateY(0)} to{transform:translateY(-2000px)} }
     .particles{ position:absolute; width:1px; height:1px; border-radius:50%; background:white; animation:move-particles 60s linear infinite; }
     .p1{ box-shadow:0 0 10px 0 white; top:30%; left:25%; animation-duration:50s; }
@@ -57,7 +56,6 @@
     input::placeholder, textarea::placeholder{ color:#a7a7a7 !important; }
     select option{ background-color:#1b2735; color:white; }
     
-    /* ✔ MEJORA: Borde con gradiente al seleccionar un campo */
     input:focus,select:focus,textarea:focus{ 
       outline:none !important; 
       border-color: rgba(0, 242, 254, 0.5) !important;
@@ -72,7 +70,6 @@
     .btn::before{ content:''; position:absolute; top:0; left:-100%; width:100%; height:100%; background:linear-gradient(90deg,#4facfe,#00f2fe); transition:.35s; z-index:-1; }
     .btn:hover::before{ left:0; }
     
-    /* ✔ MEJORA: Resplandor más pronunciado en botones */
     .btn:hover{ 
       color:#0a0a14; 
       border-color:transparent; 
@@ -95,7 +92,6 @@
       filter:drop-shadow(0 0 15px rgba(0,191,255,.7));
       animation: pulse-glow 4s infinite ease-in-out;
     }
-    /* ✔ MEJORA: Animación de "respiración" para el logo */
     @keyframes pulse-glow {
         0%, 100% { filter: drop-shadow(0 0 15px rgba(0, 191, 255, 0.7)); transform: scale(1); }
         50% { filter: drop-shadow(0 0 25px rgba(79, 172, 254, 1)); transform: scale(1.03); }
@@ -158,9 +154,9 @@
             </select>
           </div>
           <div>
-    <label for="logoInput">Logo del Propietario:</label>
-    <input type="file" id="logoInput" name="logoInput" accept="image/*">
-</div>
+            <label for="logoInput">Logo del Propietario:</label>
+            <input type="file" id="logoInput" name="logoInput" accept="image/*">
+          </div>
           <div id="campo-rancho" class="hidden">
             <label class="block text-sm mb-1 text-gray-300">Nombre del Rancho</label>
             <input type="text" id="registro-rancho">
@@ -174,84 +170,78 @@
       </div>
     </div>
 
- <div id="vista-propietario" class="vista p-4 sm:p-8 flex-col items-start app-content">
-  <header class="w-full flex flex-wrap justify-between items-center mb-8 gap-4">
-    <div class="flex items-center gap-4">
-      <img id="logo-rancho" src="" alt="Logo del Rancho" class="w-16 h-16 rounded-full object-cover hidden border-2 border-cyan-400/50 p-1">
+    <div id="vista-propietario" class="vista p-4 sm:p-8 flex-col items-start app-content">
+      <header class="w-full flex flex-wrap justify-between items-center mb-8 gap-4">
+        <div class="flex items-center gap-4">
+          <img id="logo-rancho" src="" alt="Logo del Rancho" class="w-16 h-16 rounded-full object-cover hidden border-2 border-cyan-400/50 p-1">
+          <div>
+            <h1 class="text-4xl">Panel de Propietario</h1>
+            <p class="text-gray-400">Bienvenido, <span id="nombre-propietario" class="font-semibold text-white"></span></p>
+          </div>
+        </div>
+        <button id="btn-logout-propietario" class="btn btn-logout">Salir</button>
+      </header>
       
-      <div>
-        <h1 class="text-4xl">Panel de Propietario</h1>
-        <p class="text-gray-400">Bienvenido, <span id="nombre-propietario" class="font-semibold text-white"></span></p>
+      <div id="info-rancho-propietario" class="w-full info-box mb-8"></div>
+      
+      <div class="w-full grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div class="glass-panel">
+          <h2 class="text-2xl mb-4">Agregar Nueva Vaca</h2>
+          <form id="form-agregar-vaca" class="space-y-4" enctype="multipart/form-data">
+    <div>
+        <label class="block text-sm font-medium mb-1">Foto de la Vaca (Opcional)</label>
+        <input type="file" name="fotoVaca" accept="image/*">
+    </div>
+    <div>
+        <label class="block text-sm font-medium mb-1">N° de Arete / SINIIGA</label>
+        <input type="text" id="vaca-arete" name="arete" required>
+    </div>
+    <div>
+        <label class="block text-sm font-medium mb-1">Nombre</label>
+        <input type="text" id="vaca-nombre" name="nombre" required>
+    </div>
+    <div>
+        <label class="block text-sm font-medium mb-1">Raza</label>
+        <input type="text" id="vaca-raza" name="raza" placeholder="Empieza a escribir..." autocomplete="off">
+    </div>
+    <div>
+        <label class="block text-sm font-medium mb-1">Fecha de Nacimiento</label>
+        <div class="grid grid-cols-3 gap-2">
+            <select id="vaca-fecha-dia" name="dia" required><option value="">Día</option></select>
+            <select id="vaca-fecha-mes" name="mes" required><option value="">Mes</option></select>
+            <select id="vaca-fecha-ano" name="ano" required><option value="">Año</option></select>
+        </div>
+    </div>
+    <button type="submit" class="w-full btn">Agregar Vaca</button>
+    <p id="vaca-mensaje" class="text-center mt-2 text-sm h-4"></p>
+</form>
+        </div>
+        <div class="glass-panel">
+          <h2 class="text-2xl mb-4">Mis Vacas</h2>
+          <div class="flex flex-col sm:flex-row gap-4 mb-4">
+            <input type="text" id="vaca-buscar" placeholder="Buscar por arete o nombre..." class="flex-1">
+            <button id="btn-ver-estadisticas" class="btn !py-2 !px-4 whitespace-nowrap">Estadísticas</button>
+          </div>
+          <div id="lista-vacas" class="space-y-4 max-h-96 overflow-y-auto pr-2">
+            <p class="text-gray-400 text-center">Cargando vacas...</p>
+          </div>
+        </div>
+      </div>
+      <div class="glass-panel mt-8 w-full">
+        <h3 class="text-xl mb-4">Actualizar Logo del Rancho</h3>
+        <form id="form-actualizar-logo" enctype="multipart/form-data" class="flex flex-wrap items-center gap-4">
+          <input type="file" name="logoInput" id="logoUpdateInput" class="flex-1 min-w-[200px]" required>
+          <button type="submit" class="btn">Actualizar</button>
+        </form>
+        <p id="update-logo-mensaje" class="text-sm mt-2 h-4"></p>
       </div>
     </div>
-    <button id="btn-logout-propietario" class="btn btn-logout">Salir</button>
-  </header>
-  
-  <div id="info-rancho-propietario" class="w-full info-box mb-8"></div>
-  
-  <div class="w-full grid grid-cols-1 lg:grid-cols-2 gap-8">
-    <div class="glass-panel">
-      <h2 class="text-2xl mb-4">Agregar Nueva Vaca</h2>
-      <form id="form-agregar-vaca" class="space-y-4" enctype="multipart/form-data"></form>
-        <div>
-    <label class="block text-sm font-medium mb-1">Foto de la Vaca (Opcional)</label>
-    <input type="file" name="fotoVaca" accept="image/*">
-</div>
-        <div>
-          <label class="block text-sm font-medium mb-1">N° de Arete / SINIIGA</label>
-          <input type="text" id="vaca-arete" required>
-        </div>
-        <div>
-          <label class="block text-sm font-medium mb-1">Nombre</label>
-          <input type="text" id="vaca-nombre" required>
-        </div>
-        <div>
-          <label class="block text-sm font-medium mb-1">Raza</label>
-          <input type="text" id="vaca-raza" placeholder="Empieza a escribir..." autocomplete="off">
-        </div>
-        <div>
-    <label class="block text-sm font-medium mb-1">Fecha de Nacimiento</label>
-    <div class="grid grid-cols-3 gap-2">
-        <select id="vaca-fecha-dia" required><option value="">Día</option></select>
-        <select id="vaca-fecha-mes" required><option value="">Mes</option></select>
-        <select id="vaca-fecha-ano" required><option value="">Año</option></select>
-    </div>
-</div>
-        <button type="submit" class="w-full btn">Agregar Vaca</button>
-        <p id="vaca-mensaje" class="text-center mt-2 text-sm h-4"></p>
-      </form>
-    </div>
-    <div class="glass-panel">
-  <h2 class="text-2xl mb-4">Mis Vacas</h2>
-
-  <div class="flex flex-col sm:flex-row gap-4 mb-4">
-    <input type="text" id="vaca-buscar" placeholder="Buscar por arete o nombre..." class="flex-1">
-    <button id="btn-ver-estadisticas" class="btn bg-green-700 hover:bg-green-600 !py-2 !px-4 whitespace-nowrap">Estadísticas</button>
-  </div>
-  <div id="lista-vacas" class="space-y-4 max-h-96 overflow-y-auto pr-2">
-    <p class="text-gray-400 text-center">Cargando vacas...</p>
-  </div>
-</div>
-  </div>
-
-  <div class="glass-panel mt-8 w-full">
-    <h3 class="text-xl mb-4">Actualizar Logo del Rancho</h3>
-    <form id="form-actualizar-logo" enctype="multipart/form-data" class="flex flex-wrap items-center gap-4">
-      <input type="file" name="logoInput" id="logoUpdateInput" class="flex-1 min-w-[200px]" required>
-      <button type="submit" class="btn">Actualizar</button>
-    </form>
-    <p id="update-logo-mensaje" class="text-sm mt-2 h-4"></p>
-  </div>
-</div>
     
     <div id="vista-mvz" class="vista p-4 sm:p-8 flex-col items-start app-content">
-     <header class="w-full flex flex-wrap justify-between items-center mb-8 gap-4">
-    <div class="flex items-center gap-4">
-        <img id="logo-rancho-mvz" src="" alt="Logo del Rancho" class="w-16 h-16 rounded-full object-cover hidden border-2 border-cyan-400/50 p-1">
-        <div>
-            <h1 class="text-4xl">Panel de MVZ</h1>
-            <p class="text-gray-400">Bienvenido, <span id="nombre-mvz" class="font-semibold text-white"></span></p>
-        </div>
+      <header class="w-full flex flex-wrap justify-between items-center mb-8 gap-4">
+    <div>
+        <h1 class="text-4xl">Panel de MVZ</h1>
+        <p class="text-gray-400">Bienvenido, <span id="nombre-mvz" class="font-semibold text-white"></span></p>
     </div>
     <button id="btn-logout-mvz" class="btn btn-logout">Salir</button>
 </header>
@@ -281,12 +271,15 @@
 
       <div id="mvz-herramientas" class="hidden w-full">
         <div class="info-box mb-8 flex flex-wrap justify-between items-center gap-4">
-          <div>
+    <div class="flex items-center gap-4">
+        <img id="logo-rancho-mvz-panel" src="" alt="Logo del Rancho" class="w-12 h-12 rounded-full object-cover hidden border-2 border-cyan-400/50 p-1">
+        <div>
             <p>Modo de Trabajo:</p>
             <h3 id="modo-trabajo-activo" class="text-2xl -mt-1"></h3>
-          </div>
-          <button id="btn-volver-seleccion2" class="text-sm nav-link">Cambiar de modo</button>
         </div>
+    </div>
+    <button id="btn-volver-seleccion2" class="text-sm nav-link">Cambiar de modo</button>
+</div>
 
         <div id="panel-rancho-independiente" class="hidden glass-panel mb-8">
           <div id="form-fijar-rancho">
@@ -311,59 +304,12 @@
             </div>
             
             <form id="form-agregar-actividad" class="space-y-4">
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm mb-1">Arete / SINIIGA</label>
-                  <input type="text" id="actividad-arete" placeholder="N° de la vaca" required list="lista-aretes-autocompletar" autocomplete="off">
-                  <datalist id="lista-aretes-autocompletar"></datalist> 
-                </div>
-                <div>
-                  <label class="block text-sm mb-1">Raza</label>
-                  <input type="text" id="actividad-raza" placeholder="Empieza a escribir..." autocomplete="off" class="w-full">
-                </div>
-              </div>
-              
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-sm mb-1">Tipo de Actividad</label>
-                    <select id="actividad-tipo" required>
-                      <option value="" selected>Seleccione un procedimiento...</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="actividad-lote" class="block text-sm mb-1">Número de Lote</label>
-                    <select id="actividad-lote"></select>
-                </div>
-              </div>
-
-              <div id="campos-dinamicos-actividad" class="space-y-4 pt-4 border-t border-white/10"></div>
-              
-              <button type="submit" class="w-full btn">Agregar Vaca al Lote</button>
-              <p id="actividad-mensaje" class="text-center mt-2 text-sm h-4"></p>
-            </form>
+                </form>
           </div>
           <div class="lg:col-span-2 glass-panel">
-            <h2 class="text-2xl mb-4">Lote de Trabajo Actual</h2>
-            <div id="lote-actual-lista" class="space-y-2 max-h-80 overflow-y-auto">
-              <p class="text-gray-400">Aún no has agregado vacas a este lote.</p>
-            </div>
-            <button id="btn-finalizar-lote" class="w-full btn mt-6 hidden">Finalizar Lote y Generar PDF</button>
-          </div>
+              </div>
         </div>
       </div>
-    </div>
-
-    <div id="modal-historial" class="fixed z-50 inset-0 overflow-y-auto hidden">
-        <div class="flex items-center justify-center min-h-screen p-4">
-          <div class="fixed inset-0 bg-black/70" id="modal-bg"></div>
-          <div class="relative glass-panel w-full max-w-2xl">
-            <div class="flex justify-between items-center mb-4">
-              <h2 class="text-2xl">Historial Clínico de <span id="modal-nombre-vaca"></span></h2>
-              <button id="btn-cerrar-modal" class="text-2xl leading-none">&times;</button>
-            </div>
-            <div id="modal-contenido-historial" class="space-y-4 max-h-[70vh] overflow-y-auto pr-3"></div>
-          </div>
-        </div>
     </div>
 
     <div id="modal-agregar-vaca-mvz" class="fixed z-50 inset-0 overflow-y-auto hidden">
@@ -374,28 +320,36 @@
             <h2 class="text-2xl">Agregar Nueva Vaca al Rancho</h2>
             <button id="btn-cerrar-modal-vaca-mvz" class="text-2xl leading-none">&times;</button>
           </div>
-          <form id="form-agregar-vaca-mvz" class="space-y-4">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm font-medium mb-1">N° de Arete / SINIIGA</label>
-                <input type="text" id="vaca-arete-mvz" required>
-              </div>
-              <div>
-                <label class="block text-sm font-medium mb-1">Nombre</label>
-                <input type="text" id="vaca-nombre-mvz" required>
-              </div>
-            </div>
-            <div>
-              <label class="block text-sm font-medium mb-1">Raza</label>
-              <input type="text" id="vaca-raza-mvz" placeholder="Empieza a escribir..." autocomplete="off">
-            </div>
-            <div>
-              <label class="block text-sm font-medium mb-1">Fecha de Nacimiento</label>
-              <input type="date" id="vaca-fecha-mvz" required>
-            </div>
-            <button type="submit" class="w-full btn !mt-6">Guardar Vaca</button>
-            <p id="vaca-mensaje-mvz" class="text-center mt-2 text-sm h-4"></p>
-          </form>
+          <form id="form-agregar-vaca-mvz" class="space-y-4" enctype="multipart/form-data">
+    <div>
+        <label class="block text-sm font-medium mb-1">Foto de la Vaca (Opcional)</label>
+        <input type="file" name="fotoVaca" accept="image/*">
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div>
+        <label class="block text-sm font-medium mb-1">N° de Arete / SINIIGA</label>
+        <input type="text" id="vaca-arete-mvz" name="arete" required>
+      </div>
+      <div>
+        <label class="block text-sm font-medium mb-1">Nombre</label>
+        <input type="text" id="vaca-nombre-mvz" name="nombre" required>
+      </div>
+    </div>
+    <div>
+      <label class="block text-sm font-medium mb-1">Raza</label>
+      <input type="text" id="vaca-raza-mvz" name="raza" placeholder="Empieza a escribir..." autocomplete="off">
+    </div>
+    <div>
+        <label class="block text-sm font-medium mb-1">Fecha de Nacimiento</label>
+        <div class="grid grid-cols-3 gap-2">
+            <select id="vaca-fecha-dia-mvz" name="dia" required><option value="">Día</option></select>
+            <select id="vaca-fecha-mes-mvz" name="mes" required><option value="">Mes</option></select>
+            <select id="vaca-fecha-ano-mvz" name="ano" required><option value="">Año</option></select>
+        </div>
+    </div>
+    <button type="submit" class="w-full btn !mt-6">Guardar Vaca</button>
+    <p id="vaca-mensaje-mvz" class="text-center mt-2 text-sm h-4"></p>
+</form>
         </div>
       </div>
     </div>

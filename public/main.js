@@ -447,40 +447,47 @@ document.getElementById('btn-ver-estadisticas').addEventListener('click', () => 
     alert('Funcionalidad de Estadísticas: ¡Próximamente!');
 });
 
- document.getElementById('form-agregar-vaca').addEventListener('submit', async (e) => {
+document.getElementById('form-agregar-vaca').addEventListener('submit', async (e) => {
     e.preventDefault();
-
     try {
         const form = e.target;
         const formData = new FormData(form);
 
-        // 1. Leemos la fecha de los 3 menús desplegables
-        const dia = document.getElementById('vaca-fecha-dia').value.padStart(2, '0');
-        const mes = document.getElementById('vaca-fecha-mes').value.padStart(2, '0');
-        const ano = document.getElementById('vaca-fecha-ano').value;
-        const fechaCompleta = `${ano}-${mes}-${dia}`;
-        
-        // 2. Añadimos la fecha completa y los IDs al FormData
+        // Leemos la fecha de los 3 menús
+        const dia = formData.get('dia');
+        const mes = formData.get('mes');
+        const ano = formData.get('ano');
+
+        if (!dia || !mes || !ano) {
+            mostrarMensaje('vaca-mensaje', 'Por favor, selecciona una fecha de nacimiento completa.');
+            return;
+        }
+
+        // Unimos la fecha y la añadimos a los datos del formulario
+        const fechaCompleta = `${ano}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
         formData.append('fechaNacimiento', fechaCompleta);
+
+        // Añadimos los IDs necesarios
         formData.append('propietarioId', currentUser.id);
         formData.append('ranchoId', currentUser.ranchos[0].id);
 
-        // 3. Enviamos el formulario
+        // Enviamos el formulario
         const res = await fetch(`${API_URL}/vacas`, {
             method: 'POST',
             body: formData 
         });
 
         if (!res.ok) throw new Error((await res.json()).message || 'Error al agregar vaca.');
-        
+
         mostrarMensaje('vaca-mensaje', 'Vaca agregada con éxito.', false);
         form.reset();
         cargarVacasPropietario();
-        
+
     } catch (err) {
         mostrarMensaje('vaca-mensaje', err.message);
     }
 });
+
 
 
   // ===== MVZ: Lógica de Modos y Acceso =====
@@ -526,13 +533,15 @@ document.getElementById('btn-ver-estadisticas').addEventListener('click', () => 
       btnAbrirModalVacaMvz.classList.remove('hidden');
       cargarVacasParaMVZ();
       
-      const logoImgMvz = document.getElementById('logo-rancho-mvz');
+     
+      const logoImgMvz = document.getElementById('logo-rancho-mvz-panel'); // <-- ID CORREGIDO
     if (currentRancho && currentRancho.logo_url) {
         logoImgMvz.src = currentRancho.logo_url;
         logoImgMvz.classList.remove('hidden');
     } else {
         logoImgMvz.classList.add('hidden');
     }
+// ...
     } catch (err) {
       mostrarMensaje('rancho-mensaje', err.message);
     }
@@ -705,44 +714,47 @@ document.getElementById('btn-ver-estadisticas').addEventListener('click', () => 
         modalVacaMvz.classList.add('hidden');
     });
 
-    formAgregarVacaMvz.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        if (!currentRancho) {
-            mostrarMensaje('vaca-mensaje-mvz', 'Error: No se ha seleccionado un rancho.');
+    document.getElementById('form-agregar-vaca-mvz').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!currentRancho) {
+        mostrarMensaje('vaca-mensaje-mvz', 'Error: No se ha seleccionado un rancho.');
+        return;
+    }
+    try {
+        const form = e.target;
+        const formData = new FormData(form);
+
+        const dia = formData.get('dia');
+        const mes = formData.get('mes');
+        const ano = formData.get('ano');
+
+        if (!dia || !mes || !ano) {
+            mostrarMensaje('vaca-mensaje-mvz', 'Selecciona una fecha de nacimiento completa.');
             return;
         }
 
-        const data = {
-        arete: document.getElementById('vaca-arete-mvz').value,
-        nombre: document.getElementById('vaca-nombre-mvz').value,
-        raza: document.getElementById('vaca-raza-mvz').value || '',
-        fechaNacimiento: document.getElementById('vaca-fecha-mvz').value,
-        ranchoId: currentRancho.id,
-        propietarioId: currentRancho.propietarioId 
-        };
+        const fechaCompleta = `${ano}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+        formData.append('fechaNacimiento', fechaCompleta);
 
-        try {
+        formData.append('ranchoId', currentRancho.id);
+        formData.append('propietarioId', currentRancho.propietario_id);
+
         const res = await fetch(`${API_URL}/vacas`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data),
+            body: formData,
         });
 
         if (!res.ok) throw new Error((await res.json()).message || 'Error al agregar vaca.');
-        
+
         mostrarMensaje('vaca-mensaje-mvz', 'Vaca agregada con éxito.', false);
-        e.target.reset();
-        
-        setTimeout(() => {
-            modalVacaMvz.classList.add('hidden');
-        }, 1500);
+        form.reset();
 
-        await cargarVacasParaMVZ();
+        setTimeout(() => modalVacaMvz.classList.add('hidden'), 1500);
 
-        } catch (err) {
+    } catch (err) {
         mostrarMensaje('vaca-mensaje-mvz', err.message);
-        }
-    });
+    }
+});
 
   // ===== MVZ: Cargar Vacas y Autocompletar Raza =====
   async function cargarVacasParaMVZ() {
