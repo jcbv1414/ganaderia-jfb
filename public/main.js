@@ -415,20 +415,34 @@ const nombreVacaEliminar = document.getElementById('nombre-vaca-eliminar');
     });
 
     document.getElementById('form-login').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const email = document.getElementById('login-email').value;
-        const password = document.getElementById('login-password').value;
-        try {
-            const res = await fetch(`${API_URL}/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
-            if (!res.ok) throw new Error((await res.json()).message);
-            const respuesta = await res.json();
-            currentUser = respuesta.user;
-            sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
-            iniciarSesion();
-        } catch (err) {
-            mostrarMensaje('login-mensaje', err.message);
+    e.preventDefault();
+    const email = document.getElementById('login-email').value;
+    const password = document.getElementById('login-password').value;
+    const rememberMe = document.getElementById('remember-me').checked; // <-- Obtenemos el valor del checkbox
+
+    try {
+        const res = await fetch(`${API_URL}/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+        if (!res.ok) throw new Error((await res.json()).message);
+        
+        const respuesta = await res.json();
+        currentUser = respuesta.user;
+        sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
+
+        // --- INICIO DE LA NUEVA LÓGICA ---
+        if (rememberMe) {
+            // Si la casilla está marcada, guardamos el correo en localStorage
+            localStorage.setItem('rememberedEmail', email);
+        } else {
+            // Si no está marcada, nos aseguramos de borrar cualquier correo guardado
+            localStorage.removeItem('rememberedEmail');
         }
-    });
+        // --- FIN DE LA NUEVA LÓGICA ---
+
+        iniciarSesion();
+    } catch (err) {
+        mostrarMensaje('login-mensaje', err.message);
+    }
+});
 
     document.getElementById('form-registro').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -818,6 +832,15 @@ btnConfirmarEliminar.addEventListener('click', async () => {
             actividadTipoSelect.appendChild(option);
         });
     }
+
+    // ===== INICIO DE LA APP Y RESTAURACIÓN DE SESIÓN ==============
+
+// --- Lógica para "Recuérdame" (Cargar email) ---
+const savedEmail = localStorage.getItem('rememberedEmail');
+if (savedEmail) {
+    document.getElementById('login-email').value = savedEmail;
+    document.getElementById('remember-me').checked = true;
+}
 
     // --- Restauración de Sesión ---
     const savedUser = sessionStorage.getItem('currentUser');
