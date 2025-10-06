@@ -6,7 +6,7 @@ const fs = require('fs');
 const PDFDocument = require('pdfkit');
 const bcrypt = require('bcryptjs');
 const { createClient } = require('@supabase/supabase-js');
-const multer = requiere('multer')
+const multer = require('multer')
 
 // ================== CONEXIÓN A SUPABASE ==================
 const supabaseUrl = process.env.SUPABASE_URL;
