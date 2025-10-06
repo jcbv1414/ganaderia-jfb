@@ -164,7 +164,50 @@ app.post('/api/vacas', async (req, res) => {
         res.status(500).json({ message: 'Ocurrió un error inesperado.' });
     }
 });
-  
+// NUEVO ENDPOINT PARA ACTUALIZAR EL LOGO DE UN RANCHO EXISTENTE
+app.post('/api/rancho/:ranchoId/logo', upload.single('logoInput'), async (req, res) => {
+    const { ranchoId } = req.params;
+    const logoFile = req.file;
+
+    if (!logoFile) {
+        return res.status(400).json({ message: 'No se ha subido ningún archivo.' });
+    }
+
+    try {
+        // 1. Creamos un nombre único y subimos el nuevo logo a Supabase
+        const fileName = `logos/${ranchoId}-${Date.now()}-${logoFile.originalname}`;
+        const { error: uploadError } = await supabase.storage
+            .from('logos-propietarios')
+            .upload(fileName, logoFile.buffer, { contentType: logoFile.mimetype });
+
+        if (uploadError) throw uploadError;
+
+        // 2. Obtenemos la URL pública del nuevo logo
+        const { data: urlData } = supabase.storage
+            .from('logos-propietarios')
+            .getPublicUrl(fileName);
+
+        const logoPublicUrl = urlData.publicUrl;
+
+        // 3. ACTUALIZAMOS la tabla 'ranchos' con la nueva URL del logo
+        const { data: updatedRancho, error: updateError } = await supabase
+            .from('ranchos')
+            .update({ logo_url: logoPublicUrl })
+            .eq('id', ranchoId)
+            .select()
+            .single();
+
+        if (updateError) throw updateError;
+
+        // 4. Enviamos de vuelta los datos actualizados del rancho
+        res.status(200).json(updatedRancho);
+
+    } catch (error) {
+        console.error('Error al actualizar el logo:', error);
+        res.status(500).json({ message: 'Error en el servidor al actualizar el logo.', details: error.message });
+    }
+});  
+
 // --- Lógica de Actividades y PDF ---
 // OBTENER EL HISTORIAL DE UNA VACA (CON EL NOMBRE DEL MVZ)
 app.get('/api/actividades/vaca/:vacaId', async (req, res) => {

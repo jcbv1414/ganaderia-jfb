@@ -21,6 +21,45 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnCerrarModalVacaMvz = document.getElementById('btn-cerrar-modal-vaca-mvz');
   const modalBgVacaMvz = document.getElementById('modal-bg-vaca-mvz');
   const formAgregarVacaMvz = document.getElementById('form-agregar-vaca-mvz');
+// NUEVO EVENT LISTENER PARA EL FORMULARIO DE ACTUALIZAR LOGO
+document.getElementById('form-actualizar-logo').addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    if (!currentUser || !currentUser.ranchos || !currentUser.ranchos[0]) {
+        mostrarMensaje('update-logo-mensaje', 'Error: No se encontró información del rancho.');
+        return;
+    }
+
+    const form = e.target;
+    const formData = new FormData(form);
+    const ranchoId = currentUser.ranchos[0].id;
+
+    try {
+        const res = await fetch(`/api/rancho/${ranchoId}/logo`, {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!res.ok) throw new Error((await res.json()).message);
+
+        const updatedRancho = await res.json();
+
+        // Actualizamos la sesión del usuario con la nueva URL
+        currentUser.ranchos[0].logo_url = updatedRancho.logo_url;
+        sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
+
+        // Actualizamos la imagen en la pantalla al instante
+        const logoImg = document.getElementById('logo-rancho');
+        logoImg.src = updatedRancho.logo_url;
+        logoImg.classList.remove('hidden');
+
+        mostrarMensaje('update-logo-mensaje', '¡Logo actualizado con éxito!', false);
+        form.reset();
+
+    } catch (err) {
+        mostrarMensaje('update-logo-mensaje', err.message);
+    }
+});
 
   // ===== Catálogos y Funciones Helpers =====
   const formatDate = (dateStr) => {
@@ -206,7 +245,9 @@ const prettyLabel = (str) => {
     document.getElementById('btn-logout-mvz').addEventListener('click', logout);
     document.getElementById('registro-rol').addEventListener('change', (e) => {
       document.getElementById('campo-rancho').classList.toggle('hidden', e.target.value !== 'propietario');
+    
     });
+
   
     document.getElementById('form-login').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -261,10 +302,22 @@ const prettyLabel = (str) => {
     if (currentUser.rol === 'propietario') {
         document.getElementById('nombre-propietario').textContent = currentUser.nombre;
         const rancho = currentUser.ranchos[0];
+
         if (rancho) {
             document.getElementById('info-rancho-propietario').innerHTML = `<p class="text-gray-300">Rancho: <strong class="text-white">${rancho.nombre}</strong> | Código de Acceso: <strong class="text-cyan-400 text-lg">${rancho.codigo}</strong> (Compártelo con tu MVZ)</p>`;
             cargarVacasPropietario();
         }
+
+        // --- CÓDIGO ACTUALIZADO PARA MOSTRAR EL LOGO ---
+        const logoImg = document.getElementById('logo-rancho');
+        if (rancho && rancho.logo_url) { 
+            logoImg.src = rancho.logo_url;
+            logoImg.classList.remove('hidden');
+        } else {
+            logoImg.classList.add('hidden');
+        }
+        // --- FIN DEL CÓDIGO ACTUALIZADO ---
+
         cambiarVista('propietario');
     } else { // MVZ
         document.getElementById('nombre-mvz').textContent = currentUser.nombre;
@@ -273,7 +326,7 @@ const prettyLabel = (str) => {
         document.getElementById('mvz-herramientas').classList.add('hidden');
         cambiarVista('mvz');
     }
-  };
+};
 
   // ===== Propietario: Cargar y Agregar Vacas =====
   const cargarVacasPropietario = async () => {
