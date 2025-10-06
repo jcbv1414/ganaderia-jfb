@@ -329,24 +329,76 @@ const prettyLabel = (str) => {
 };
 
   // ===== Propietario: Cargar y Agregar Vacas =====
-  const cargarVacasPropietario = async () => {
+let allVacasPropietario = []; // Nueva variable global para almacenar todas las vacas del propietario
+
+const cargarVacasPropietario = async () => {
     const ranchoId = currentUser.ranchos[0].id;
-    const res = await fetch(`${API_URL}/vacas/rancho/${ranchoId}`);
-    const vacas = await res.json();
     const lista = document.getElementById('lista-vacas');
-    lista.innerHTML = vacas.length ? '' : '<p class="text-gray-400">Aún no tienes vacas registradas.</p>';
-    vacas.forEach((vaca) => {
-      lista.innerHTML += `
-        <div class="vaca-card p-4 rounded-lg flex justify-between items-center">
-          <div>
-<p class="font-bold text-white">${vaca.nombre} <span class="text-sm font-normal text-gray-400">Arete: ${vaca.numero_arete}</span></p>
-<p class="text-xs text-gray-300">Nacimiento: ${vaca.fecha_nacimiento || '-'}</p>
-            ${vaca.raza ? `<p class="text-xs text-gray-300">Raza: ${vaca.raza}</p>` : ''}
-          </div>
-          <button class="btn text-xs py-2 px-4" onclick="app.verHistorial('${vaca.id}', '${vaca.nombre}')">Ver Historial</button>
-        </div>`;
+    lista.innerHTML = '<p class="text-gray-400 text-center">Cargando vacas...</p>'; // Mensaje de carga
+
+    try {
+        const res = await fetch(`${API_URL}/vacas/rancho/${ranchoId}`);
+        if (!res.ok) throw new Error('Error al cargar las vacas.');
+
+        allVacasPropietario = await res.json(); // Guardamos todas las vacas
+        renderVacasPropietario(allVacasPropietario); // Mostramos todas inicialmente
+
+    } catch (err) {
+        console.error("Error cargando vacas del propietario:", err);
+        lista.innerHTML = '<p class="text-red-400 text-center">No se pudieron cargar las vacas.</p>';
+    }
+};
+
+// Nueva función para renderizar las vacas (se llamará al cargar y al buscar)
+const renderVacasPropietario = (vacasToRender) => {
+    const lista = document.getElementById('lista-vacas');
+    lista.innerHTML = ''; // Limpiamos la lista
+
+    if (vacasToRender.length === 0) {
+        lista.innerHTML = '<p class="text-gray-400 text-center">Aún no tienes vacas registradas o no hay resultados para tu búsqueda.</p>';
+        return;
+    }
+
+    vacasToRender.forEach((vaca) => {
+        const vacaCard = document.createElement('div');
+        vacaCard.className = 'vaca-card p-4 rounded-xl flex items-center bg-black/20 hover:bg-black/30 transition-colors cursor-pointer'; // Añadimos clases para la tarjeta
+        vacaCard.onclick = () => app.verHistorial(vaca.id, vaca.nombre); // Hacemos clicable toda la tarjeta
+
+        // Generar una imagen de vaca aleatoria o usar una predeterminada si no hay una real
+        // Por simplicidad, aquí usaremos una URL de imagen de ejemplo
+        const randomCowImage = `https://picsum.photos/seed/${vaca.id}/100/100`; // Usar ID para una imagen "única"
+
+        vacaCard.innerHTML = `
+            <img src="${randomCowImage}" alt="Vaca ${vaca.nombre}" class="w-20 h-20 rounded-lg object-cover mr-4 border border-white/10">
+            <div class="flex-1">
+                <p class="font-bold text-white text-lg">${vaca.nombre} <span class="text-sm font-normal text-gray-400">#${vaca.numero_arete}</span></p>
+                <p class="text-xs text-gray-300">Raza: ${vaca.raza || 'Desconocida'}</p>
+                <p class="text-xs text-gray-300">Nacimiento: ${formatDate(vaca.fecha_nacimiento) || '-'}</p>
+            </div>
+        `;
+        lista.appendChild(vacaCard);
     });
-  };
+};
+
+// AGREGAR EVENT LISTENER PARA LA BARRA DE BÚSQUEDA
+document.getElementById('vaca-buscar').addEventListener('input', (e) => {
+    const searchTerm = normalize(e.target.value); // Usamos tu función normalize
+    if (searchTerm.length < 2 && searchTerm.length !== 0) { // Solo busca con 2 o más caracteres, o si está vacío
+        renderVacasPropietario(allVacasPropietario); // Muestra todo si la búsqueda es muy corta
+        return;
+    }
+
+    const filteredVacas = allVacasPropietario.filter(vaca => 
+        normalize(vaca.nombre).includes(searchTerm) || 
+        normalize(vaca.numero_arete).includes(searchTerm)
+    );
+    renderVacasPropietario(filteredVacas);
+});
+
+// AGREGAR EVENT LISTENER PARA EL BOTÓN DE ESTADÍSTICAS (solo un placeholder por ahora)
+document.getElementById('btn-ver-estadisticas').addEventListener('click', () => {
+    alert('Funcionalidad de Estadísticas: ¡Próximamente!');
+});
 
   document.getElementById('form-agregar-vaca').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -412,6 +464,14 @@ const prettyLabel = (str) => {
       document.getElementById('modo-trabajo-activo').textContent = `En Rancho: ${currentRancho.nombre}`;
       btnAbrirModalVacaMvz.classList.remove('hidden');
       cargarVacasParaMVZ();
+      
+      const logoImgMvz = document.getElementById('logo-rancho-mvz');
+    if (currentRancho && currentRancho.logo_url) {
+        logoImgMvz.src = currentRancho.logo_url;
+        logoImgMvz.classList.remove('hidden');
+    } else {
+        logoImgMvz.classList.add('hidden');
+    }
     } catch (err) {
       mostrarMensaje('rancho-mensaje', err.message);
     }

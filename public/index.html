@@ -214,9 +214,16 @@
       </form>
     </div>
     <div class="glass-panel">
-      <h2 class="text-2xl mb-4">Mis Vacas</h2>
-      <div id="lista-vacas" class="space-y-3 max-h-96 overflow-y-auto pr-2"></div>
-    </div>
+  <h2 class="text-2xl mb-4">Mis Vacas</h2>
+
+  <div class="flex flex-col sm:flex-row gap-4 mb-4">
+    <input type="text" id="vaca-buscar" placeholder="Buscar por arete o nombre..." class="flex-1">
+    <button id="btn-ver-estadisticas" class="btn bg-green-700 hover:bg-green-600 !py-2 !px-4 whitespace-nowrap">Estadísticas</button>
+  </div>
+  <div id="lista-vacas" class="space-y-4 max-h-96 overflow-y-auto pr-2">
+    <p class="text-gray-400 text-center">Cargando vacas...</p>
+  </div>
+</div>
   </div>
 
   <div class="glass-panel mt-8 w-full">
@@ -230,14 +237,16 @@
 </div>
     
     <div id="vista-mvz" class="vista p-4 sm:p-8 flex-col items-start app-content">
-      <header class="w-full flex justify-between items-center mb-8">
+     <header class="w-full flex flex-wrap justify-between items-center mb-8 gap-4">
+    <div class="flex items-center gap-4">
+        <img id="logo-rancho-mvz" src="" alt="Logo del Rancho" class="w-16 h-16 rounded-full object-cover hidden border-2 border-cyan-400/50 p-1">
         <div>
-          <h1 class="text-4xl">Panel de MVZ</h1>
-          <p class="text-gray-400">Bienvenido, <span id="nombre-mvz" class="font-semibold text-white"></span></p>
+            <h1 class="text-4xl">Panel de MVZ</h1>
+            <p class="text-gray-400">Bienvenido, <span id="nombre-mvz" class="font-semibold text-white"></span></p>
         </div>
-        <button id="btn-logout-mvz" class="btn btn-logout">Salir</button>
-      </header>
-
+    </div>
+    <button id="btn-logout-mvz" class="btn btn-logout">Salir</button>
+</header>
       <div id="mvz-seleccion-modo" class="w-full flex justify-center items-center" style="min-height: 60vh;">
         <div class="glass-panel text-center w-full max-w-lg">
           <h2 class="text-2xl mb-4">Selecciona tu modo de trabajo</h2>
