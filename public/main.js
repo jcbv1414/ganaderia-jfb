@@ -1,4 +1,87 @@
 document.addEventListener('DOMContentLoaded', () => {
+        // --- LÓGICA DEL FONDO ANIMADO ---
+    const canvas = document.getElementById('animated-background');
+    if (canvas) {
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        const numParticles = 70;
+        const particleSize = 2;
+        const connectionDistance = 150;
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            particles = []; // Reiniciar partículas al cambiar tamaño
+            initParticles();
+        }
+
+        class Particle {
+            constructor(x, y) {
+                this.x = x || Math.random() * canvas.width;
+                this.y = y || Math.random() * canvas.height;
+                this.speedX = (Math.random() - 0.5) * 0.5; // Más lento
+                this.speedY = (Math.random() - 0.5) * 0.5; // Más lento
+            }
+
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+
+                // Rebotar en los bordes
+                if (this.x < 0 || this.x > canvas.width) this.speedX *= -1;
+                if (this.y < 0 || this.y > canvas.height) this.speedY *= -1;
+            }
+
+            draw() {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, particleSize, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function initParticles() {
+            for (let i = 0; i < numParticles; i++) {
+                particles.push(new Particle());
+            }
+        }
+
+        function connectParticles() {
+            for (let i = 0; i < particles.length; i++) {
+                for (let j = i; j < particles.length; j++) {
+                    const dx = particles[i].x - particles[j].x;
+                    const dy = particles[i].y - particles[j].y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance < connectionDistance) {
+                        ctx.strokeStyle = `rgba(255, 255, 255, ${1 - (distance / connectionDistance) * 0.8})`;
+                        ctx.lineWidth = 0.5;
+                        ctx.beginPath();
+                        ctx.moveTo(particles[i].x, particles[i].y);
+                        ctx.lineTo(particles[j].x, particles[j].y);
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            for (let i = 0; i < particles.length; i++) {
+                particles[i].update();
+                particles[i].draw();
+            }
+            connectParticles();
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas(); // Inicializar el tamaño del canvas y las partículas
+        animate(); // Iniciar la animación
+    }
+    // --- FIN LÓGICA DEL FONDO ANIMADO ---
+    // ... el resto de tu código de DOMContentLoaded sigue aquí ...
     // =================================================================
     // ===== 1. ESTADO GLOBAL Y CONFIGURACIÓN ==========================
     // =================================================================
