@@ -21,7 +21,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnAbrirModalVacaMvz = document.getElementById('btn-abrir-modal-vaca-mvz');
     const btnCerrarModalVacaMvz = document.getElementById('btn-cerrar-modal-vaca-mvz');
     const modalBgVacaMvz = document.getElementById('modal-bg-vaca-mvz');
-    
+    // Referencias para el nuevo modal de confirmación
+const modalConfirmacion = document.getElementById('modal-confirmacion-eliminar');
+const btnCancelarEliminar = document.getElementById('btn-cancelar-eliminar');
+const btnConfirmarEliminar = document.getElementById('btn-confirmar-eliminar');
+const nombreVacaEliminar = document.getElementById('nombre-vaca-eliminar');
     const actividadTipoSelect = document.getElementById('actividad-tipo');
 
     const PROCEDIMIENTOS = {
@@ -476,32 +480,27 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    document.getElementById('lista-vacas').addEventListener('click', async (e) => {
-        const target = e.target;
-        const deleteButton = target.closest('.delete-vaca-btn');
-        const viewHistoryArea = target.closest('[data-action="view-history"]');
-        const vacaCard = target.closest('.vaca-card');
-        
-        if (!vacaCard) return;
+    document.getElementById('lista-vacas').addEventListener('click', (e) => {
+    const target = e.target;
+    const vacaCard = target.closest('.vaca-card');
+    if (!vacaCard) return;
 
-        const vacaId = vacaCard.dataset.vacaId;
-        const vacaNombre = vacaCard.dataset.vacaNombre;
+    const vacaId = vacaCard.dataset.vacaId;
+    const vacaNombre = vacaCard.dataset.vacaNombre;
 
-        if (deleteButton) {
-            if (confirm(`¿Estás seguro de que quieres eliminar a ${vacaNombre}? Esta acción no se puede deshacer.`)) {
-                try {
-                    const res = await fetch(`${API_URL}/vacas/${vacaId}`, { method: 'DELETE' });
-                    if (!res.ok) throw new Error('No se pudo eliminar la vaca.');
-                    cargarVacasPropietario();
-                } catch (err) {
-                    console.error("Error al eliminar vaca:", err);
-                    alert(err.message);
-                }
-            }
-        } else if (viewHistoryArea) {
-            app.verHistorial(vacaId, vacaNombre);
-        }
-    });
+    // Decide qué hacer basado en dónde se hizo clic
+    if (target.closest('[data-action="delete-vaca"]')) {
+        // 1. Prepara el modal con la información de la vaca
+        nombreVacaEliminar.textContent = vacaNombre;
+        btnConfirmarEliminar.dataset.vacaId = vacaId; // Guarda el ID en el botón para usarlo después
+
+        // 2. Muestra el modal
+        modalConfirmacion.classList.remove('hidden');
+
+    } else if (target.closest('[data-action="view-history"]')) {
+        app.verHistorial(vacaId, vacaNombre);
+    }
+});
 
     document.getElementById('vaca-buscar').addEventListener('input', (e) => {
         const searchTerm = normalize(e.target.value);
@@ -773,7 +772,32 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Modales (General) ---
     document.getElementById('modal-bg').addEventListener('click', () => document.getElementById('modal-historial').classList.add('hidden'));
     document.getElementById('btn-cerrar-modal').addEventListener('click', () => document.getElementById('modal-historial').classList.add('hidden'));
+// --- Lógica para el modal de confirmación de eliminación ---
 
+// Evento para el botón de cancelar en el modal
+btnCancelarEliminar.addEventListener('click', () => {
+    modalConfirmacion.classList.add('hidden');
+});
+
+// Evento para el botón que confirma la eliminación
+btnConfirmarEliminar.addEventListener('click', async () => {
+    const vacaId = btnConfirmarEliminar.dataset.vacaId;
+    if (!vacaId) return;
+
+    try {
+        const res = await fetch(`${API_URL}/vacas/${vacaId}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('No se pudo eliminar la vaca.');
+        
+        // Oculta el modal y recarga la lista de vacas
+        modalConfirmacion.classList.add('hidden');
+        cargarVacasPropietario();
+
+    } catch (err) {
+        console.error("Error al eliminar vaca:", err);
+        alert(err.message); // Muestra un error si algo falla
+        modalConfirmacion.classList.add('hidden');
+    }
+});
 
     // =================================================================
     // ===== 6. INICIO DE LA APP Y RESTAURACIÓN DE SESIÓN ==============
