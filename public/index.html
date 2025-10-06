@@ -192,7 +192,11 @@
   <div class="w-full grid grid-cols-1 lg:grid-cols-2 gap-8">
     <div class="glass-panel">
       <h2 class="text-2xl mb-4">Agregar Nueva Vaca</h2>
-      <form id="form-agregar-vaca" class="space-y-4">
+      <form id="form-agregar-vaca" class="space-y-4" enctype="multipart/form-data"></form>
+        <div>
+    <label class="block text-sm font-medium mb-1">Foto de la Vaca (Opcional)</label>
+    <input type="file" name="fotoVaca" accept="image/*" capture="environment">
+</div>
         <div>
           <label class="block text-sm font-medium mb-1">N° de Arete / SINIIGA</label>
           <input type="text" id="vaca-arete" required>

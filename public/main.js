@@ -359,25 +359,28 @@ const renderVacasPropietario = (vacasToRender) => {
         return;
     }
 
-    vacasToRender.forEach((vaca) => {
-        const vacaCard = document.createElement('div');
-        vacaCard.className = 'vaca-card p-4 rounded-xl flex items-center bg-black/20 hover:bg-black/30 transition-colors cursor-pointer'; // Añadimos clases para la tarjeta
-        vacaCard.onclick = () => app.verHistorial(vaca.id, vaca.nombre); // Hacemos clicable toda la tarjeta
+    // Dentro de la función renderVacasPropietario, en el bucle forEach...
+vacasToRender.forEach((vaca) => {
+    const vacaCard = document.createElement('div');
+    vacaCard.className = 'vaca-card p-4 rounded-xl flex items-center bg-black/20 hover:bg-black/30 transition-colors cursor-pointer';
+    vacaCard.onclick = () => app.verHistorial(vaca.id, vaca.nombre);
 
-        // Generar una imagen de vaca aleatoria o usar una predeterminada si no hay una real
-        // Por simplicidad, aquí usaremos una URL de imagen de ejemplo
-        const randomCowImage = `https://picsum.photos/seed/${vaca.id}/100/100`; // Usar ID para una imagen "única"
+    // --- ESTA ES LA LÍNEA MÁS IMPORTANTE ---
+    // Si la vaca tiene una foto_url, la usamos. Si no, ponemos una imagen de reemplazo.
+    // (Asegúrate de tener un archivo llamado 'placeholder-vaca.png' en tu carpeta public/assets)
+    const imageUrl = vaca.foto_url || '/assets/placeholder-vaca.png'; 
 
-        vacaCard.innerHTML = `
-            <img src="${randomCowImage}" alt="Vaca ${vaca.nombre}" class="w-20 h-20 rounded-lg object-cover mr-4 border border-white/10">
-            <div class="flex-1">
-                <p class="font-bold text-white text-lg">${vaca.nombre} <span class="text-sm font-normal text-gray-400">#${vaca.numero_arete}</span></p>
-                <p class="text-xs text-gray-300">Raza: ${vaca.raza || 'Desconocida'}</p>
-                <p class="text-xs text-gray-300">Nacimiento: ${formatDate(vaca.fecha_nacimiento) || '-'}</p>
-            </div>
-        `;
-        lista.appendChild(vacaCard);
-    });
+    // Usamos la variable imageUrl en la etiqueta <img>
+    vacaCard.innerHTML = `
+        <img src="${imageUrl}" alt="Vaca ${vaca.nombre}" class="w-20 h-20 rounded-lg object-cover mr-4 border border-white/10">
+        <div class="flex-1">
+            <p class="font-bold text-white text-lg">${vaca.nombre} <span class="text-sm font-normal text-gray-400">#${vaca.numero_arete}</span></p>
+            <p class="text-xs text-gray-300">Raza: ${vaca.raza || 'Desconocida'}</p>
+            <p class="text-xs text-gray-300">Nacimiento: ${formatDate(vaca.fecha_nacimiento) || '-'}</p>
+        </div>
+    `;
+    lista.appendChild(vacaCard);
+});
 };
 
 // AGREGAR EVENT LISTENER PARA LA BARRA DE BÚSQUEDA
@@ -400,26 +403,38 @@ document.getElementById('btn-ver-estadisticas').addEventListener('click', () => 
     alert('Funcionalidad de Estadísticas: ¡Próximamente!');
 });
 
-  document.getElementById('form-agregar-vaca').addEventListener('submit', async (e) => {
+ document.getElementById('form-agregar-vaca').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const data = {
-      arete: document.getElementById('vaca-arete').value,
-      nombre: document.getElementById('vaca-nombre').value,
-      fechaNacimiento: document.getElementById('vaca-fecha').value,
-      raza: document.getElementById('vaca-raza').value || '',
-      propietarioId: currentUser.id,
-      ranchoId: currentUser.ranchos[0].id,
-    };
+
     try {
-      const res = await fetch(`${API_URL}/vacas`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
-      if (!res.ok) throw new Error((await res.json()).message || 'Error al agregar vaca.');
-      mostrarMensaje('vaca-mensaje', 'Vaca agregada con éxito.', false);
-      e.target.reset();
-      cargarVacasPropietario();
+        const form = e.target;
+
+        // 1. Usamos FormData (con 'F' mayúscula) para capturar TODO el formulario (texto y archivo).
+        const formData = new FormData(form);
+
+        // 2. Añadimos los datos del usuario y rancho que no están en el formulario visible.
+        formData.append('propietarioId', currentUser.id);
+        formData.append('ranchoId', currentUser.ranchos[0].id);
+
+        // 3. YA NO creamos el objeto 'data' a mano. FormData se encarga de todo.
+
+        const res = await fetch(`${API_URL}/vacas`, {
+            method: 'POST',
+            // 4. Enviamos 'formData' directamente. NO usamos 'headers' ni 'JSON.stringify'.
+            // El navegador lo hace todo automáticamente.
+            body: formData 
+        });
+
+        if (!res.ok) throw new Error((await res.json()).message || 'Error al agregar vaca.');
+        
+        mostrarMensaje('vaca-mensaje', 'Vaca agregada con éxito.', false);
+        form.reset();
+        cargarVacasPropietario();
+        
     } catch (err) {
-      mostrarMensaje('vaca-mensaje', err.message);
+        mostrarMensaje('vaca-mensaje', err.message);
     }
-  });
+});
 
 
   // ===== MVZ: Lógica de Modos y Acceso =====

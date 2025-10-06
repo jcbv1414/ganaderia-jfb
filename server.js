@@ -150,13 +150,43 @@ app.get('/api/vacas/rancho/:ranchoId', async (req, res) => {
     }
 });
   
-app.post('/api/vacas', async (req, res) => {
+// REEMPLAZA TU RUTA ACTUAL CON ESTA
+app.post('/api/vacas', upload.single('fotoVaca'), async (req, res) => {
+    // Los datos de texto vienen de req.body, el archivo de req.file
     const { arete, nombre, fechaNacimiento, raza, propietarioId, ranchoId } = req.body;
+    const fotoFile = req.file;
+
     if (!arete || !nombre || !propietarioId || !ranchoId) {
         return res.status(400).json({ message: 'Faltan datos importantes para registrar la vaca.' });
     }
     try {
-        const { data, error } = await supabase.from('vacas').insert({ numero_arete: arete, nombre, fecha_nacimiento: fechaNacimiento, raza, estado: 'Activa', id_usuario: propietarioId, rancho_id: ranchoId }).select().single();
+        let fotoPublicUrl = null;
+
+        // Si se subió una foto, la procesamos
+        if (fotoFile) {
+            const fileName = `vacas/${ranchoId}-${arete}-${Date.now()}`;
+            const { error: uploadError } = await supabase.storage
+                .from('fotos-ganado') // Usamos el nuevo bucket
+                .upload(fileName, fotoFile.buffer, { contentType: fotoFile.mimetype });
+
+            if (uploadError) throw uploadError;
+
+            const { data: urlData } = supabase.storage.from('fotos-ganado').getPublicUrl(fileName);
+            fotoPublicUrl = urlData.publicUrl;
+        }
+
+        // Insertamos la vaca en la base de datos con la URL de la foto
+        const { data, error } = await supabase.from('vacas').insert({
+            numero_arete: arete,
+            nombre,
+            fecha_nacimiento: fechaNacimiento,
+            raza,
+            estado: 'Activa',
+            id_usuario: propietarioId,
+            rancho_id: ranchoId,
+            foto_url: fotoPublicUrl // Guardamos el nuevo enlace
+        }).select().single();
+
         if (error) throw error;
         res.status(201).json({ success: true, message: 'Vaca registrada exitosamente', vaca: data });
     } catch (err) {
