@@ -337,6 +337,24 @@ app.post('/api/lote/pdf', async (req, res) => {
         }
     }
 });
+// Endpoint para ELIMINAR una vaca
+app.delete('/api/vacas/:vacaId', async (req, res) => {
+    const { vacaId } = req.params;
+
+    try {
+        const { error } = await supabase
+            .from('vacas')
+            .delete()
+            .eq('id', vacaId);
+
+        if (error) throw error;
+
+        res.status(200).json({ success: true, message: 'Vaca eliminada exitosamente.' });
+    } catch (err) {
+        console.error("Error en el servidor al eliminar vaca:", err);
+        res.status(500).json({ message: 'Error al eliminar la vaca.' });
+    }
+});
 
 // ================== INICIO DEL SERVIDOR ==================
 app.listen(PORT, () => {

@@ -371,14 +371,17 @@ vacasToRender.forEach((vaca) => {
     const imageUrl = vaca.foto_url || '/assets/placeholder-vaca.png'; 
 
     // Usamos la variable imageUrl en la etiqueta <img>
-    vacaCard.innerHTML = `
-        <img src="${imageUrl}" alt="Vaca ${vaca.nombre}" class="w-20 h-20 rounded-lg object-cover mr-4 border border-white/10">
-        <div class="flex-1">
-            <p class="font-bold text-white text-lg">${vaca.nombre} <span class="text-sm font-normal text-gray-400">#${vaca.numero_arete}</span></p>
-            <p class="text-xs text-gray-300">Raza: ${vaca.raza || 'Desconocida'}</p>
-            <p class="text-xs text-gray-300">Nacimiento: ${formatDate(vaca.fecha_nacimiento) || '-'}</p>
-        </div>
-    `;
+   vacaCard.innerHTML = `
+    <img src="${imageUrl}" alt="Vaca ${vaca.nombre}" class="w-20 h-20 rounded-lg object-cover mr-4 border border-white/10">
+    <div class="flex-1">
+        <p class="font-bold text-white text-lg">${vaca.nombre} <span class="text-sm font-normal text-gray-400">#${vaca.numero_arete}</span></p>
+        <p class="text-xs text-gray-300">Raza: ${vaca.raza || 'Desconocida'}</p>
+        <p class="text-xs text-gray-300">Nacimiento: ${formatDate(vaca.fecha_nacimiento) || '-'}</p>
+    </div>
+    <button data-vaca-id="${vaca.id}" data-vaca-nombre="${vaca.nombre}" class="delete-vaca-btn text-red-400 hover:text-red-600 text-2xl p-2 rounded-full hover:bg-red-500/10">
+        🗑️
+    </button>
+`;
     lista.appendChild(vacaCard);
 });
 };
@@ -396,6 +399,33 @@ document.getElementById('vaca-buscar').addEventListener('input', (e) => {
         normalize(vaca.numero_arete).includes(searchTerm)
     );
     renderVacasPropietario(filteredVacas);
+});
+
+// Event listener para TODOS los botones de eliminar vaca
+document.getElementById('lista-vacas').addEventListener('click', async (e) => {
+    const deleteButton = e.target.closest('.delete-vaca-btn');
+    if (!deleteButton) return; // Si no se hizo clic en un botón de eliminar, no hacemos nada
+
+    const vacaId = deleteButton.dataset.vacaId;
+    const vacaNombre = deleteButton.dataset.vacaNombre;
+
+    // Pedimos confirmación antes de borrar
+    if (confirm(`¿Estás seguro de que quieres eliminar a ${vacaNombre}? Esta acción no se puede deshacer.`)) {
+        try {
+            const res = await fetch(`${API_URL}/vacas/${vacaId}`, {
+                method: 'DELETE'
+            });
+
+            if (!res.ok) throw new Error('No se pudo eliminar la vaca.');
+
+            // Si se eliminó correctamente, recargamos la lista
+            cargarVacasPropietario();
+
+        } catch (err) {
+            console.error("Error al eliminar vaca:", err);
+            alert(err.message);
+        }
+    }
 });
 
 // AGREGAR EVENT LISTENER PARA EL BOTÓN DE ESTADÍSTICAS (solo un placeholder por ahora)
