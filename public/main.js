@@ -8,6 +8,12 @@ document.addEventListener('DOMContentLoaded', () => {
   let loteActual = [];
   const API_URL = '/api';
 
+  // ===== Funciones Globales (Modal y Lote) =====
+  window.app = {
+  verHistorial: async (vacaId, vacaNombre) => {
+    document.getElementById('modal-nombre-vaca').textContent = vacaNombre;
+    const contenedor = document.getElementById('modal-contenido-historial');
+
 function popularSelectsDeFecha() {
     const selDia = document.getElementById('vaca-fecha-dia');
     const selMes = document.getElementById('vaca-fecha-mes');
@@ -794,14 +800,7 @@ document.getElementById('form-agregar-vaca').addEventListener('submit', async (e
     areteInput.addEventListener('input', tryAutofillRaza);
     areteInput.addEventListener('change', tryAutofillRaza);
   }
-
-  // ===== Funciones Globales (Modal y Lote) =====
-  window.app = {
-  verHistorial: async (vacaId, vacaNombre) => {
-    document.getElementById('modal-nombre-vaca').textContent = vacaNombre;
-    const contenedor = document.getElementById('modal-contenido-historial');
-
-    try {
+        try {
         const res = await fetch(`${API_URL}/actividades/vaca/${vacaId}`);
         if (!res.ok) { // Comprobamos si la petición al servidor fue exitosa
             throw new Error('No se pudo cargar el historial.');
