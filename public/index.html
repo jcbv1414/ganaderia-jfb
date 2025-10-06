@@ -228,13 +228,17 @@
         </div>
       </div>
       <div class="glass-panel mt-8 w-full">
-        <h3 class="text-xl mb-4">Actualizar Logo del Rancho</h3>
-        <form id="form-actualizar-logo" enctype="multipart/form-data" class="flex flex-wrap items-center gap-4">
-          <input type="file" name="logoInput" id="logoUpdateInput" class="flex-1 min-w-[200px]" required>
-          <button type="submit" class="btn">Actualizar</button>
+    <details>
+        <summary class="cursor-pointer text-xl hover:text-cyan-400 transition-colors">
+            Actualizar Logo del Rancho
+        </summary>
+        <form id="form-actualizar-logo" enctype="multipart/form-data" class="flex flex-wrap items-center gap-4 mt-4 pt-4 border-t border-white/10">
+            <input type="file" name="logoInput" id="logoUpdateInput" class="flex-1 min-w-[200px]" required>
+            <button type="submit" class="btn">Actualizar</button>
         </form>
         <p id="update-logo-mensaje" class="text-sm mt-2 h-4"></p>
-      </div>
+    </details>
+</div>
     </div>
     
     <div id="vista-mvz" class="vista p-4 sm:p-8 flex-col items-start app-content">

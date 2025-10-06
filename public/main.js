@@ -384,6 +384,8 @@ vacasToRender.forEach((vaca) => {
     // (Asegúrate de tener un archivo llamado 'placeholder-vaca.png' en tu carpeta public/assets)
      const imageUrl = vaca.foto_url || 'https://i.imgur.com/s6l2h27.png'; // URL de una imagen de placeholder
 
+     vacaCard.dataset.vacaId = vaca.id;
+     vacaCard.dataset.vacaNombre = vaca.nombre;
     // Usamos la variable imageUrl en la etiqueta <img>
    vacaCard.innerHTML = `
     <img src="${imageUrl}" alt="Vaca ${vaca.nombre}" class="w-20 h-20 rounded-lg object-cover mr-4 border border-white/10">
@@ -416,29 +418,32 @@ document.getElementById('vaca-buscar').addEventListener('input', (e) => {
 });
 
 // Event listener para TODOS los botones de eliminar vaca
+// Event listener inteligente para la lista de vacas
 document.getElementById('lista-vacas').addEventListener('click', async (e) => {
     const deleteButton = e.target.closest('.delete-vaca-btn');
-    if (!deleteButton) return; // Si no se hizo clic en un botón de eliminar, no hacemos nada
+    const vacaCard = e.target.closest('.vaca-card');
 
-    const vacaId = deleteButton.dataset.vacaId;
-    const vacaNombre = deleteButton.dataset.vacaNombre;
+    // Si se hizo clic en el botón de eliminar
+    if (deleteButton) {
+        const vacaId = deleteButton.dataset.vacaId;
+        const vacaNombre = deleteButton.dataset.vacaNombre;
 
-    // Pedimos confirmación antes de borrar
-    if (confirm(`¿Estás seguro de que quieres eliminar a ${vacaNombre}? Esta acción no se puede deshacer.`)) {
-        try {
-            const res = await fetch(`${API_URL}/vacas/${vacaId}`, {
-                method: 'DELETE'
-            });
-
-            if (!res.ok) throw new Error('No se pudo eliminar la vaca.');
-
-            // Si se eliminó correctamente, recargamos la lista
-            cargarVacasPropietario();
-
-        } catch (err) {
-            console.error("Error al eliminar vaca:", err);
-            alert(err.message);
+        if (confirm(`¿Estás seguro de que quieres eliminar a ${vacaNombre}? Esta acción no se puede deshacer.`)) {
+            try {
+                const res = await fetch(`${API_URL}/vacas/${vacaId}`, { method: 'DELETE' });
+                if (!res.ok) throw new Error('No se pudo eliminar la vaca.');
+                cargarVacasPropietario();
+            } catch (err) {
+                console.error("Error al eliminar vaca:", err);
+                alert(err.message);
+            }
         }
+    } 
+    // Si no, si se hizo clic en cualquier otra parte de la tarjeta
+    else if (vacaCard) {
+        const vacaId = vacaCard.dataset.vacaId;
+        const vacaNombre = vacaCard.dataset.vacaNombre;
+        app.verHistorial(vacaId, vacaNombre);
     }
 });
 
