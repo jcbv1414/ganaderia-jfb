@@ -358,7 +358,18 @@
       </div>
     </div>
   </div>
-
+<div id="modal-historial" class="fixed z-50 inset-0 overflow-y-auto hidden">
+  <div class="flex items-center justify-center min-h-screen p-4">
+    <div class="fixed inset-0 bg-black/70" id="modal-bg"></div>
+    <div class="relative glass-panel w-full max-w-2xl">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-2xl">Historial Clínico de <span id="modal-nombre-vaca"></span></h2>
+        <button id="btn-cerrar-modal" class="text-2xl leading-none">&times;</button>
+      </div>
+      <div id="modal-contenido-historial" class="space-y-4 max-h-[70vh] overflow-y-auto pr-3"></div>
+    </div>
+  </div>
+</div>
   <script src="main.js"></script>
 </body>
 </html>
