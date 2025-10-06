@@ -210,9 +210,13 @@
           <input type="text" id="vaca-raza" placeholder="Empieza a escribir..." autocomplete="off">
         </div>
         <div>
-          <label class="block text-sm font-medium mb-1">Fecha de Nacimiento</label>
-          <input type="date" id="vaca-fecha" required>
-        </div>
+    <label class="block text-sm font-medium mb-1">Fecha de Nacimiento</label>
+    <div class="grid grid-cols-3 gap-2">
+        <select id="vaca-fecha-dia" required><option value="">Día</option></select>
+        <select id="vaca-fecha-mes" required><option value="">Mes</option></select>
+        <select id="vaca-fecha-ano" required><option value="">Año</option></select>
+    </div>
+</div>
         <button type="submit" class="w-full btn">Agregar Vaca</button>
         <p id="vaca-mensaje" class="text-center mt-2 text-sm h-4"></p>
       </form>

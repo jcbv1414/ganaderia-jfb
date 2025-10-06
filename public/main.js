@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
+  popularSelectsDeFecha();
   // ===== Estado global =====
   let currentUser = null;
   let currentRancho = null;
@@ -6,6 +7,19 @@ document.addEventListener('DOMContentLoaded', () => {
   let independentRanchoName = null;
   let loteActual = [];
   const API_URL = '/api';
+
+function popularSelectsDeFecha() {
+    const selDia = document.getElementById('vaca-fecha-dia');
+    const selMes = document.getElementById('vaca-fecha-mes');
+    const selAno = document.getElementById('vaca-fecha-ano');
+
+    for (let i = 1; i <= 31; i++) selDia.innerHTML += `<option value="${i}">${i}</option>`;
+    const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+    meses.forEach((mes, i) => selMes.innerHTML += `<option value="${i + 1}">${mes}</option>`);
+    const anoActual = new Date().getFullYear();
+    for (let i = 0; i <= 20; i++) selAno.innerHTML += `<option value="${anoActual - i}">${anoActual - i}</option>`;
+}
+
 
   // ===== Vistas =====
   const vistas = {
@@ -368,7 +382,7 @@ vacasToRender.forEach((vaca) => {
     // --- ESTA ES LA LÍNEA MÁS IMPORTANTE ---
     // Si la vaca tiene una foto_url, la usamos. Si no, ponemos una imagen de reemplazo.
     // (Asegúrate de tener un archivo llamado 'placeholder-vaca.png' en tu carpeta public/assets)
-    const imageUrl = vaca.foto_url || '/assets/placeholder-vaca.png'; 
+     const imageUrl = vaca.foto_url || 'https://i.imgur.com/s6l2h27.png'; // URL de una imagen de placeholder
 
     // Usamos la variable imageUrl en la etiqueta <img>
    vacaCard.innerHTML = `
@@ -438,20 +452,22 @@ document.getElementById('btn-ver-estadisticas').addEventListener('click', () => 
 
     try {
         const form = e.target;
-
-        // 1. Usamos FormData (con 'F' mayúscula) para capturar TODO el formulario (texto y archivo).
         const formData = new FormData(form);
 
-        // 2. Añadimos los datos del usuario y rancho que no están en el formulario visible.
+        // 1. Leemos la fecha de los 3 menús desplegables
+        const dia = document.getElementById('vaca-fecha-dia').value.padStart(2, '0');
+        const mes = document.getElementById('vaca-fecha-mes').value.padStart(2, '0');
+        const ano = document.getElementById('vaca-fecha-ano').value;
+        const fechaCompleta = `${ano}-${mes}-${dia}`;
+        
+        // 2. Añadimos la fecha completa y los IDs al FormData
+        formData.append('fechaNacimiento', fechaCompleta);
         formData.append('propietarioId', currentUser.id);
         formData.append('ranchoId', currentUser.ranchos[0].id);
 
-        // 3. YA NO creamos el objeto 'data' a mano. FormData se encarga de todo.
-
+        // 3. Enviamos el formulario
         const res = await fetch(`${API_URL}/vacas`, {
             method: 'POST',
-            // 4. Enviamos 'formData' directamente. NO usamos 'headers' ni 'JSON.stringify'.
-            // El navegador lo hace todo automáticamente.
             body: formData 
         });
 
