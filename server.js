@@ -15,7 +15,7 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 const upload = multer({ storage: multer.memoryStorage() });
 // ================== CONFIGURACIÓN DE EXPRESS ==================
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -32,6 +32,21 @@ function formatDate(dateString) {
     const [year, month, day] = dateString.split('-');
     return `${day}/${month}/${year}`;
 }
+const whitelist = ['https://ganaderia-jfb-cbps.onrender.com']; // URL de tu front-end
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Permite peticiones sin origen (como Postman) y las de tu whitelist
+    if (!origin || whitelist.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('No permitido por CORS'));
+    }
+  }
+};
+app.use(cors(corsOptions)); // Usa las nuevas opciones
+
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
 
 // ================== ENDPOINTS DE LA API ==================
 

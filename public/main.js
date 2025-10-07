@@ -40,8 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const API_URL = '/api';
     const appContent = document.getElementById('app-content');
-    const authContainer = document.querySelector('.auth-container');
-    const appContainer = document.getElementById('app-container');
+    const navContainer = document.getElementById('nav-container');
 
     const PROCEDIMIENTOS = {
         palpacion: {
@@ -89,31 +88,18 @@ document.addEventListener('DOMContentLoaded', () => {
             ]
         }
     };
-
-    const RAZAS_BOVINAS = [
-        'Aberdeen Angus', 'Ayrshire', 'Bazadaise', 'Beefmaster', 'Belgian Blue', 'Brahman',
-        'Brangus', 'Charolais', 'Chianina', 'Criollo', 'Galloway', 'Gelbvieh', 'Gir',
-        'Guzerá', 'Gyr Lechero', 'Guernsey', 'Hereford', 'Holstein', 'Jersey', 'Limousin',
-        'Maine-Anjou', 'Marchigiana', 'Montbéliarde', 'Normando', 'Pardo Suizo',
-        'Piemontese', 'Pinzgauer', 'Romagnola', 'Sahiwal', 'Santa Gertrudis', 'Sardo Negro',
-        'Shorthorn', 'Simbrah', 'Simmental', 'Sindi', 'Tarentaise', 'Wagyu'
-    ].sort((a, b) => a.localeCompare(b));
-
+    const RAZAS_BOVINAS = ['Aberdeen Angus', 'Ayrshire', 'Bazadaise', 'Beefmaster', 'Belgian Blue', 'Brahman', 'Brangus', 'Charolais', 'Chianina', 'Criollo', 'Galloway', 'Gelbvieh', 'Gir', 'Guzerá', 'Gyr Lechero', 'Guernsey', 'Hereford', 'Holstein', 'Jersey', 'Limousin', 'Maine-Anjou', 'Marchigiana', 'Montbéliarde', 'Normando', 'Pardo Suizo', 'Piemontese', 'Pinzgauer', 'Romagnola', 'Sahiwal', 'Santa Gertrudis', 'Sardo Negro', 'Shorthorn', 'Simbrah', 'Simmental', 'Sindi', 'Tarentaise', 'Wagyu'].sort((a, b) => a.localeCompare(b));
 
     // =================================================================
     // ===== 3. FUNCIONES DE AYUDA (HELPERS) ===========================
     // =================================================================
-
     const formatDate = (dateStr) => {
         if (!dateStr) return '-';
         const date = new Date(dateStr);
         return date.toLocaleDateString('es-MX', { year: 'numeric', month: '2-digit', day: '2-digit' });
     };
-
     const prettyLabel = (str) => (str || '').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-
     const normalize = (s) => (s || '').toString().normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
-
     const mostrarMensaje = (elId, texto, esError = true) => {
         const el = document.getElementById(elId);
         if (!el) return;
@@ -121,19 +107,15 @@ document.addEventListener('DOMContentLoaded', () => {
         el.className = `text-center mt-2 text-sm h-4 ${esError ? 'text-red-400' : 'text-green-400'}`;
         setTimeout(() => el.textContent = '', 4000);
     };
-
     const logout = () => {
         currentUser = null;
         currentRancho = null;
-        independentRanchoName = null;
-        loteActual = [];
         sessionStorage.clear();
-        document.getElementById('nav-propietario').classList.add('hidden');
-        document.getElementById('nav-mvz').classList.add('hidden');
-        if (appContainer) appContainer.classList.add('hidden');
-        if (authContainer) authContainer.classList.remove('hidden');
+        navContainer.classList.add('hidden');
+        document.getElementById('nav-propietario')?.classList.add('hidden');
+        document.getElementById('nav-mvz')?.classList.add('hidden');
+        navigateTo('login');
     };
-
     function popularSelectsDeFecha() {
         const selects = [
             { dia: 'vaca-fecha-dia', mes: 'vaca-fecha-mes', ano: 'vaca-fecha-ano' },
@@ -154,14 +136,12 @@ document.addEventListener('DOMContentLoaded', () => {
             for (let i = 0; i <= 30; i++) selAno.innerHTML += `<option value="${anoActual - i}">${anoActual - i}</option>`;
         });
     }
-
-    function poblarSelectLote(max = 50) {
+    function poblarSelectLote(max = 10) {
         const sel = document.getElementById('actividad-lote');
         if (!sel) return;
         sel.innerHTML = '';
         for (let i = 1; i <= max; i++) sel.appendChild(new Option(`Lote ${i}`, String(i)));
     }
-
     function attachRazaAutocomplete(inputId) {
         const input = document.getElementById(inputId);
         if (!input) return;
@@ -203,22 +183,35 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         input.addEventListener('focus', () => { if (input.value.trim().length >= 2) openWithQuery(input.value); });
     }
-
     // =================================================================
-    // ===== 4. LÓGICA DE NAVEGACIÓN Y VISTAS ==========================
+    // ===== 4. NAVEGACIÓN Y RENDERIZADO DE VISTAS =====================
     // =================================================================
-
     function navigateTo(viewId) {
-        if (!appContent) { console.error('Falta #app-content en el HTML'); return; }
+        if (!appContent) { console.error('Elemento #app-content no encontrado.'); return; }
         appContent.innerHTML = '';
         const template = document.getElementById(`template-${viewId}`);
-        if (!template) { console.error(`No se encontró la plantilla para la vista: ${viewId}`); return; }
+        if (!template) {
+            console.error(`No se encontró la plantilla para la vista: ${viewId}`);
+            return;
+        }
+        appContent.appendChild(template.content.cloneNode(true));
 
-        const clone = template.content.cloneNode(true);
-        appContent.appendChild(clone);
-
-        // Lógica específica a ejecutar después de cargar cada vista
-        if (viewId === 'inicio-propietario') {
+        // --- LÓGICA A EJECUTAR DESPUÉS DE CARGAR CADA VISTA ---
+        if (viewId === 'login') {
+            document.getElementById('form-login').addEventListener('submit', handleLogin);
+            document.getElementById('link-a-registro').addEventListener('click', () => navigateTo('registro'));
+            const savedEmail = localStorage.getItem('rememberedEmail');
+            if (savedEmail) {
+                document.getElementById('login-email').value = savedEmail;
+                document.getElementById('remember-me').checked = true;
+            }
+        } else if (viewId === 'registro') {
+            document.getElementById('form-registro').addEventListener('submit', handleRegister);
+            document.getElementById('link-a-login').addEventListener('click', () => navigateTo('login'));
+            document.getElementById('registro-rol').addEventListener('change', (e) => {
+                document.getElementById('campo-rancho').classList.toggle('hidden', e.target.value !== 'propietario');
+            });
+        } else if (viewId === 'inicio-propietario') {
             document.getElementById('dash-nombre-propietario').textContent = currentUser?.nombre || '';
             document.getElementById('dash-fecha-actual').textContent = new Date().toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
             cargarDatosDashboard();
@@ -232,18 +225,14 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('dash-fecha-actual-mvz').textContent = new Date().toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
         }
     }
-
     const iniciarSesion = () => {
         if (!currentUser) return;
-        if (authContainer) authContainer.classList.add('hidden');
-        if (appContainer) appContainer.classList.remove('hidden');
+        navContainer.classList.remove('hidden');
         const isPropietario = currentUser.rol === 'propietario';
         document.getElementById('nav-propietario').classList.toggle('hidden', !isPropietario);
         document.getElementById('nav-mvz').classList.toggle('hidden', isPropietario);
         navigateTo(isPropietario ? 'inicio-propietario' : 'inicio-mvz');
-        setupNavigation();
     };
-
     function setupNavigation() {
         document.querySelectorAll('.nav-button').forEach(button => {
             button.addEventListener('click', () => {
@@ -254,9 +243,43 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
     }
+     // =================================================================
+    // ===== 5. MANEJADORES DE EVENTOS (HANDLERS) ======================
+    // =================================================================
+    async function handleLogin(e) {
+        e.preventDefault();
+        const email = document.getElementById('login-email').value;
+        const password = document.getElementById('login-password').value;
+        const rememberMe = document.getElementById('remember-me').checked;
+        try {
+            const res = await fetch(`${API_URL}/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+            const respuesta = await res.json();
+            if (!res.ok) throw new Error(respuesta.message);
+            currentUser = respuesta.user;
+            sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
+            if (rememberMe) localStorage.setItem('rememberedEmail', email);
+            else localStorage.removeItem('rememberedEmail');
+            iniciarSesion();
+        } catch (err) {
+            mostrarMensaje('login-mensaje', err.message);
+        }
+    }
+    async function handleRegister(e) {
+        e.preventDefault();
+        try {
+            const res = await fetch(`${API_URL}/register`, { method: 'POST', body: new FormData(e.target) });
+            const respuesta = await res.json();
+            if (!res.ok) throw new Error(respuesta.message);
+            mostrarMensaje('registro-mensaje', '¡Registro exitoso! Ahora puedes iniciar sesión.', false);
+            e.target.reset();
+            navigateTo('login');
+        } catch (err) {
+            mostrarMensaje('registro-mensaje', err.message);
+        }
+    }
 
     // =================================================================
-    // ===== 5. LÓGICA DE VISTAS ESPECÍFICAS ===========================
+    // ===== 6. LÓGICA DE VISTAS Y DATOS ===========================
     // =================================================================
 
     // --- Lógica de Propietario ---
@@ -479,9 +502,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-
-    // =================================================================
-    // ===== 6. FUNCIONES GLOBALES (ACCESIBLES DESDE HTML) =============
+        // =================================================================
+    // ===== 7. FUNCIONES GLOBALES (ACCESIBLES DESDE HTML) =============
     // =================================================================
     window.app = {
         verHistorial: async (vacaId, vacaNombre) => {
@@ -517,96 +539,6 @@ document.addEventListener('DOMContentLoaded', () => {
             renderLoteActual();
         },
     };
-
-    // =================================================================
-    // ===== 7. ASIGNACIÓN DE EVENTOS (EVENT LISTENERS) ================
-    // =================================================================
-    function bindEventListeners() {
-        // --- Navegación y Autenticación ---
-        document.getElementById('link-a-registro')?.addEventListener('click', () => navigateTo('registro'));
-        document.getElementById('link-a-login')?.addEventListener('click', () => navigateTo('login'));
-        document.getElementById('btn-logout-propietario')?.addEventListener('click', logout);
-        document.getElementById('btn-logout-mvz')?.addEventListener('click', logout);
-
-        document.getElementById('form-login')?.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
-            const rememberMe = document.getElementById('remember-me').checked;
-            try {
-                const res = await fetch(`${API_URL}/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
-                const respuesta = await res.json();
-                if (!res.ok) throw new Error(respuesta.message);
-                currentUser = respuesta.user;
-                sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
-                if (rememberMe) localStorage.setItem('rememberedEmail', email);
-                else localStorage.removeItem('rememberedEmail');
-                iniciarSesion();
-            } catch (err) {
-                mostrarMensaje('login-mensaje', err.message);
-            }
-        });
-
-        document.getElementById('form-registro')?.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            try {
-                const res = await fetch(`${API_URL}/register`, { method: 'POST', body: new FormData(e.target) });
-                const respuesta = await res.json();
-                if (!res.ok) throw new Error(respuesta.message);
-                mostrarMensaje('registro-mensaje', '¡Registro exitoso! Ahora puedes iniciar sesión.', false);
-                e.target.reset();
-                navigateTo('login');
-            } catch (err) {
-                mostrarMensaje('registro-mensaje', err.message);
-            }
-        });
-        
-        document.getElementById('registro-rol')?.addEventListener('change', (e) => {
-            document.getElementById('campo-rancho').classList.toggle('hidden', e.target.value !== 'propietario');
-        });
-
-        // --- Eventos en Modales ---
-        document.getElementById('modal-bg')?.addEventListener('click', () => document.getElementById('modal-historial').classList.add('hidden'));
-        document.getElementById('btn-cerrar-modal')?.addEventListener('click', () => document.getElementById('modal-historial').classList.add('hidden'));
-        document.getElementById('btn-cancelar-eliminar')?.addEventListener('click', () => document.getElementById('modal-confirmacion-eliminar').classList.add('hidden'));
-
-        document.getElementById('btn-confirmar-eliminar')?.addEventListener('click', async (e) => {
-            const vacaId = e.target.dataset.vacaId;
-            if (!vacaId) return;
-            try {
-                const res = await fetch(`${API_URL}/vacas/${vacaId}`, { method: 'DELETE' });
-                if (!res.ok) throw new Error((await res.json()).message || 'No se pudo eliminar.');
-                document.getElementById('modal-confirmacion-eliminar').classList.add('hidden');
-                cargarVacasPropietario();
-            } catch (err) {
-                alert(err.message);
-            }
-        });
-
-        // --- Listeners específicos de MVZ (delegados al body por si no existen al inicio) ---
-        document.body.addEventListener('click', (e) => {
-            const target = e.target;
-            if(target.id === 'btn-modo-rancho') {
-                document.getElementById('mvz-seleccion-modo').style.display = 'none';
-                document.getElementById('mvz-acceso-rancho').classList.remove('hidden');
-            } else if (target.id === 'btn-modo-independiente') {
-                document.getElementById('mvz-seleccion-modo').style.display = 'none';
-                document.getElementById('mvz-herramientas').classList.remove('hidden');
-                document.getElementById('panel-rancho-independiente').classList.remove('hidden');
-                document.getElementById('modo-trabajo-activo').textContent = 'Independiente';
-                document.getElementById('logo-rancho-mvz-panel').classList.add('hidden');
-                currentRancho = null;
-                loteActual = [];
-                renderLoteActual();
-            } else if (target.id === 'btn-volver-seleccion1' || target.id === 'btn-volver-seleccion2') {
-                document.getElementById('mvz-seleccion-modo').style.display = 'flex';
-                document.getElementById('mvz-acceso-rancho').classList.add('hidden');
-                document.getElementById('mvz-herramientas').classList.add('hidden');
-                currentRancho = null; independentRanchoName = null; loteActual = [];
-                sessionStorage.removeItem('currentRancho');
-            }
-        });
-    }
 
     // =================================================================
     // ===== 8. INICIALIZACIÓN DE LA APLICACIÓN ========================
