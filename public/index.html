@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>JFB Ganadería Inteligente</title>
@@ -120,6 +121,46 @@
   .tab-lote.active-tab {
     color: #22d3ee; /* Cian */
     border-color: #22d3ee; /* Cian */
+}
+/* --- Estilos para la Barra de Navegación Inferior --- */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 80px;
+    background: rgba(10, 10, 20, 0.6);
+    backdrop-filter: blur(10px);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    z-index: 100;
+}
+
+.nav-button {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: #a0aec0; /* Gris */
+    font-size: 0.75rem;
+    transition: color 0.2s ease-in-out;
+    padding: 8px;
+    height: 100%;
+    flex-grow: 1;
+}
+
+.nav-button i {
+    font-size: 1.5rem;
+    margin-bottom: 4px;
+}
+
+.nav-button.active,
+.nav-button:hover {
+    color: #ffffff; /* Blanco */
 }
   </style>
 </head>
@@ -275,7 +316,81 @@
     </details>
 </div>
     </div>
+    <div id="app-container" class="hidden">
     
+    <main id="app-content" class="pb-24">
+      <div id="contenido-inicio-propietario">
+    <header class="p-4 sm:p-8">
+        <div class="flex justify-between items-center">
+            <div>
+                <h1 class="text-3xl">¡Bienvenido, <span id="dash-nombre-propietario"></span>!</h1>
+                <p class="text-gray-400 text-sm" id="dash-fecha-actual"></p>
+            </div>
+            <div class="w-12 h-12 rounded-full bg-gray-700"></div> </div>
+    </header>
+
+    <div class="p-4 sm:p-8">
+        <h2 class="text-xl mb-4">Resumen del Rancho</h2>
+        <div class="grid grid-cols-3 gap-4 text-center">
+            <div class="glass-panel p-4">
+                <p class="text-3xl font-bold" id="resumen-total-vacas">--</p>
+                <p class="text-xs text-gray-400">Vacas en Rancho</p>
+            </div>
+            <div class="glass-panel p-4">
+                <p class="text-3xl font-bold" id="resumen-vacas-gestantes">--</p>
+                <p class="text-xs text-gray-400">Vacas Gestantes</p>
+            </div>
+            <div class="glass-panel p-4">
+                <p class="text-3xl font-bold" id="resumen-alertas">--</p>
+                <p class="text-xs text-gray-400">Alertas de Salud</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="p-4 sm:p-8">
+        <h2 class="text-xl mb-4">Actividad y Eventos</h2>
+        <div class="glass-panel p-4 space-y-4">
+            <div>
+                <h3 class="font-semibold mb-2"><i class="fa-solid fa-bell mr-2"></i> Actividad Reciente</h3>
+                <p class="text-sm text-gray-300" id="actividad-reciente">Aún no hay actividad reciente.</p>
+            </div>
+            <div class="border-t border-white/10"></div>
+            <div>
+                <h3 class="font-semibold mb-2"><i class="fa-solid fa-calendar-days mr-2"></i> Próximos Eventos</h3>
+                <p class="text-sm text-gray-300" id="proximos-eventos">No hay eventos programados.</p>
+            </div>
+        </div>
+    </div>
+</div>
+        </main>
+
+    <nav id="nav-propietario" class="bottom-nav">
+        <button class="nav-button active" data-vista="propietario-inicio">
+            <i class="fa-solid fa-house"></i>
+            <span>Inicio</span>
+        </button>
+        <button class="nav-button" data-vista="propietario-vacas">
+            <i class="fa-solid fa-cow"></i>
+            <span>Mis Vacas</span>
+        </button>
+        <button class="nav-button" data-vista="propietario-mvz">
+            <i class="fa-solid fa-user-doctor"></i>
+            <span>Mi MVZ</span>
+        </button>
+        <button class="nav-button" data-vista="estadisticas">
+            <i class="fa-solid fa-chart-pie"></i>
+            <span>Estadísticas</span>
+        </button>
+        <button class="nav-button" data-vista="propietario-config">
+            <i class="fa-solid fa-gear"></i>
+            <span>Ajustes</span>
+        </button>
+    </nav>
+
+    <nav id="nav-mvz" class="bottom-nav hidden">
+        ...
+    </nav>
+</div>
     <div id="vista-mvz" class="vista p-4 sm:p-8 flex-col items-start app-content">
       <header class="w-full flex flex-wrap justify-between items-center mb-8 gap-4">
     <div>

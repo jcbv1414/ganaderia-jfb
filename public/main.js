@@ -312,30 +312,32 @@ const nombreVacaEliminar = document.getElementById('nombre-vaca-eliminar');
 
     const iniciarSesion = () => {
         if (!currentUser) return;
-        if (currentUser.rol === 'propietario') {
-            document.getElementById('nombre-propietario').textContent = currentUser.nombre;
-            const rancho = currentUser.ranchos[0];
+        // Dentro de la función iniciarSesion...
 
-            if (rancho) {
-                document.getElementById('info-rancho-propietario').innerHTML = `<p class="text-gray-300">Rancho: <strong class="text-white">${rancho.nombre}</strong> | Código de Acceso: <strong class="text-cyan-400 text-lg">${rancho.codigo}</strong> (Compártelo con tu MVZ)</p>`;
-                cargarVacasPropietario();
-            }
+if (currentUser.rol === 'propietario') {
+    // --- ESTA ES LA PARTE NUEVA ---
+    // Ocultamos todas las vistas viejas y mostramos el contenedor principal de la app
+    Object.values(vistas).forEach(v => v.classList.remove('activa'));
+    document.getElementById('app-container').classList.remove('hidden');
+    document.getElementById('nav-propietario').classList.remove('hidden');
+    document.getElementById('nav-mvz').classList.add('hidden');
 
-            const logoImg = document.getElementById('logo-rancho');
-            if (rancho && rancho.logo_url) {
-                logoImg.src = rancho.logo_url;
-                logoImg.classList.remove('hidden');
-            } else {
-                logoImg.classList.add('hidden');
-            }
-            cambiarVista('propietario');
-        } else { // MVZ
-            document.getElementById('nombre-mvz').textContent = currentUser.nombre;
-            document.getElementById('mvz-seleccion-modo').style.display = 'flex';
-            document.getElementById('mvz-acceso-rancho').classList.add('hidden');
-            document.getElementById('mvz-herramientas').classList.add('hidden');
-            cambiarVista('mvz');
-        }
+    // Llenamos los datos del nuevo dashboard
+    document.getElementById('dash-nombre-propietario').textContent = currentUser.nombre;
+    const hoy = new Date();
+    document.getElementById('dash-fecha-actual').textContent = hoy.toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    
+    // Aquí iría la lógica para cargar los números del resumen (total de vacas, etc.)
+    // Por ahora, se quedarán con "--"
+
+} else { // MVZ
+    // La lógica del MVZ se queda igual por ahora
+    document.getElementById('nombre-mvz').textContent = currentUser.nombre;
+    document.getElementById('mvz-seleccion-modo').style.display = 'flex';
+    document.getElementById('mvz-acceso-rancho').classList.add('hidden');
+    document.getElementById('mvz-herramientas').classList.add('hidden');
+    cambiarVista('mvz');
+}   
     };
 
     // --- Lógica de Propietario ---
