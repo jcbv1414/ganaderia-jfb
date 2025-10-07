@@ -9,23 +9,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const numParticles = 70;
         const particleSize = 2;
         const connectionDistance = 150;
-
         class Particle {
             constructor(x, y) { this.x = x || Math.random() * canvas.width; this.y = y || Math.random() * canvas.height; this.speedX = (Math.random() - 0.5) * 0.5; this.speedY = (Math.random() - 0.5) * 0.5; }
             update() { this.x += this.speedX; this.y += this.speedY; if (this.x < 0 || this.x > canvas.width) this.speedX *= -1; if (this.y < 0 || this.y > canvas.height) this.speedY *= -1; }
             draw() { ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'; ctx.beginPath(); ctx.arc(this.x, this.y, particleSize, 0, Math.PI * 2); ctx.fill(); }
         }
-
         const initParticles = () => { for (let i = 0; i < numParticles; i++) particles.push(new Particle()); };
         const connectParticles = () => { for (let i = 0; i < particles.length; i++) for (let j = i; j < particles.length; j++) { const dx = particles[i].x - particles[j].x; const dy = particles[i].y - particles[j].y; const distance = Math.sqrt(dx * dx + dy * dy); if (distance < connectionDistance) { ctx.strokeStyle = `rgba(255, 255, 255, ${1 - (distance / connectionDistance) * 0.8})`; ctx.lineWidth = 0.5; ctx.beginPath(); ctx.moveTo(particles[i].x, particles[i].y); ctx.lineTo(particles[j].x, particles[j].y); ctx.stroke(); } } };
         const animate = () => { requestAnimationFrame(animate); ctx.clearRect(0, 0, canvas.width, canvas.height); particles.forEach(p => { p.update(); p.draw(); }); connectParticles(); };
         const resizeCanvas = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; particles = []; initParticles(); };
-
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
         animate();
     }
-
     // =================================================================
     // ===== 2. ESTADO GLOBAL Y CONFIGURACIÓN ==========================
     // =================================================================
@@ -90,7 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     const RAZAS_BOVINAS = ['Aberdeen Angus', 'Ayrshire', 'Bazadaise', 'Beefmaster', 'Belgian Blue', 'Brahman', 'Brangus', 'Charolais', 'Chianina', 'Criollo', 'Galloway', 'Gelbvieh', 'Gir', 'Guzerá', 'Gyr Lechero', 'Guernsey', 'Hereford', 'Holstein', 'Jersey', 'Limousin', 'Maine-Anjou', 'Marchigiana', 'Montbéliarde', 'Normando', 'Pardo Suizo', 'Piemontese', 'Pinzgauer', 'Romagnola', 'Sahiwal', 'Santa Gertrudis', 'Sardo Negro', 'Shorthorn', 'Simbrah', 'Simmental', 'Sindi', 'Tarentaise', 'Wagyu'].sort((a, b) => a.localeCompare(b));
 
-    // =================================================================
+     // =================================================================
     // ===== 3. FUNCIONES DE AYUDA (HELPERS) ===========================
     // =================================================================
     const formatDate = (dateStr) => {
@@ -105,7 +101,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!el) return;
         el.textContent = texto;
         el.className = `text-center mt-2 text-sm h-4 ${esError ? 'text-red-400' : 'text-green-400'}`;
-        setTimeout(() => el.textContent = '', 4000);
+        setTimeout(() => { if(el) el.textContent = ''; }, 4000);
     };
     const logout = () => {
         currentUser = null;
@@ -190,27 +186,26 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!appContent) { console.error('Elemento #app-content no encontrado.'); return; }
         appContent.innerHTML = '';
         const template = document.getElementById(`template-${viewId}`);
-        if (!template) {
-            console.error(`No se encontró la plantilla para la vista: ${viewId}`);
-            return;
-        }
+        if (!template) { console.error(`No se encontró la plantilla para la vista: ${viewId}`); return; }
         appContent.appendChild(template.content.cloneNode(true));
 
-        // --- LÓGICA A EJECUTAR DESPUÉS DE CARGAR CADA VISTA ---
         if (viewId === 'login') {
             document.getElementById('form-login').addEventListener('submit', handleLogin);
             document.getElementById('link-a-registro').addEventListener('click', () => navigateTo('registro'));
             const savedEmail = localStorage.getItem('rememberedEmail');
-            if (savedEmail) {
+            if (savedEmail && document.getElementById('login-email')) {
                 document.getElementById('login-email').value = savedEmail;
                 document.getElementById('remember-me').checked = true;
             }
         } else if (viewId === 'registro') {
             document.getElementById('form-registro').addEventListener('submit', handleRegister);
             document.getElementById('link-a-login').addEventListener('click', () => navigateTo('login'));
-            document.getElementById('registro-rol').addEventListener('change', (e) => {
-                document.getElementById('campo-rancho').classList.toggle('hidden', e.target.value !== 'propietario');
-            });
+            const registroRol = document.getElementById('registro-rol');
+            if(registroRol) {
+                registroRol.addEventListener('change', (e) => {
+                    document.getElementById('campo-rancho').classList.toggle('hidden', e.target.value !== 'propietario');
+                });
+            }
         } else if (viewId === 'inicio-propietario') {
             document.getElementById('dash-nombre-propietario').textContent = currentUser?.nombre || '';
             document.getElementById('dash-fecha-actual').textContent = new Date().toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -243,7 +238,8 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
     }
-     // =================================================================
+  
+    // =================================================================
     // ===== 5. MANEJADORES DE EVENTOS (HANDLERS) ======================
     // =================================================================
     async function handleLogin(e) {
@@ -281,8 +277,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // =================================================================
     // ===== 6. LÓGICA DE VISTAS Y DATOS ===========================
     // =================================================================
-
-    // --- Lógica de Propietario ---
     async function cargarDatosDashboard() {
         if (!currentUser || currentUser.rol !== 'propietario') return;
         try {
@@ -378,7 +372,6 @@ document.addEventListener('DOMContentLoaded', () => {
         `).join('');
     };
 
-    // --- Lógica de MVZ ---
     async function cargarVacasParaMVZ() {
         if (!currentRancho) return;
         try {
@@ -419,8 +412,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 <button class="text-red-400 hover:text-red-600 font-bold text-lg" onclick="app.removerDelLote(${idx})">&times;</button>
             </div>`).join('');
     }
-
-    // --- Lógica de Estadísticas ---
     async function mostrarEstadisticas() {
         const statsTabsContainer = document.getElementById('estadisticas-tabs-lotes');
         const statsContenido = document.getElementById('estadisticas-contenido');
@@ -544,14 +535,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // ===== 8. INICIALIZACIÓN DE LA APLICACIÓN ========================
     // =================================================================
     function initApp() {
-        bindEventListeners();
-        popularSelectsDeFecha();
-        attachRazaAutocomplete('actividad-raza');
-        attachRazaAutocomplete('vaca-raza');
-        attachRazaAutocomplete('vaca-raza-mvz');
-        poblarSelectLote(50);
-
-        // Poblar select de procedimientos
+      setupNavigation();
+        const savedUser = sessionStorage.getItem('currentUser');
+        if (savedUser) {
+            currentUser = JSON.parse(savedUser);
+            iniciarSesion();
+        } else {
+            navContainer.classList.add('hidden');
+            navigateTo('login');
+        }
+    }
+// Poblar select de procedimientos
         const actividadTipoSelect = document.getElementById('actividad-tipo');
         if (actividadTipoSelect) {
             actividadTipoSelect.innerHTML = '<option value="" selected disabled>Seleccione un procedimiento...</option>';
@@ -559,26 +553,5 @@ document.addEventListener('DOMContentLoaded', () => {
                 actividadTipoSelect.add(new Option(PROCEDIMIENTOS[key].titulo, key));
             });
         }
-        
-        // --- Restauración de Sesión ---
-        const savedUser = sessionStorage.getItem('currentUser');
-        const loginEmailEl = document.getElementById('login-email');
-        const rememberEl = document.getElementById('remember-me');
-        const savedEmail = localStorage.getItem('rememberedEmail');
-
-        if (savedEmail && loginEmailEl && rememberEl) {
-            loginEmailEl.value = savedEmail;
-            rememberEl.checked = true;
-        }
-
-        if (savedUser) {
-            currentUser = JSON.parse(savedUser);
-            currentRancho = JSON.parse(sessionStorage.getItem('currentRancho'));
-            iniciarSesion();
-        } else {
-             navigateTo('login');
-        }
-    }
-
     initApp();
 });
