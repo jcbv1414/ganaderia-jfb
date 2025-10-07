@@ -356,6 +356,130 @@ app.delete('/api/vacas/:vacaId', async (req, res) => {
     }
 });
 
+// =================================================================
+// ===== GESTIÓN DE PERMISOS MVZ ===================================
+// =================================================================
+
+// Endpoint para invitar a un MVZ a un rancho y asignarle permisos
+app.post('/api/rancho/invitar-mvz', async (req, res) => {
+    const { ranchoId, mvzEmail, permisos } = req.body;
+
+    if (!ranchoId || !mvzEmail || !permisos) {
+        return res.status(400).json({ message: 'Faltan datos para asignar el permiso.' });
+    }
+
+    try {
+        // 1. Buscamos el ID del veterinario usando su correo electrónico
+        const { data: mvzUser, error: mvzError } = await supabase
+            .from('usuarios')
+            .select('id')
+            .eq('email', mvzEmail)
+            .eq('rol', 'mvz')
+            .single();
+
+        if (mvzError || !mvzUser) {
+            return res.status(404).json({ message: 'No se encontró un veterinario con ese correo electrónico.' });
+        }
+        const mvzId = mvzUser.id;
+
+        // 2. Creamos la fila en la nueva tabla con los IDs y el permiso
+        const { data, error: insertError } = await supabase
+            .from('rancho_mvz_permisos')
+            .insert([
+                { rancho_id: ranchoId, mvz_id: mvzId, permisos: permisos }
+            ])
+            .select();
+
+        if (insertError) {
+            if (insertError.code === '23505') { 
+                return res.status(409).json({ message: 'Este veterinario ya tiene permisos en este rancho.' });
+            }
+            throw insertError;
+        }
+
+        res.status(201).json({ message: 'Permisos asignados correctamente.', data });
+
+    } catch (error) {
+        console.error('Error al asignar permisos:', error);
+        res.status(500).json({ message: 'Error interno del servidor.' });
+    }
+});
+// =================================================================
+// ===== ESTADÍSTICAS ==============================================
+// =================================================================
+
+app.get('/api/rancho/:ranchoId/estadisticas', async (req, res) => {
+    const { ranchoId } = req.params;
+
+    try {
+        // 1. Obtenemos todas las vacas del rancho
+        const { data: vacas, error: vacasError } = await supabase
+            .from('vacas')
+            .select('id, lote, raza')
+            .eq('rancho_id', ranchoId);
+
+        if (vacasError) throw vacasError;
+        if (!vacas || vacas.length === 0) {
+            return res.json({}); // Devuelve un objeto vacío si no hay vacas
+        }
+
+        // 2. Obtenemos el último estado de "Palpación" de cada vaca
+        // Usamos una función de base de datos (RPC) para eficiencia
+        const cowIds = vacas.map(v => v.id);
+        const { data: ultimasActividades, error: rpcError } = await supabase.rpc('get_latest_palpacion_for_cows', {
+            cow_ids: cowIds
+        });
+
+        if (rpcError) throw rpcError;
+
+        // 3. Procesamos los datos para crear las estadísticas
+        const stats = {};
+
+        // Creamos un mapa para buscar fácilmente el último estado de una vaca
+        const estadoMap = new Map();
+        ultimasActividades.forEach(act => {
+            estadoMap.set(act.vaca_id, JSON.parse(act.descripcion));
+        });
+
+        vacas.forEach(vaca => {
+            const lote = vaca.lote || 'Sin Lote';
+            const ultimoEstado = estadoMap.get(vaca.id) || {};
+
+            // Si el lote no existe en nuestro objeto de stats, lo inicializamos
+            if (!stats[lote]) {
+                stats[lote] = {
+                    totalVacas: 0,
+                    estados: {
+                        Gestante: 0,
+                        Estatica: 0,
+                        Ciclando: 0,
+                        Sucia: 0,
+                        // Puedes agregar más estados si los necesitas
+                    },
+                    razas: {}
+                };
+            }
+
+            // Contamos las vacas y sus estados
+            stats[lote].totalVacas++;
+            if (ultimoEstado.gestante === 'Sí') stats[lote].estados.Gestante++;
+            if (ultimoEstado.estatica === 'Sí') stats[lote].estados.Estatica++;
+            if (ultimoEstado.ciclando === 'Sí') stats[lote].estados.Ciclando++;
+            if (ultimoEstado.sucia === 'Sí') stats[lote].estados.Sucia++;
+
+            // Contamos las razas
+            const raza = vaca.raza || 'Desconocida';
+            stats[lote].razas[raza] = (stats[lote].razas[raza] || 0) + 1;
+        });
+
+        res.json(stats);
+
+    } catch (error) {
+        console.error("Error generando estadísticas:", error);
+        res.status(500).json({ message: "Error al generar estadísticas" });
+    }
+});
+
 // ================== INICIO DEL SERVIDOR ==================
 app.listen(PORT, () => {
     console.log(`Servidor corriendo en http://localhost:${PORT}`);

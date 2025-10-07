@@ -612,9 +612,7 @@ const nombreVacaEliminar = document.getElementById('nombre-vaca-eliminar');
         renderVacasPropietario(filteredVacas);
     });
 
-    document.getElementById('btn-ver-estadisticas').addEventListener('click', () => {
-        alert('Funcionalidad de Estadísticas: ¡Próximamente!');
-    });
+    document.getElementById('btn-ver-estadisticas').addEventListener('click', mostrarEstadisticas);
     
     document.getElementById('form-actualizar-logo').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -950,4 +948,126 @@ if (savedEmail) {
     } else {
         cambiarVista('login');
     }
+    // =================================================================
+// ===== LÓGICA DE ESTADÍSTICAS ====================================
+// =================================================================
+
+// Referencias a los elementos de la vista de estadísticas
+const btnEstadisticasVolver = document.getElementById('btn-estadisticas-volver');
+const statsTabsContainer = document.getElementById('estadisticas-tabs-lotes');
+const statsContenido = document.getElementById('estadisticas-contenido');
+const statsTituloLote = document.getElementById('estadisticas-titulo-lote');
+const statsResumenTexto = document.getElementById('estadisticas-resumen-texto');
+const ctx = document.getElementById('grafico-estado-reproductivo').getContext('2d');
+
+let miGrafico = null; // Variable para guardar la instancia del gráfico
+let datosEstadisticas = null; // Variable para guardar los datos que vienen del API
+
+// Función para renderizar el gráfico y los datos de un lote específico
+function renderizarGrafico(numeroLote) {
+    if (!datosEstadisticas || !datosEstadisticas[numeroLote]) return;
+
+    const loteData = datosEstadisticas[numeroLote];
+    
+    // Actualizar el título y el resumen en texto
+    statsTituloLote.textContent = `Lote ${numeroLote}`;
+    let resumenHtml = `
+        <p><strong>Total de Vacas:</strong> ${loteData.totalVacas}</p>
+        <p><strong>Gestantes:</strong> ${loteData.estados.Gestante} vacas</p>
+        <p><strong>Estáticas:</strong> ${loteData.estados.Estatica} vacas</p>
+        <p><strong>Ciclando:</strong> ${loteData.estados.Ciclando} vacas</p>
+    `;
+    const razasOrdenadas = Object.entries(loteData.razas).sort(([,a],[,b]) => b-a);
+    if(razasOrdenadas.length > 0) {
+        resumenHtml += `<p><strong>Raza Principal:</strong> ${razasOrdenadas[0][0]}</p>`;
+    }
+    statsResumenTexto.innerHTML = resumenHtml;
+
+    // Destruir el gráfico anterior si existe (para poder dibujar uno nuevo)
+    if (miGrafico) {
+        miGrafico.destroy();
+    }
+
+    // Preparar datos para Chart.js
+    const labels = ['Gestantes', 'Estáticas', 'Ciclando', 'Sucias'];
+    const data = [
+        loteData.estados.Gestante,
+        loteData.estados.Estatica,
+        loteData.estados.Ciclando,
+        loteData.estados.Sucia
+    ];
+
+    miGrafico = new Chart(ctx, {
+        type: 'doughnut', // Gráfico de dona (pastel con hoyo)
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Estado Reproductivo',
+                data: data,
+                backgroundColor: ['#FFC107', '#6c757d', '#17A2B8', '#DC3545'],
+                borderColor: '#1a1a2e',
+                borderWidth: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '60%',
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { color: '#ffffff', padding: 20 }
+                }
+            }
+        }
+    });
+}
+
+// Función principal para mostrar la vista de estadísticas
+async function mostrarEstadisticas() {
+    cambiarVista('estadisticas');
+    statsContenido.style.visibility = 'hidden';
+    statsTabsContainer.innerHTML = '<p class="text-gray-400 p-4">Cargando estadísticas...</p>';
+
+    try {
+        const ranchoId = currentUser.ranchos[0].id;
+        const res = await fetch(`/api/rancho/${ranchoId}/estadisticas`);
+        if (!res.ok) throw new Error('No se pudieron cargar las estadísticas.');
+        
+        datosEstadisticas = await res.json();
+        const lotes = Object.keys(datosEstadisticas);
+
+        if (lotes.length === 0) {
+            statsTabsContainer.innerHTML = '<p class="text-gray-400 p-4">No hay datos suficientes para mostrar estadísticas.</p>';
+            return;
+        }
+
+        // Crear las pestañas de los lotes
+        statsTabsContainer.innerHTML = lotes.map(lote => 
+            `<button class="tab-lote p-4 text-gray-400 border-b-2 border-transparent hover:text-white" data-lote="${lote}">${lote === 'Sin Lote' ? 'Sin Asignar' : `Lote ${lote}`}</button>`
+        ).join('');
+
+        // Agregar el listener a las pestañas para que sean interactivas
+        statsTabsContainer.querySelectorAll('.tab-lote').forEach(tab => {
+            tab.addEventListener('click', () => {
+                statsTabsContainer.querySelectorAll('.tab-lote').forEach(t => t.classList.remove('active-tab'));
+                tab.classList.add('active-tab');
+                renderizarGrafico(tab.dataset.lote);
+            });
+        });
+
+        // Por defecto, hacer clic en la primera pestaña para mostrar sus datos
+        statsTabsContainer.querySelector('.tab-lote').click();
+        statsContenido.style.visibility = 'visible';
+
+    } catch (err) {
+        console.error(err);
+        statsTabsContainer.innerHTML = `<p class="text-red-400 p-4">${err.message}</p>`;
+    }
+}
+
+// Listener para el botón de volver en la vista de estadísticas
+btnEstadisticasVolver.addEventListener('click', () => {
+    cambiarVista('propietario');
+});
 });

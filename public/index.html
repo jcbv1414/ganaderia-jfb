@@ -7,7 +7,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
-
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
     html, body {
@@ -117,6 +117,10 @@
     }
 
     .vaca-card{ background: rgba(255,255,255,.05); }
+  .tab-lote.active-tab {
+    color: #22d3ee; /* Cian */
+    border-color: #22d3ee; /* Cian */
+}
   </style>
 </head>
 <body>
@@ -422,6 +426,32 @@
 </form>
         </div>
       </div>
+    </div>
+    <div id="vista-estadisticas" class="vista p-4 sm:p-8 flex-col items-start app-content">
+    
+    <header class="w-full flex items-center mb-6">
+        <button id="btn-estadisticas-volver" class="nav-link text-lg mr-4">&larr; Volver</button>
+        <h1 class="text-3xl">Estadísticas del Rancho</h1>
+    </header>
+
+    <div id="estadisticas-tabs-lotes" class="w-full flex items-center gap-2 mb-6 border-b border-white/10">
+        <p class="text-gray-400 p-4">Cargando lotes...</p>
+    </div>
+
+    <div id="estadisticas-contenido" class="w-full">
+        <h2 id="estadisticas-titulo-lote" class="text-2xl mb-2 text-cyan-400"></h2>
+        <p class="text-sm text-gray-400 mb-8">Estado Reproductivo</p>
+        
+        <div class="w-full grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+            
+            <div class="relative w-full max-w-sm mx-auto h-72 md:h-96">
+                <canvas id="grafico-estado-reproductivo"></canvas>
+            </div>
+            
+            <div id="estadisticas-resumen-texto" class="text-lg space-y-3">
+                </div>
+        </div>
+    </div>
     </div>
   </div>
 <div id="modal-historial" class="fixed z-50 inset-0 overflow-y-auto hidden">
