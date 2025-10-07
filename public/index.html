@@ -173,6 +173,8 @@
   </div>
 
   <div id="app">
+    <div class="auth-container">
+
     <div id="vista-login" class="vista activa main-container">
     <div class="glass-panel w-full max-w-md text-center">
         <img src="/assets/logo.png" alt="Logo JFB Ganadería" class="logo">
@@ -444,11 +446,23 @@
 
 <template id="template-actividades-mvz">
     <div class="p-4 sm:p-8">
-        <header class="w-full mb-8">
-            <h1 class="text-4xl">Registro de Actividades</h1>
-            <p class="text-gray-400">Selecciona un modo de trabajo para comenzar.</p>
-        </header>
+        <div id="mvz-seleccion-modo" class="w-full flex justify-center items-center" style="min-height: 60vh;">
+            <div class="glass-panel text-center w-full max-w-lg">
+                <h2 class="text-2xl mb-4">Selecciona tu modo de trabajo</h2>
+                <p class="text-gray-400 mb-8">Puedes acceder a un rancho o trabajar de forma independiente.</p>
+                <div class="flex flex-col md:flex-row gap-6 justify-center">
+                    <button id="btn-modo-rancho" class="btn flex-1">Acceder a un Rancho</button>
+                    <button id="btn-modo-independiente" class="btn flex-1">Trabajo Independiente</button>
+                </div>
+            </div>
         </div>
+        
+        <div id="mvz-acceso-rancho" class="hidden main-container">
+            </div>
+
+        <div id="mvz-herramientas" class="hidden w-full">
+            </div>
+    </div>
 </template>
 
 <template id="template-estadisticas">
