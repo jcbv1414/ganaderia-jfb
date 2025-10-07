@@ -306,54 +306,109 @@ const nombreVacaEliminar = document.getElementById('nombre-vaca-eliminar');
         }
     }
 
-    // =================================================================
-    // ===== 3. FUNCIONES PRINCIPALES Y LÓGICA DE LA APP ===============
-    // =================================================================
+// =================================================================
+// ===== NUEVO SISTEMA DE NAVEGACIÓN Y SESIÓN (VERSIÓN MEJORADA) ====
+// =================================================================
 
-    const iniciarSesion = () => {
-        if (!currentUser) return;
-        // Dentro de la función iniciarSesion...
+const appContent = document.getElementById('app-content');
+const authContainer = document.querySelector('.auth-container');
+const appContainer = document.getElementById('app-container');
 
-if (currentUser.rol === 'propietario') {
-    // --- ESTA ES LA PARTE NUEVA ---
-    // Ocultamos todas las vistas viejas y mostramos el contenedor principal de la app
-    Object.values(vistas).forEach(v => v.classList.remove('activa'));
-    document.getElementById('app-container').classList.remove('hidden');
-    document.getElementById('nav-propietario').classList.remove('hidden');
-    document.getElementById('nav-mvz').classList.add('hidden');
+// Función para cargar los datos del resumen en el dashboard del propietario
+async function cargarDatosDashboard() {
+    if (!currentUser || currentUser.rol !== 'propietario') return;
+    try {
+        const ranchoId = currentUser.ranchos[0].id;
+        const res = await fetch(`/api/rancho/${ranchoId}/estadisticas`);
+        if (!res.ok) throw new Error('No se pudieron cargar las estadísticas del dashboard.');
+        const stats = await res.json();
 
-    // Llenamos los datos del nuevo dashboard
-    document.getElementById('dash-nombre-propietario').textContent = currentUser.nombre;
-    const hoy = new Date();
-    document.getElementById('dash-fecha-actual').textContent = hoy.toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-    
-    // Aquí iría la lógica para cargar los números del resumen (total de vacas, etc.)
-    // Por ahora, se quedarán con "--"
+        let totalVacas = 0;
+        let totalGestantes = 0;
 
-// Dentro de la función iniciarSesion...
+        for (const lote in stats) {
+            totalVacas += stats[lote].totalVacas;
+            totalGestantes += stats[lote].estados.Gestante;
+        }
 
-} else { // MVZ
-    // --- ESTA ES LA PARTE NUEVA PARA EL MVZ ---
-    // Ocultamos las vistas viejas y mostramos el contenedor principal de la app
-    Object.values(vistas).forEach(v => v.classList.remove('activa'));
-    document.getElementById('app-container').classList.remove('hidden');
-    document.getElementById('nav-propietario').classList.add('hidden');
-    document.getElementById('nav-mvz').classList.remove('hidden');
-
-    // Mostramos el contenido específico del dashboard del MVZ
-    document.getElementById('contenido-inicio-propietario').classList.add('hidden');
-    document.getElementById('contenido-inicio-mvz').classList.remove('hidden');
-
-
-    // Llenamos los datos del nuevo dashboard del MVZ
-    document.getElementById('dash-nombre-mvz').textContent = currentUser.nombre;
-    const hoy = new Date();
-    document.getElementById('dash-fecha-actual-mvz').textContent = hoy.toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-    
-    // Aquí iría la lógica para cargar los números del resumen (visitas, alertas, etc.)
-    // Por ahora, se quedarán con "--"
+        document.getElementById('resumen-total-vacas').textContent = totalVacas;
+        document.getElementById('resumen-vacas-gestantes').textContent = totalGestantes;
+        document.getElementById('resumen-alertas').textContent = 0; // Placeholder
+    } catch (error) {
+        console.error("Error al cargar datos del dashboard:", error);
+    }
 }
-    };
+
+// La función principal que se encarga de cambiar el contenido
+function navigateTo(viewId) {
+    appContent.innerHTML = '';
+    const template = document.getElementById(`template-${viewId}`);
+    if (!template) {
+        console.error(`No se encontró la plantilla para la vista: ${viewId}`);
+        return;
+    }
+    
+    const clone = template.content.cloneNode(true);
+    appContent.appendChild(clone);
+
+    // --- Lógica a ejecutar DESPUÉS de cargar la vista ---
+    if (viewId === 'inicio-propietario') {
+        document.getElementById('dash-nombre-propietario').textContent = currentUser.nombre;
+        const hoy = new Date();
+        document.getElementById('dash-fecha-actual').textContent = hoy.toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        cargarDatosDashboard();
+    } else if (viewId === 'mis-vacas') {
+        cargarVacasPropietario();
+        // Aseguramos que el botón de agregar vaca funcione
+        const btnAbrirModal = document.getElementById('btn-abrir-modal-vaca');
+        if (btnAbrirModal) {
+            btnAbrirModal.addEventListener('click', () => {
+                document.getElementById('modal-agregar-vaca').classList.remove('hidden');
+            });
+        }
+    } else if (viewId === 'estadisticas') {
+        mostrarEstadisticas();
+    } else if (viewId === 'inicio-mvz') {
+        document.getElementById('dash-nombre-mvz').textContent = currentUser.nombre;
+        const hoy = new Date();
+        document.getElementById('dash-fecha-actual-mvz').textContent = hoy.toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        // Aquí cargaremos los datos del MVZ en el futuro
+    }
+}
+
+// Función que configura los listeners de los botones de navegación
+function setupNavigation() {
+    document.querySelectorAll('.nav-button').forEach(button => {
+        button.addEventListener('click', () => {
+            const viewId = button.dataset.vista;
+            if (button.parentElement.querySelector('.active')) {
+                button.parentElement.querySelector('.active').classList.remove('active');
+            }
+            button.classList.add('active');
+            navigateTo(viewId);
+        });
+    });
+}
+
+// NUEVA FUNCIÓN iniciarSesion (más simple)
+const iniciarSesion = () => {
+    if (!currentUser) return;
+
+    authContainer.classList.add('hidden');
+    appContainer.classList.remove('hidden');
+
+    if (currentUser.rol === 'propietario') {
+        document.getElementById('nav-propietario').classList.remove('hidden');
+        document.getElementById('nav-mvz').classList.add('hidden');
+        navigateTo('inicio-propietario');
+    } else { // MVZ
+        document.getElementById('nav-propietario').classList.add('hidden');
+        document.getElementById('nav-mvz').classList.remove('hidden');
+        navigateTo('inicio-mvz');
+    }
+    
+    setupNavigation();
+};
 
     // --- Lógica de Propietario ---
     const cargarVacasPropietario = async () => {

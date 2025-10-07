@@ -246,80 +246,14 @@
       </div>
     </div>
 
-    <div id="vista-propietario" class="vista p-4 sm:p-8 flex-col items-start app-content">
-      <header class="w-full flex flex-wrap justify-between items-center mb-8 gap-4">
-        <div class="flex items-center gap-4">
-          <img id="logo-rancho" src="" alt="Logo del Rancho" class="w-16 h-16 rounded-full object-cover hidden border-2 border-cyan-400/50 p-1">
-          <div>
-            <h1 class="text-4xl">Panel de Propietario</h1>
-            <p class="text-gray-400">Bienvenido, <span id="nombre-propietario" class="font-semibold text-white"></span></p>
-          </div>
-        </div>
-        <button id="btn-logout-propietario" class="btn btn-logout">Salir</button>
-      </header>
-      
-      <div id="info-rancho-propietario" class="w-full info-box mb-8"></div>
-      
-      <div class="w-full grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div class="glass-panel">
-          <h2 class="text-2xl mb-4">Agregar Nueva Vaca</h2>
-          <form id="form-agregar-vaca" class="space-y-4" enctype="multipart/form-data">
-    <div>
-        <label class="block text-sm font-medium mb-1">Foto de la Vaca (Opcional)</label>
-        <input type="file" name="fotoVaca" accept="image/*">
-    </div>
-    <div>
-        <label class="block text-sm font-medium mb-1">N° de Arete / SINIIGA</label>
-        <input type="text" id="vaca-arete" name="arete" required>
-    </div>
-    <div>
-        <label class="block text-sm font-medium mb-1">Nombre</label>
-        <input type="text" id="vaca-nombre" name="nombre" required>
-    </div>
-    <div>
-        <label class="block text-sm font-medium mb-1">Raza</label>
-        <input type="text" id="vaca-raza" name="raza" placeholder="Empieza a escribir..." autocomplete="off">
-    </div>
-    <div>
-        <label class="block text-sm font-medium mb-1">Fecha de Nacimiento</label>
-        <div class="grid grid-cols-3 gap-2">
-            <select id="vaca-fecha-dia" name="dia" required><option value="">Día</option></select>
-            <select id="vaca-fecha-mes" name="mes" required><option value="">Mes</option></select>
-            <select id="vaca-fecha-ano" name="ano" required><option value="">Año</option></select>
-        </div>
-    </div>
-    <button type="submit" class="w-full btn">Agregar Vaca</button>
-    <p id="vaca-mensaje" class="text-center mt-2 text-sm h-4"></p>
-</form>
-        </div>
-        <div class="glass-panel">
-          <h2 class="text-2xl mb-4">Mis Vacas</h2>
-          <div class="flex flex-col sm:flex-row gap-4 mb-4">
-            <input type="text" id="vaca-buscar" placeholder="Buscar por arete o nombre..." class="flex-1">
-            <button id="btn-ver-estadisticas" class="btn !py-2 !px-4 whitespace-nowrap">Estadísticas</button>
-          </div>
-          <div id="lista-vacas" class="space-y-4 max-h-96 overflow-y-auto pr-2">
-            <p class="text-gray-400 text-center">Cargando vacas...</p>
-          </div>
-        </div>
-      </div>
-      <div class="glass-panel mt-8 w-full">
-    <details>
-        <summary class="cursor-pointer text-xl hover:text-cyan-400 transition-colors">
-            Actualizar Logo del Rancho
-        </summary>
-        <form id="form-actualizar-logo" enctype="multipart/form-data" class="flex flex-wrap items-center gap-4 mt-4 pt-4 border-t border-white/10">
-            <input type="file" name="logoInput" id="logoUpdateInput" class="flex-1 min-w-[200px]" required>
-            <button type="submit" class="btn">Actualizar</button>
-        </form>
-        <p id="update-logo-mensaje" class="text-sm mt-2 h-4"></p>
-    </details>
-</div>
-    </div>
+    
     <div id="app-container" class="hidden">
     
     <main id="app-content" class="pb-24">
-      <div id="contenido-inicio-propietario">
+      <template id="template-inicio-propietario">
+        <div id="contenido-inicio-propietario">
+        </div>
+      </template>
     <header class="p-4 sm:p-8">
         <div class="flex justify-between items-center">
             <div>
@@ -362,6 +296,8 @@
         </div>
     </div>
 </div>
+
+<template id="template-inicio-mvz">
 <div id="contenido-inicio-mvz" class="hidden">
     <header class="p-4 sm:p-8">
         <div class="flex justify-between items-center">
@@ -397,6 +333,7 @@
         +
     </button>
 </div>
+</template>
         </main>
 
     <nav id="nav-propietario" class="bottom-nav">
@@ -445,115 +382,7 @@
     </button>
 </nav>
 </div>
-    <div id="vista-mvz" class="vista p-4 sm:p-8 flex-col items-start app-content">
-      <header class="w-full flex flex-wrap justify-between items-center mb-8 gap-4">
-    <div>
-        <h1 class="text-4xl">Panel de MVZ</h1>
-        <p class="text-gray-400">Bienvenido, <span id="nombre-mvz" class="font-semibold text-white"></span></p>
-    </div>
-    <button id="btn-logout-mvz" class="btn btn-logout">Salir</button>
-</header>
-      <div id="mvz-seleccion-modo" class="w-full flex justify-center items-center" style="min-height: 60vh;">
-        <div class="glass-panel text-center w-full max-w-lg">
-          <h2 class="text-2xl mb-4">Selecciona tu modo de trabajo</h2>
-          <p class="text-gray-400 mb-8">Puedes acceder a un rancho o trabajar de forma independiente.</p>
-          <div class="flex flex-col md:flex-row gap-6 justify-center">
-            <button id="btn-modo-rancho" class="btn flex-1">Acceder a un Rancho</button>
-            <button id="btn-modo-independiente" class="btn flex-1">Trabajo Independiente</button>
-          </div>
-        </div>
-      </div>
-      
-      <div id="mvz-acceso-rancho" class="hidden main-container">
-        <div class="glass-panel text-center w-full max-w-md">
-          <h2 class="text-2xl mb-4">Acceder a Rancho</h2>
-          <p class="text-gray-400 mb-8">Ingresa el código de 6 dígitos del rancho.</p>
-          <form id="form-acceso-rancho" class="space-y-4">
-            <input type="text" id="codigo-rancho" placeholder="XXXXXX" class="w-full text-center tracking-widest text-lg uppercase">
-            <button type="submit" class="w-full btn">Entrar</button>
-          </form>
-          <p id="rancho-mensaje" class="text-red-400 mt-4 text-sm h-4"></p>
-          <p class="mt-6 text-sm"><span id="btn-volver-seleccion1" class="nav-link">Volver a la selección</span></p>
-        </div>
-      </div>
-
-      <div id="mvz-herramientas" class="hidden w-full">
-        <div class="info-box mb-8 flex flex-wrap justify-between items-center gap-4">
-    <div class="flex items-center gap-4">
-        <img id="logo-rancho-mvz-panel" src="" alt="Logo del Rancho" class="w-12 h-12 rounded-full object-cover hidden border-2 border-cyan-400/50 p-1">
-        <div>
-            <p>Modo de Trabajo:</p>
-            <h3 id="modo-trabajo-activo" class="text-2xl -mt-1"></h3>
-        </div>
-    </div>
-    <button id="btn-volver-seleccion2" class="text-sm nav-link">Cambiar de modo</button>
-</div>
-
-        <div id="panel-rancho-independiente" class="hidden glass-panel mb-8">
-          <div id="form-fijar-rancho">
-            <label for="nombre-rancho-independiente" class="block text-sm font-medium text-gray-300 mb-2">Nombre del Rancho (para este lote):</label>
-            <div class="flex gap-4 items-center">
-              <input type="text" id="nombre-rancho-independiente" placeholder="Ej: Rancho Montana" class="flex-1">
-              <button id="btn-fijar-rancho" type="button" class="btn whitespace-nowrap">Fijar Rancho</button>
-            </div>
-          </div>
-          <div id="rancho-fijado-info" class="hidden">
-            <p>Trabajando para: <strong id="nombre-rancho-fijado" class="text-white text-lg"></strong>
-              <button id="btn-cambiar-rancho-fijado" class="text-sm nav-link ml-4">Cambiar</button>
-            </p>
-          </div>
-        </div>
-        
-        <div class="w-full grid grid-cols-1 lg:grid-cols-5 gap-8">
-    <div class="lg:col-span-3 glass-panel">
-        <div class="flex justify-between items-center mb-4">
-            <h2 class="text-2xl">Registrar Actividad Clínica</h2>
-            <button id="btn-abrir-modal-vaca-mvz" class="nav-link text-sm hidden">+ Agregar Vaca</button>
-        </div>
-        
-        <form id="form-agregar-actividad" class="space-y-4">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-sm mb-1">Arete / SINIIGA</label>
-                    <input type="text" id="actividad-arete" placeholder="N° de la vaca" required list="lista-aretes-autocompletar" autocomplete="off">
-                    <datalist id="lista-aretes-autocompletar"></datalist>
-                </div>
-                <div>
-                    <label class="block text-sm mb-1">Raza</label>
-                    <input type="text" id="actividad-raza" placeholder="Empieza a escribir..." autocomplete="off" class="w-full">
-                </div>
-            </div>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-sm mb-1">Tipo de Actividad</label>
-                    <select id="actividad-tipo" required>
-                        <option value="" selected>Seleccione un procedimiento...</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="actividad-lote" class="block text-sm mb-1">Número de Lote</label>
-                    <select id="actividad-lote"></select>
-                </div>
-            </div>
-
-            <div id="campos-dinamicos-actividad" class="space-y-4 pt-4 border-t border-white/10"></div>
-            
-            <button type="submit" class="w-full btn">Agregar Vaca al Lote</button>
-            <p id="actividad-mensaje" class="text-center mt-2 text-sm h-4"></p>
-        </form>
-    </div>
-
-    <div class="lg:col-span-2 glass-panel">
-        <h2 class="text-2xl mb-4">Lote de Trabajo Actual</h2>
-        <div id="lote-actual-lista" class="space-y-2 max-h-80 overflow-y-auto pr-2">
-            <p class="text-gray-400">Aún no has agregado vacas a este lote.</p>
-        </div>
-        <button id="btn-finalizar-lote" class="w-full btn mt-6 hidden">Finalizar Lote y Generar PDF</button>
-    </div>
-</div>
-      </div>
-    </div>
+    
 
     <div id="modal-agregar-vaca-mvz" class="fixed z-50 inset-0 overflow-y-auto hidden">
       <div class="flex items-center justify-center min-h-screen p-4">
@@ -596,32 +425,50 @@
         </div>
       </div>
     </div>
-    <div id="vista-estadisticas" class="vista p-4 sm:p-8 flex-col items-start app-content">
-    
-    <header class="w-full flex items-center mb-6">
-        <button id="btn-estadisticas-volver" class="nav-link text-lg mr-4">&larr; Volver</button>
-        <h1 class="text-3xl">Estadísticas del Rancho</h1>
-    </header>
-
-    <div id="estadisticas-tabs-lotes" class="w-full flex items-center gap-2 mb-6 border-b border-white/10">
-        <p class="text-gray-400 p-4">Cargando lotes...</p>
-    </div>
-
-    <div id="estadisticas-contenido" class="w-full">
-        <h2 id="estadisticas-titulo-lote" class="text-2xl mb-2 text-cyan-400"></h2>
-        <p class="text-sm text-gray-400 mb-8">Estado Reproductivo</p>
-        
-        <div class="w-full grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-            
-            <div class="relative w-full max-w-sm mx-auto h-72 md:h-96">
-                <canvas id="grafico-estado-reproductivo"></canvas>
+    <template id="template-mis-vacas">
+    <div class="p-4 sm:p-8">
+        <header class="w-full flex flex-wrap justify-between items-center mb-8 gap-4">
+            <div>
+                <h1 class="text-4xl">Mis Vacas</h1>
+                <p class="text-gray-400">Administra y consulta tu ganado.</p>
             </div>
-            
-            <div id="estadisticas-resumen-texto" class="text-lg space-y-3">
+            <button id="btn-abrir-modal-vaca" class="btn">+ Agregar Vaca</button>
+        </header>
+        <div class="mb-6">
+            <input type="text" id="vaca-buscar" placeholder="Buscar por nombre o arete...">
+        </div>
+        <div id="lista-vacas" class="space-y-4">
+            </div>
+    </div>
+</template>
+
+<template id="template-actividades-mvz">
+    <div class="p-4 sm:p-8">
+        <header class="w-full mb-8">
+            <h1 class="text-4xl">Registro de Actividades</h1>
+            <p class="text-gray-400">Selecciona un modo de trabajo para comenzar.</p>
+        </header>
+        </div>
+</template>
+
+<template id="template-estadisticas">
+    <div class="p-4 sm:p-8">
+        <header class="w-full flex items-center mb-6">
+            <h1 class="text-3xl">Estadísticas del Rancho</h1>
+        </header>
+        <div id="estadisticas-tabs-lotes" class="w-full flex items-center gap-2 mb-6 border-b border-white/10"></div>
+        <div id="estadisticas-contenido" class="w-full">
+            <h2 id="estadisticas-titulo-lote" class="text-2xl mb-2 text-cyan-400"></h2>
+            <p class="text-sm text-gray-400 mb-8">Estado Reproductivo</p>
+            <div class="w-full grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                <div class="relative w-full max-w-sm mx-auto h-72 md:h-96">
+                    <canvas id="grafico-estado-reproductivo"></canvas>
                 </div>
+                <div id="estadisticas-resumen-texto" class="text-lg space-y-3"></div>
+            </div>
         </div>
     </div>
-    </div>
+</template>
   </div>
 <div id="modal-historial" class="fixed z-50 inset-0 overflow-y-auto hidden">
   <div class="flex items-center justify-center min-h-screen p-4">
