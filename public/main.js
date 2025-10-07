@@ -330,14 +330,29 @@ if (currentUser.rol === 'propietario') {
     // Aquí iría la lógica para cargar los números del resumen (total de vacas, etc.)
     // Por ahora, se quedarán con "--"
 
+// Dentro de la función iniciarSesion...
+
 } else { // MVZ
-    // La lógica del MVZ se queda igual por ahora
-    document.getElementById('nombre-mvz').textContent = currentUser.nombre;
-    document.getElementById('mvz-seleccion-modo').style.display = 'flex';
-    document.getElementById('mvz-acceso-rancho').classList.add('hidden');
-    document.getElementById('mvz-herramientas').classList.add('hidden');
-    cambiarVista('mvz');
-}   
+    // --- ESTA ES LA PARTE NUEVA PARA EL MVZ ---
+    // Ocultamos las vistas viejas y mostramos el contenedor principal de la app
+    Object.values(vistas).forEach(v => v.classList.remove('activa'));
+    document.getElementById('app-container').classList.remove('hidden');
+    document.getElementById('nav-propietario').classList.add('hidden');
+    document.getElementById('nav-mvz').classList.remove('hidden');
+
+    // Mostramos el contenido específico del dashboard del MVZ
+    document.getElementById('contenido-inicio-propietario').classList.add('hidden');
+    document.getElementById('contenido-inicio-mvz').classList.remove('hidden');
+
+
+    // Llenamos los datos del nuevo dashboard del MVZ
+    document.getElementById('dash-nombre-mvz').textContent = currentUser.nombre;
+    const hoy = new Date();
+    document.getElementById('dash-fecha-actual-mvz').textContent = hoy.toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    
+    // Aquí iría la lógica para cargar los números del resumen (visitas, alertas, etc.)
+    // Por ahora, se quedarán con "--"
+}
     };
 
     // --- Lógica de Propietario ---
