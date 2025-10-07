@@ -7,82 +7,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const numParticles = 70;
         const particleSize = 2;
         const connectionDistance = 150;
-
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            particles = []; // Reiniciar partículas al cambiar tamaño
-            initParticles();
-        }
-
+        function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; particles = []; initParticles(); }
         class Particle {
-            constructor(x, y) {
-                this.x = x || Math.random() * canvas.width;
-                this.y = y || Math.random() * canvas.height;
-                this.speedX = (Math.random() - 0.5) * 0.5; // Más lento
-                this.speedY = (Math.random() - 0.5) * 0.5; // Más lento
-            }
-
-            update() {
-                this.x += this.speedX;
-                this.y += this.speedY;
-
-                // Rebotar en los bordes
-                if (this.x < 0 || this.x > canvas.width) this.speedX *= -1;
-                if (this.y < 0 || this.y > canvas.height) this.speedY *= -1;
-            }
-
-            draw() {
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, particleSize, 0, Math.PI * 2);
-                ctx.fill();
-            }
+            constructor(x, y) { this.x = x || Math.random() * canvas.width; this.y = y || Math.random() * canvas.height; this.speedX = (Math.random() - 0.5) * 0.5; this.speedY = (Math.random() - 0.5) * 0.5; }
+            update() { this.x += this.speedX; this.y += this.speedY; if (this.x < 0 || this.x > canvas.width) this.speedX *= -1; if (this.y < 0 || this.y > canvas.height) this.speedY *= -1; }
+            draw() { ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'; ctx.beginPath(); ctx.arc(this.x, this.y, particleSize, 0, Math.PI * 2); ctx.fill(); }
         }
-
-        function initParticles() {
-            for (let i = 0; i < numParticles; i++) {
-                particles.push(new Particle());
-            }
-        }
-
-        function connectParticles() {
-            for (let i = 0; i < particles.length; i++) {
-                // empezar en i+1 para no conectar la partícula consigo misma ni repetir pares
-                for (let j = i + 1; j < particles.length; j++) {
-                    const dx = particles[i].x - particles[j].x;
-                    const dy = particles[i].y - particles[j].y;
-                    const distance = Math.sqrt(dx * dx + dy * dy);
-
-                    if (distance < connectionDistance) {
-                        ctx.strokeStyle = `rgba(255, 255, 255, ${1 - (distance / connectionDistance) * 0.8})`;
-                        ctx.lineWidth = 0.5;
-                        ctx.beginPath();
-                        ctx.moveTo(particles[i].x, particles[i].y);
-                        ctx.lineTo(particles[j].x, particles[j].y);
-                        ctx.stroke();
-                    }
-                }
-            }
-        }
-
-        function animate() {
-            requestAnimationFrame(animate);
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            for (let i = 0; i < particles.length; i++) {
-                particles[i].update();
-                particles[i].draw();
-            }
-            connectParticles();
-        }
-
+        function initParticles() { for (let i = 0; i < numParticles; i++) particles.push(new Particle()); }
+        function connectParticles() { for (let i = 0; i < particles.length; i++) for (let j = i; j < particles.length; j++) { const dx = particles[i].x - particles[j].x; const dy = particles[i].y - particles[j].y; const distance = Math.sqrt(dx * dx + dy * dy); if (distance < connectionDistance) { ctx.strokeStyle = `rgba(255, 255, 255, ${1 - (distance / connectionDistance) * 0.8})`; ctx.lineWidth = 0.5; ctx.beginPath(); ctx.moveTo(particles[i].x, particles[i].y); ctx.lineTo(particles[j].x, particles[j].y); ctx.stroke(); } } }
+        function animate() { requestAnimationFrame(animate); ctx.clearRect(0, 0, canvas.width, canvas.height); for (let i = 0; i < particles.length; i++) { particles[i].update(); particles[i].draw(); } connectParticles(); }
         window.addEventListener('resize', resizeCanvas);
-        resizeCanvas(); // Inicializar el tamaño del canvas y las partículas
-        animate(); // Iniciar la animación
+        resizeCanvas();
+        animate();
     }
-    // --- FIN LÓGICA DEL FONDO ANIMADO ---
-    // ... el resto de tu código de DOMContentLoaded sigue aquí ...
     // =================================================================
     // ===== 1. ESTADO GLOBAL Y CONFIGURACIÓN ==========================
     // =================================================================
@@ -101,17 +38,6 @@ document.addEventListener('DOMContentLoaded', () => {
         mvz: document.getElementById('vista-mvz'),
         estadisticas: document.getElementById('vista-estadisticas'), // <-- AGREGA ESTA LÍNEA
     };
-
-    const modalVacaMvz = document.getElementById('modal-agregar-vaca-mvz');
-    const btnAbrirModalVacaMvz = document.getElementById('btn-abrir-modal-vaca-mvz');
-    const btnCerrarModalVacaMvz = document.getElementById('btn-cerrar-modal-vaca-mvz');
-    const modalBgVacaMvz = document.getElementById('modal-bg-vaca-mvz');
-    // Referencias para el nuevo modal de confirmación
-    const modalConfirmacion = document.getElementById('modal-confirmacion-eliminar');
-    const btnCancelarEliminar = document.getElementById('btn-cancelar-eliminar');
-    const btnConfirmarEliminar = document.getElementById('btn-confirmar-eliminar');
-    const nombreVacaEliminar = document.getElementById('nombre-vaca-eliminar');
-    const actividadTipoSelect = document.getElementById('actividad-tipo');
 
     const PROCEDIMIENTOS = {
         palpacion: {
@@ -306,7 +232,7 @@ document.addEventListener('DOMContentLoaded', () => {
             sel.appendChild(opt);
         }
     }
-
+     
     // =================================================================
     // ===== NUEVO SISTEMA DE NAVEGACIÓN Y SESIÓN (VERSIÓN MEJORADA) ====
     // =================================================================
@@ -315,36 +241,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const authContainer = document.querySelector('.auth-container');
     const appContainer = document.getElementById('app-container');
 
-    // Función para cargar los datos del resumen en el dashboard del propietario
-    async function cargarDatosDashboard() {
-        if (!currentUser || currentUser.rol !== 'propietario') return;
-        try {
-            const ranchoId = currentUser.ranchos?.[0]?.id;
-            if (!ranchoId) return;
-            const res = await fetch(`/api/rancho/${ranchoId}/estadisticas`);
-            if (!res.ok) throw new Error('No se pudieron cargar las estadísticas del dashboard.');
-            const stats = await res.json();
-
-            let totalVacas = 0;
-            let totalGestantes = 0;
-
-            for (const lote in stats) {
-                totalVacas += stats[lote].totalVacas || 0;
-                totalGestantes += (stats[lote].estados && stats[lote].estados.Gestante) || 0;
-            }
-
-            const elTotal = document.getElementById('resumen-total-vacas');
-            const elGestantes = document.getElementById('resumen-vacas-gestantes');
-            const elAlertas = document.getElementById('resumen-alertas');
-            if (elTotal) elTotal.textContent = totalVacas;
-            if (elGestantes) elGestantes.textContent = totalGestantes;
-            if (elAlertas) elAlertas.textContent = 0; // Placeholder
-        } catch (error) {
-            console.error("Error al cargar datos del dashboard:", error);
-        }
-    }
-
-    // La función principal que se encarga de cambiar el contenido
     function navigateTo(viewId) {
         if (!appContent) { console.error('Falta #app-content en el HTML'); return; }
         appContent.innerHTML = '';
@@ -357,7 +253,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const clone = template.content.cloneNode(true);
         appContent.appendChild(clone);
 
-        // --- Lógica a ejecutar DESPUÉS de cargar la vista ---
         if (viewId === 'inicio-propietario') {
             const dashNombre = document.getElementById('dash-nombre-propietario');
             if (dashNombre) dashNombre.textContent = currentUser?.nombre || '';
@@ -388,6 +283,150 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+     const iniciarSesion = () => {
+        if (!currentUser) return;
+        if (authContainer) authContainer.classList.add('hidden');
+        if (appContainer) appContainer.classList.remove('hidden');
+
+        if (currentUser.rol === 'propietario') {
+            document.getElementById('nav-propietario').classList.remove('hidden');
+            document.getElementById('nav-mvz').classList.add('hidden');
+            navigateTo('inicio-propietario');
+        } else {
+            document.getElementById('nav-propietario').classList.add('hidden');
+            document.getElementById('nav-mvz').classList.remove('hidden');
+            navigateTo('inicio-mvz');
+        }
+        setupNavigation();
+    };
+
+    // =================================================================
+    // ===== ASIGNACIÓN DE EVENTOS INICIALES ===========================
+    // =================================================================
+    
+    // Listeners para Login y Registro
+    const linkARegistro = document.getElementById('link-a-registro');
+    if (linkARegistro) linkARegistro.addEventListener('click', () => cambiarVista('registro'));
+
+    const linkALogin = document.getElementById('link-a-login');
+    if (linkALogin) linkALogin.addEventListener('click', () => cambiarVista('login'));
+
+    const formLogin = document.getElementById('form-login');
+    if (formLogin) formLogin.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('login-email').value;
+        const password = document.getElementById('login-password').value;
+        const rememberMe = document.getElementById('remember-me').checked;
+        try {
+            const res = await fetch(`${API_URL}/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+            if (!res.ok) throw new Error((await res.json()).message);
+            const respuesta = await res.json();
+            currentUser = respuesta.user;
+            sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
+            if (rememberMe) { localStorage.setItem('rememberedEmail', email); } 
+            else { localStorage.removeItem('rememberedEmail'); }
+            iniciarSesion();
+        } catch (err) {
+            mostrarMensaje('login-mensaje', err.message);
+        }
+    });
+
+    const formRegistro = document.getElementById('form-registro');
+    if (formRegistro) formRegistro.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        try {
+            const form = e.target;
+            const formData = new FormData(form);
+            const res = await fetch(`${API_URL}/register`, { method: 'POST', body: formData });
+            if (!res.ok) throw new Error((await res.json()).message);
+            mostrarMensaje('registro-mensaje', '¡Registro exitoso! Ahora puedes iniciar sesión.', false);
+            form.reset();
+            cambiarVista('login');
+        } catch (err) {
+            mostrarMensaje('registro-mensaje', err.message);
+        }
+    });
+
+    // --- Lógica para "Recuérdame" (Cargar email) ---
+const savedEmail = localStorage.getItem('rememberedEmail');
+if (savedEmail) {
+    const loginEmailEl = document.getElementById('login-email');
+    const rememberEl = document.getElementById('remember-me');
+    if (loginEmailEl) loginEmailEl.value = savedEmail;
+    if (rememberEl) rememberEl.checked = true;
+}
+
+// --- Restauración de Sesión ---
+const savedUser = sessionStorage.getItem('currentUser');
+if (savedUser) {
+    try {
+        currentUser = JSON.parse(savedUser);
+    } catch { currentUser = null; }
+    const savedRancho = sessionStorage.getItem('currentRancho');
+    if (savedRancho) {
+        try { currentRancho = JSON.parse(savedRancho); } catch { currentRancho = null; }
+    }
+    iniciarSesion();
+
+    if (currentUser?.rol === 'mvz' && currentRancho) {
+        const mvzSel = document.getElementById('mvz-seleccion-modo');
+        const mvzHerr = document.getElementById('mvz-herramientas');
+        const modoEl = document.getElementById('modo-trabajo-activo');
+        if (mvzSel) mvzSel.style.display = 'none';
+        if (mvzHerr) mvzHerr.classList.remove('hidden');
+        if (modoEl) modoEl.textContent = `En Rancho: ${currentRancho.nombre}`;
+        if (btnAbrirModalVacaMvz) btnAbrirModalVacaMvz.classList.remove('hidden');
+        cargarVacasParaMVZ();
+
+        const logoImgMvz = document.getElementById('logo-rancho-mvz-panel');
+        if (logoImgMvz && currentRancho?.logo_url) {
+            logoImgMvz.src = currentRancho.logo_url;
+            logoImgMvz.classList.remove('hidden');
+        }
+    }
+} else {
+    cambiarVista('login');
+}
+
+    const modalVacaMvz = document.getElementById('modal-agregar-vaca-mvz');
+    const btnAbrirModalVacaMvz = document.getElementById('btn-abrir-modal-vaca-mvz');
+    const btnCerrarModalVacaMvz = document.getElementById('btn-cerrar-modal-vaca-mvz');
+    const modalBgVacaMvz = document.getElementById('modal-bg-vaca-mvz');
+    // Referencias para el nuevo modal de confirmación
+    const modalConfirmacion = document.getElementById('modal-confirmacion-eliminar');
+    const btnCancelarEliminar = document.getElementById('btn-cancelar-eliminar');
+    const btnConfirmarEliminar = document.getElementById('btn-confirmar-eliminar');
+    const nombreVacaEliminar = document.getElementById('nombre-vaca-eliminar');
+    const actividadTipoSelect = document.getElementById('actividad-tipo');
+     
+    // Función para cargar los datos del resumen en el dashboard del propietario
+    async function cargarDatosDashboard() {
+        if (!currentUser || currentUser.rol !== 'propietario') return;
+        try {
+            const ranchoId = currentUser.ranchos?.[0]?.id;
+            if (!ranchoId) return;
+            const res = await fetch(`/api/rancho/${ranchoId}/estadisticas`);
+            if (!res.ok) throw new Error('No se pudieron cargar las estadísticas del dashboard.');
+            const stats = await res.json();
+
+            let totalVacas = 0;
+            let totalGestantes = 0;
+
+            for (const lote in stats) {
+                totalVacas += stats[lote].totalVacas || 0;
+                totalGestantes += (stats[lote].estados && stats[lote].estados.Gestante) || 0;
+            }
+
+            const elTotal = document.getElementById('resumen-total-vacas');
+            const elGestantes = document.getElementById('resumen-vacas-gestantes');
+            const elAlertas = document.getElementById('resumen-alertas');
+            if (elTotal) elTotal.textContent = totalVacas;
+            if (elGestantes) elGestantes.textContent = totalGestantes;
+            if (elAlertas) elAlertas.textContent = 0; // Placeholder
+        } catch (error) {
+            console.error("Error al cargar datos del dashboard:", error);
+        }
+    }
     // Función que configura los listeners de los botones de navegación
     function setupNavigation() {
         document.querySelectorAll('.nav-button').forEach(button => {
@@ -402,29 +441,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // NUEVA FUNCIÓN iniciarSesion (más simple)
-    const iniciarSesion = () => {
-        if (!currentUser) return;
-
-        if (authContainer) authContainer.classList.add('hidden');
-        if (appContainer) appContainer.classList.remove('hidden');
-
-        if (currentUser.rol === 'propietario') {
-            const navProp = document.getElementById('nav-propietario');
-            const navMvz = document.getElementById('nav-mvz');
-            if (navProp) navProp.classList.remove('hidden');
-            if (navMvz) navMvz.classList.add('hidden');
-            navigateTo('inicio-propietario');
-        } else { // MVZ
-            const navProp = document.getElementById('nav-propietario');
-            const navMvz = document.getElementById('nav-mvz');
-            if (navProp) navProp.classList.add('hidden');
-            if (navMvz) navMvz.classList.remove('hidden');
-            navigateTo('inicio-mvz');
-        }
-
-        setupNavigation();
-    };
+    
 
     // --- Lógica de Propietario ---
     // Función que inicializa los listeners para la vista "Mis Vacas"
@@ -628,8 +645,6 @@ document.addEventListener('DOMContentLoaded', () => {
             renderLoteActual();
         },
     };
-}); // fin DOMContentLoaded
-
 
 // =================================================================
 // ===== 5. ASIGNACIÓN DE EVENTOS (EVENT LISTENERS) ================
@@ -1072,48 +1087,6 @@ if (actividadTipoSelect) {
     });
 }
 
-// ===== INICIO DE LA APP Y RESTAURACIÓN DE SESIÓN ==============
-
-// --- Lógica para "Recuérdame" (Cargar email) ---
-const savedEmail = localStorage.getItem('rememberedEmail');
-if (savedEmail) {
-    const loginEmailEl = document.getElementById('login-email');
-    const rememberEl = document.getElementById('remember-me');
-    if (loginEmailEl) loginEmailEl.value = savedEmail;
-    if (rememberEl) rememberEl.checked = true;
-}
-
-// --- Restauración de Sesión ---
-const savedUser = sessionStorage.getItem('currentUser');
-if (savedUser) {
-    try {
-        currentUser = JSON.parse(savedUser);
-    } catch { currentUser = null; }
-    const savedRancho = sessionStorage.getItem('currentRancho');
-    if (savedRancho) {
-        try { currentRancho = JSON.parse(savedRancho); } catch { currentRancho = null; }
-    }
-    iniciarSesion();
-
-    if (currentUser?.rol === 'mvz' && currentRancho) {
-        const mvzSel = document.getElementById('mvz-seleccion-modo');
-        const mvzHerr = document.getElementById('mvz-herramientas');
-        const modoEl = document.getElementById('modo-trabajo-activo');
-        if (mvzSel) mvzSel.style.display = 'none';
-        if (mvzHerr) mvzHerr.classList.remove('hidden');
-        if (modoEl) modoEl.textContent = `En Rancho: ${currentRancho.nombre}`;
-        if (btnAbrirModalVacaMvz) btnAbrirModalVacaMvz.classList.remove('hidden');
-        cargarVacasParaMVZ();
-
-        const logoImgMvz = document.getElementById('logo-rancho-mvz-panel');
-        if (logoImgMvz && currentRancho?.logo_url) {
-            logoImgMvz.src = currentRancho.logo_url;
-            logoImgMvz.classList.remove('hidden');
-        }
-    }
-} else {
-    cambiarVista('login');
-}
 
 // =================================================================
 // ===== LÓGICA DE ESTADÍSTICAS ====================================
@@ -1228,4 +1201,5 @@ async function mostrarEstadisticas() {
 
 btnEstadisticasVolver?.addEventListener('click', () => {
     cambiarVista('propietario');
+});
 });
