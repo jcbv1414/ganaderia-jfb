@@ -783,7 +783,6 @@ const nombreVacaEliminar = document.getElementById('nombre-vaca-eliminar');
         mostrarMensaje('actividad-mensaje', `Vaca ${areteVaca} agregada al lote ${loteNumero}.`, false);
         document.getElementById('actividad-arete').value = '';
         document.getElementById('actividad-raza').value = '';
-        document.getElementById('campos-dinamicos-actividad').innerHTML = '';
         document.getElementById('actividad-arete').focus();
     });
     
