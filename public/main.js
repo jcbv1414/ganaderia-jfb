@@ -94,11 +94,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const API_URL = '/api';
 
     const vistas = {
-        login: document.getElementById('vista-login'),
-        registro: document.getElementById('vista-registro'),
-        propietario: document.getElementById('vista-propietario'),
-        mvz: document.getElementById('vista-mvz'),
-    };
+    login: document.getElementById('vista-login'),
+    registro: document.getElementById('vista-registro'),
+    propietario: document.getElementById('vista-propietario'),
+    mvz: document.getElementById('vista-mvz'),
+    estadisticas: document.getElementById('vista-estadisticas'), // <-- AGREGA ESTA LÍNEA
+};
 
     const modalVacaMvz = document.getElementById('modal-agregar-vaca-mvz');
     const btnAbrirModalVacaMvz = document.getElementById('btn-abrir-modal-vaca-mvz');
