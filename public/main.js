@@ -1,17 +1,17 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-    // =================================================================
-    // ===== 2. ESTADO GLOBAL Y CONFIGURACIÓN ==========================
-    // =================================================================
+    // ESTADO GLOBAL Y CONFIGURACIÓN
     let currentUser = null;
     let currentRancho = null;
     let loteActual = []; 
     let vacasIndex = new Map();
+    let datosEstadisticasCompletos = null; // Para guardar los datos de estadísticas
+    let miGrafico = null; // Para poder destruir la gráfica anterior
 
     const API_URL = '/api';
     const appContent = document.getElementById('app-content');
     const navContainer = document.getElementById('nav-container');
-
+    
     const PROCEDIMIENTOS = {
         palpacion: {
             titulo: "Palpación",
@@ -81,6 +81,10 @@ document.addEventListener('DOMContentLoaded', () => {
     function navigateTo(viewId) {
         if (!appContent) { console.error('Elemento #app-content no encontrado.'); return; }
         
+        if (viewId === 'estadisticas') {
+            renderizarVistaEstadisticas()
+        }
+
         const fab = document.getElementById('fab-container');
         if (fab) fab.classList.add('hidden');
         document.body.className = 'bg-brand-bg'; // Estilo por defecto
@@ -139,7 +143,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 navigateTo(button.dataset.vista);
             });
         });
+
+         window.navigateTo = navigateTo;
     }
+
+    
+
 
     // =================================================================
     // ===== 5. MANEJADORES DE EVENTOS (HANDLERS) COMPLETOS ============
@@ -237,6 +246,118 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // --- NUEVA LÓGICA PARA LA VISTA DE ESTADÍSTICAS ---
+    async function renderizarVistaEstadisticas() {
+        try {
+            const ranchoId = currentUser?.ranchos?.[0]?.id;
+            if (!ranchoId) throw new Error('No se encontró rancho.');
+            
+            const res = await fetch(`${API_URL}/rancho/${ranchoId}/estadisticas`);
+            if (!res.ok) throw new Error('No se pudieron cargar las estadísticas.');
+            
+            datosEstadisticasCompletos = await res.json();
+            
+            const tabsContainer = document.getElementById('tabs-lotes-container');
+            const lotes = Object.keys(datosEstadisticasCompletos);
+
+            if (!tabsContainer) return;
+            tabsContainer.innerHTML = ''; // Limpiar tabs anteriores
+
+            if (lotes.length === 0) {
+                document.getElementById('contenido-estadisticas').innerHTML = '<p class="text-center text-gray-500">No hay datos suficientes para mostrar estadísticas.</p>';
+                return;
+            }
+
+            // Crear las pestañas para cada lote
+            lotes.forEach(lote => {
+                const tabButton = document.createElement('button');
+                tabButton.className = 'py-2 px-4 text-gray-500 font-semibold border-b-2 border-transparent';
+                tabButton.textContent = lote === 'Sin Lote' ? 'Sin Asignar' : `Lote ${lote}`;
+                tabButton.dataset.loteId = lote;
+                tabsContainer.appendChild(tabButton);
+            });
+
+            // Añadir evento de clic a las pestañas
+            tabsContainer.querySelectorAll('button').forEach(tab => {
+                tab.addEventListener('click', (e) => {
+                    tabsContainer.querySelector('.active-tab')?.classList.remove('active-tab', 'text-brand-green', 'border-brand-green');
+                    e.currentTarget.classList.add('active-tab', 'text-brand-green', 'border-brand-green');
+                    renderizarGraficoLote(e.currentTarget.dataset.loteId);
+                });
+            });
+
+            // Simular clic en la primera pestaña para mostrarla por defecto
+            if (tabsContainer.firstChild) {
+                tabsContainer.firstChild.click();
+            }
+
+        } catch (error) {
+            console.error('Error al renderizar estadísticas:', error);
+            document.getElementById('contenido-estadisticas').innerHTML = `<p class="text-center text-red-500">${error.message}</p>`;
+        }
+    }
+
+    function renderizarGraficoLote(loteId) {
+        const datosLote = datosEstadisticasCompletos[loteId];
+        if (!datosLote) return;
+
+        // Actualizar títulos
+        document.getElementById('stats-titulo-lote').textContent = `Lote ${loteId}: Vacas en Ordeño`; // Placeholder, se puede ajustar
+        document.getElementById('stats-fecha-actualizacion').textContent = `Última Actualización: ${new Date().toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })}`;
+
+        // Preparar datos para la gráfica
+        const ctx = document.getElementById('grafico-reproductivo').getContext('2d');
+        const estados = datosLote.estados || {};
+        
+        const data = {
+            labels: ['Gestantes', 'Estáticas', 'Ciclando', 'Secas'], // "Secas" es un ejemplo, puedes ajustarlo
+            datasets: [{
+                data: [estados.Gestante || 0, estados.Estatica || 0, estados.Ciclando || 0, 2], // '2' es un dato de ejemplo para 'Secas'
+                backgroundColor: ['#2dd4bf', '#facc15', '#fb923c', '#9ca3af'], // Verde azulado, Amarillo, Naranja, Gris
+                borderColor: '#ffffff',
+                borderWidth: 4,
+                hoverOffset: 8
+            }]
+        };
+
+        // Destruir la gráfica anterior si existe
+        if (miGrafico) {
+            miGrafico.destroy();
+        }
+
+        // Crear la nueva gráfica de dona
+        miGrafico = new Chart(ctx, {
+            type: 'doughnut',
+            data: data,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '70%',
+                plugins: {
+                    legend: {
+                        display: false // Ocultamos la leyenda original
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `${context.label}: ${context.raw} vacas`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Actualizar el resumen en texto
+        const resumenContainer = document.getElementById('stats-resumen-texto');
+        resumenContainer.innerHTML = `
+            <p><strong class="font-bold text-gray-800">Total de Vacas:</strong> ${datosLote.totalVacas}</p>
+            <p><strong class="font-bold text-gray-800">Gestantes:</strong> ${estados.Gestante || 0} vacas</p>
+            <p><strong class="font-bold text-gray-800">Estáticas:</strong> ${estados.Estatica || 0} vacas</p>
+            <p><strong class="font-bold text-gray-800">Ciclando:</strong> ${estados.Ciclando || 0} vacas</p>
+            <p><strong class="font-bold text-gray-800">Raza:</strong> ${Object.keys(datosLote.razas)[0] || 'N/A'}</p>
+        `;
+    }
     // --- LÓGICA DEL MVZ ---
     function initMvzListeners() {
         document.getElementById('btn-validar-rancho').addEventListener('click', handleValidarRancho);
