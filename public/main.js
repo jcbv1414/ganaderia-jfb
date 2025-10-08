@@ -1,28 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // =================================================================
-    // ===== 1. LÓGICA DEL FONDO ANIMADO ===============================
-    // =================================================================
-    const canvas = document.getElementById('animated-background');
-    if (canvas) {
-        const ctx = canvas.getContext('2d');
-        let particles = [];
-        const numParticles = 70;
-        const particleSize = 2;
-        const connectionDistance = 150;
-        class Particle {
-            constructor(x, y) { this.x = x || Math.random() * canvas.width; this.y = y || Math.random() * canvas.height; this.speedX = (Math.random() - 0.5) * 0.5; this.speedY = (Math.random() - 0.5) * 0.5; }
-            update() { this.x += this.speedX; this.y += this.speedY; if (this.x < 0 || this.x > canvas.width) this.speedX *= -1; if (this.y < 0 || this.y > canvas.height) this.speedY *= -1; }
-            draw() { ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'; ctx.beginPath(); ctx.arc(this.x, this.y, particleSize, 0, Math.PI * 2); ctx.fill(); }
-        }
-        const initParticles = () => { for (let i = 0; i < numParticles; i++) particles.push(new Particle()); };
-        const connectParticles = () => { for (let i = 0; i < particles.length; i++) for (let j = i; j < particles.length; j++) { const dx = particles[i].x - particles[j].x; const dy = particles[i].y - particles[j].y; const distance = Math.sqrt(dx * dx + dy * dy); if (distance < connectionDistance) { ctx.strokeStyle = `rgba(255, 255, 255, ${1 - (distance / connectionDistance) * 0.8})`; ctx.lineWidth = 0.5; ctx.beginPath(); ctx.moveTo(particles[i].x, particles[i].y); ctx.lineTo(particles[j].x, particles[j].y); ctx.stroke(); } } };
-        const animate = () => { requestAnimationFrame(animate); ctx.clearRect(0, 0, canvas.width, canvas.height); particles.forEach(p => { p.update(); p.draw(); }); connectParticles(); };
-        const resizeCanvas = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; particles = []; initParticles(); };
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
-        animate();
-    }
-    // =================================================================
+        // =================================================================
     // ===== 2. ESTADO GLOBAL Y CONFIGURACIÓN ==========================
     // =================================================================
     let currentUser = null;
@@ -184,9 +161,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // =================================================================
     function navigateTo(viewId) {
         if (!appContent) { console.error('Elemento #app-content no encontrado.'); return; }
+        
+         // Ocultar el botón flotante por defecto, se mostrará solo si es necesario
+        const fab = document.getElementById('fab-container');
+        if (fab) fab.classList.add('hidden');
+
         appContent.innerHTML = '';
         const template = document.getElementById(`template-${viewId}`);
-        if (!template) { console.error(`No se encontró la plantilla para la vista: ${viewId}`); return; }
+        if (!template) {
+            appContent.innerHTML = `<p class="text-center p-8 text-red-500">Error: No se encontró la plantilla para la vista: ${viewId}</p>`;
+            return;
+        }
         appContent.appendChild(template.content.cloneNode(true));
 
         if (viewId === 'login') {
@@ -207,8 +192,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
         } else if (viewId === 'inicio-propietario') {
-            document.getElementById('dash-nombre-propietario').textContent = currentUser?.nombre || '';
-            document.getElementById('dash-fecha-actual').textContent = new Date().toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            document.getElementById('dash-nombre-propietario').textContent = currentUser?.nombre.split(' ')[0] || '';
+            document.getElementById('dash-fecha-actual').textContent = new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
+            if (fab) fab.classList.remove('hidden'); // Mostrar el botón flotante en el inicio
             cargarDatosDashboard();
         } else if (viewId === 'mis-vacas') {
             cargarVacasPropietario();
@@ -226,9 +212,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const isPropietario = currentUser.rol === 'propietario';
         document.getElementById('nav-propietario').classList.toggle('hidden', !isPropietario);
         document.getElementById('nav-mvz').classList.toggle('hidden', isPropietario);
+       
+       // Activar el botón de 'Inicio' por defecto
+        document.querySelector('.nav-button.active')?.classList.remove('active');
+        document.querySelector('.nav-button[data-vista="inicio-propietario"]')?.classList.add('active');
+       
         navigateTo(isPropietario ? 'inicio-propietario' : 'inicio-mvz');
     };
-    function setupNavigation() {
+     function setupNavigation() {
         document.querySelectorAll('.nav-button').forEach(button => {
             button.addEventListener('click', () => {
                 const viewId = button.dataset.vista;
@@ -277,221 +268,79 @@ document.addEventListener('DOMContentLoaded', () => {
     // =================================================================
     // ===== 6. LÓGICA DE VISTAS Y DATOS ===========================
     // =================================================================
-    async function cargarDatosDashboard() {
+   async function cargarDatosDashboard() {
         if (!currentUser || currentUser.rol !== 'propietario') return;
         try {
             const ranchoId = currentUser.ranchos?.[0]?.id;
             if (!ranchoId) return;
+
             const res = await fetch(`${API_URL}/rancho/${ranchoId}/estadisticas`);
             if (!res.ok) throw new Error('No se pudieron cargar las estadísticas.');
             const stats = await res.json();
-            let totalVacas = 0, totalGestantes = 0;
+
+            let totalVacas = 0;
+            let totalGestantes = 0;
+
+            // --- 1. Calcular totales para las tarjetas de resumen ---
             for (const lote in stats) {
                 totalVacas += stats[lote].totalVacas || 0;
                 totalGestantes += (stats[lote].estados && stats[lote].estados.Gestante) || 0;
             }
             document.getElementById('resumen-total-vacas').textContent = totalVacas;
             document.getElementById('resumen-vacas-gestantes').textContent = totalGestantes;
-            document.getElementById('resumen-alertas').textContent = 0; // Placeholder
+            document.getElementById('resumen-alertas').textContent = 3; // Placeholder, necesita su propia lógica
+
+            // --- 2. Renderizar las tarjetas de "Estado de Lotes" ---
+            const lotesContainer = document.getElementById('lotes-container');
+            if (!lotesContainer) return;
+            
+            lotesContainer.innerHTML = ''; // Limpiar el mensaje de "cargando"
+            
+            if (Object.keys(stats).length === 0) {
+                 lotesContainer.innerHTML = '<p class="text-gray-500">No hay lotes con datos para mostrar.</p>';
+                 return;
+            }
+            
+            Object.entries(stats).forEach(([numeroLote, datosLote]) => {
+                const vacasEnLote = datosLote.totalVacas || 0;
+                const gestantesEnLote = datosLote.estados?.Gestante || 0;
+                const porcentajeGestacion = vacasEnLote > 0 ? Math.round((gestantesEnLote / vacasEnLote) * 100) : 0;
+                
+                // Determinar el color y estado del lote (lógica de ejemplo)
+                let colorProgreso = '#22c55e'; // Verde por defecto
+                let estadoAnillo = ''; // Círculo verde por defecto
+                if (porcentajeGestacion < 50) {
+                    colorProgreso = '#f59e0b'; // Amarillo si es bajo
+                    estadoAnillo = `<div class="absolute top-0 right-0 w-4 h-4 bg-yellow-400 rounded-full border-2 border-white"></div>`;
+                }
+                // Placeholder para una alerta
+                if (numeroLote === 'B') { // Simulación de alerta como en tu diseño
+                     colorProgreso = '#ef4444'; // Rojo si hay alerta
+                     estadoAnillo = `<div class="absolute top-0 right-0 w-4 h-4 bg-red-500 rounded-full border-2 border-white flex items-center justify-center text-white text-xs font-bold">!</div>`;
+                }
+
+                const loteCardHTML = `
+                    <div class="bg-white p-4 rounded-xl shadow-md flex items-center justify-between">
+                        <div class="flex items-center">
+                            <div class="progress-ring mr-4" style="--value: ${porcentajeGestacion}; --color: ${colorProgreso};">
+                                <span class="progress-ring-percent">${porcentajeGestacion}%</span>
+                                ${estadoAnillo}
+                            </div>
+                            <div>
+                                <p class="font-semibold">Lote ${numeroLote}</p>
+                                <p class="text-sm text-gray-500">Gestación</p>
+                            </div>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-gray-400"></i>
+                    </div>
+                `;
+                lotesContainer.innerHTML += loteCardHTML;
+            });
+
         } catch (error) {
             console.error("Error al cargar datos del dashboard:", error);
+            document.getElementById('lotes-container').innerHTML = '<p class="text-red-500">No se pudieron cargar los datos de los lotes.</p>';
         }
-    }
-
-    function initMisVacasListeners() {
-        const vacaBuscarInput = document.getElementById('vaca-buscar');
-        if (vacaBuscarInput) {
-            vacaBuscarInput.addEventListener('input', (e) => {
-                const searchTerm = normalize(e.target.value);
-                const filteredVacas = allVacasPropietario.filter(vaca =>
-                    normalize(vaca.nombre).includes(searchTerm) ||
-                    normalize(vaca.numero_arete).includes(searchTerm)
-                );
-                renderVacasPropietario(filteredVacas);
-            });
-        }
-
-        const listaVacas = document.getElementById('lista-vacas');
-        if (listaVacas) {
-            listaVacas.addEventListener('click', (e) => {
-                const vacaCard = e.target.closest('.vaca-card');
-                if (!vacaCard) return;
-                const vacaId = vacaCard.dataset.vacaId;
-                const vacaNombre = vacaCard.dataset.vacaNombre;
-
-                if (e.target.closest('[data-action="delete-vaca"]')) {
-                    document.getElementById('nombre-vaca-eliminar').textContent = vacaNombre;
-                    document.getElementById('btn-confirmar-eliminar').dataset.vacaId = vacaId;
-                    document.getElementById('modal-confirmacion-eliminar').classList.remove('hidden');
-                } else if (e.target.closest('[data-action="view-history"]')) {
-                    window.app.verHistorial(vacaId, vacaNombre);
-                }
-            });
-        }
-    }
-
-    const cargarVacasPropietario = async () => {
-        const lista = document.getElementById('lista-vacas');
-        if (!lista) return;
-        lista.innerHTML = '<p class="text-gray-400 text-center">Cargando vacas...</p>';
-        const ranchoId = currentUser?.ranchos?.[0]?.id;
-        if (!ranchoId) {
-            lista.innerHTML = '<p class="text-red-400 text-center">No hay rancho asignado.</p>';
-            return;
-        }
-        try {
-            const res = await fetch(`${API_URL}/vacas/rancho/${ranchoId}`);
-            if (!res.ok) throw new Error('Error al cargar las vacas.');
-            allVacasPropietario = await res.json();
-            renderVacasPropietario(allVacasPropietario);
-        } catch (err) {
-            console.error("Error cargando vacas del propietario:", err);
-            lista.innerHTML = '<p class="text-red-400 text-center">No se pudieron cargar las vacas.</p>';
-        }
-    };
-
-    const renderVacasPropietario = (vacasToRender) => {
-        const lista = document.getElementById('lista-vacas');
-        if (!lista) return;
-        if (!vacasToRender || vacasToRender.length === 0) {
-            lista.innerHTML = '<p class="text-gray-400 text-center">Aún no tienes vacas o no hay resultados para tu búsqueda.</p>';
-            return;
-        }
-        lista.innerHTML = vacasToRender.map(vaca => `
-            <div class="vaca-card p-4 rounded-xl flex items-center bg-black/20 hover:bg-black/30 transition-colors" data-vaca-id="${vaca.id}" data-vaca-nombre="${vaca.nombre}">
-                <div class="flex-1 flex items-center cursor-pointer" data-action="view-history">
-                    <img src="${vaca.foto_url || 'https://i.imgur.com/s6l2h27.png'}" alt="Vaca ${vaca.nombre}" class="w-20 h-20 rounded-lg object-cover mr-4 border border-white/10">
-                    <div class="flex-1">
-                        <p class="font-bold text-white text-lg">${vaca.nombre} <span class="text-sm font-normal text-gray-400">#${vaca.numero_arete}</span></p>
-                        <p class="text-xs text-gray-300">Raza: ${vaca.raza || 'Desconocida'}</p>
-                        <p class="text-xs text-gray-300">Nacimiento: ${formatDate(vaca.fecha_nacimiento)}</p>
-                    </div>
-                </div>
-                <button data-action="delete-vaca" class="text-red-400 hover:text-red-600 text-2xl p-2 rounded-full hover:bg-red-500/10">🗑️</button>
-            </div>
-        `).join('');
-    };
-
-    async function cargarVacasParaMVZ() {
-        if (!currentRancho) return;
-        try {
-            const res = await fetch(`${API_URL}/vacas/rancho/${currentRancho.id}`);
-            const vacas = await res.json();
-            const datalist = document.getElementById('lista-aretes-autocompletar');
-            if (!datalist) return;
-            datalist.innerHTML = '';
-            vacasIndex.clear();
-            vacas.forEach(v => {
-                datalist.insertAdjacentHTML('beforeend', `<option value="${v.numero_arete}">(${v.nombre})</option>`);
-                vacasIndex.set(String(v.numero_arete).trim(), { id: v.id, nombre: v.nombre, raza: v.raza || '' });
-            });
-        } catch (err) {
-            console.error("Error cargando vacas para MVZ:", err);
-        }
-    }
-
-    function renderLoteActual() {
-        const lista = document.getElementById('lote-actual-lista');
-        const btnFinalizar = document.getElementById('btn-finalizar-lote');
-        const actividadTipoSelect = document.getElementById('actividad-tipo');
-        const actividadLoteEl = document.getElementById('actividad-lote');
-        if (!lista || !btnFinalizar) return;
-
-        const hayLote = loteActual.length > 0;
-        btnFinalizar.classList.toggle('hidden', !hayLote);
-        if (actividadTipoSelect) actividadTipoSelect.disabled = hayLote;
-        if (actividadLoteEl) actividadLoteEl.disabled = hayLote;
-
-        if (!hayLote) {
-            lista.innerHTML = '<p class="text-gray-400">Aún no has agregado vacas a este lote.</p>';
-            return;
-        }
-        lista.innerHTML = loteActual.map((item, idx) => `
-            <div class="bg-white/5 p-2 rounded flex justify-between items-center text-sm">
-                <span>Arete: <strong>${item.areteVaca}</strong>${item.raza ? ` (${item.raza})` : ''}</span>
-                <button class="text-red-400 hover:text-red-600 font-bold text-lg" onclick="app.removerDelLote(${idx})">&times;</button>
-            </div>`).join('');
-    }
-    async function mostrarEstadisticas() {
-        const statsTabsContainer = document.getElementById('estadisticas-tabs-lotes');
-        const statsContenido = document.getElementById('estadisticas-contenido');
-        if (statsContenido) statsContenido.style.visibility = 'hidden';
-        if (statsTabsContainer) statsTabsContainer.innerHTML = '<p class="text-gray-400 p-4">Cargando estadísticas...</p>';
-
-        try {
-            const ranchoId = currentUser?.ranchos?.[0]?.id;
-            if (!ranchoId) throw new Error('No se encontró rancho.');
-            const res = await fetch(`${API_URL}/rancho/${ranchoId}/estadisticas`);
-            if (!res.ok) throw new Error((await res.json()).message || 'No se pudieron cargar las estadísticas.');
-            datosEstadisticas = await res.json();
-            const lotes = Object.keys(datosEstadisticas || {});
-            if (!statsTabsContainer) return;
-            if (lotes.length === 0) {
-                statsTabsContainer.innerHTML = '<p class="text-gray-400 p-4">No hay datos suficientes para mostrar estadísticas.</p>';
-                return;
-            }
-
-            statsTabsContainer.innerHTML = lotes.map(lote =>
-                `<button class="tab-lote p-4 text-gray-400 border-b-2 border-transparent hover:text-white" data-lote="${lote}">${lote === 'Sin Lote' ? 'Sin Asignar' : `Lote ${lote}`}</button>`
-            ).join('');
-
-            statsTabsContainer.querySelectorAll('.tab-lote').forEach(tab => {
-                tab.addEventListener('click', () => {
-                    statsTabsContainer.querySelector('.active-tab')?.classList.remove('active-tab');
-                    tab.classList.add('active-tab');
-                    renderizarGrafico(tab.dataset.lote);
-                });
-            });
-
-            const firstTab = statsTabsContainer.querySelector('.tab-lote');
-            if (firstTab) firstTab.click();
-            if (statsContenido) statsContenido.style.visibility = 'visible';
-        } catch (err) {
-            console.error(err);
-            if (statsTabsContainer) statsTabsContainer.innerHTML = `<p class="text-red-400 p-4">${err.message}</p>`;
-        }
-    }
-
-    function renderizarGrafico(numeroLote) {
-        if (!datosEstadisticas || !datosEstadisticas[numeroLote]) return;
-        const loteData = datosEstadisticas[numeroLote];
-        const statsTituloLote = document.getElementById('estadisticas-titulo-lote');
-        const statsResumenTexto = document.getElementById('estadisticas-resumen-texto');
-        const grafEl = document.getElementById('grafico-estado-reproductivo');
-        const ctx = grafEl ? grafEl.getContext('2d') : null;
-
-        if (statsTituloLote) statsTituloLote.textContent = `Lote ${numeroLote}`;
-        const razasOrdenadas = Object.entries(loteData.razas || {}).sort(([, a], [, b]) => b - a);
-        if (statsResumenTexto) {
-            statsResumenTexto.innerHTML = `
-                <p><strong>Total de Vacas:</strong> ${loteData.totalVacas || 0}</p>
-                <p><strong>Gestantes:</strong> ${loteData.estados?.Gestante || 0} vacas</p>
-                <p><strong>Estáticas:</strong> ${loteData.estados?.Estatica || 0} vacas</p>
-                <p><strong>Ciclando:</strong> ${loteData.estados?.Ciclando || 0} vacas</p>
-                ${razasOrdenadas.length > 0 ? `<p><strong>Raza Principal:</strong> ${razasOrdenadas[0][0]}</p>` : ''}
-            `;
-        }
-
-        if (miGrafico) miGrafico.destroy();
-        if (!ctx) return;
-
-        miGrafico = new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Gestantes', 'Estáticas', 'Ciclando', 'Sucias'],
-                datasets: [{
-                    label: 'Estado Reproductivo',
-                    data: [loteData.estados?.Gestante || 0, loteData.estados?.Estatica || 0, loteData.estados?.Ciclando || 0, loteData.estados?.Sucia || 0],
-                    backgroundColor: ['#FFC107', '#6c757d', '#17A2B8', '#DC3545'],
-                    borderColor: '#1a1a2e',
-                    borderWidth: 4
-                }]
-            },
-            options: {
-                responsive: true, maintainAspectRatio: false, cutout: '60%',
-                plugins: { legend: { position: 'bottom', labels: { color: '#ffffff', padding: 20 } } }
-            }
-        });
     }
         // =================================================================
     // ===== 7. FUNCIONES GLOBALES (ACCESIBLES DESDE HTML) =============
@@ -535,23 +384,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // ===== 8. INICIALIZACIÓN DE LA APLICACIÓN ========================
     // =================================================================
     function initApp() {
-      setupNavigation();
+        setupNavigation();
         const savedUser = sessionStorage.getItem('currentUser');
         if (savedUser) {
             currentUser = JSON.parse(savedUser);
             iniciarSesion();
         } else {
             navContainer.classList.add('hidden');
-            navigateTo('login');
+            // Por defecto, llevamos al login que ahora tendrá el fondo claro
+            // Si quieres que login/registro mantengan el fondo oscuro, se necesitaría una lógica adicional
+            navigateTo('login'); 
         }
     }
-// Poblar select de procedimientos
-        const actividadTipoSelect = document.getElementById('actividad-tipo');
-        if (actividadTipoSelect) {
-            actividadTipoSelect.innerHTML = '<option value="" selected disabled>Seleccione un procedimiento...</option>';
-            Object.keys(PROCEDIMIENTOS).forEach(key => {
-                actividadTipoSelect.add(new Option(PROCEDIMIENTOS[key].titulo, key));
-            });
-        }
+    
     initApp();
 });

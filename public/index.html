@@ -1,254 +1,221 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>JFB Ganadería Inteligente</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
-    html, body {
-      height: 100%; margin: 0; font-family: 'Poppins', sans-serif;
-      background-color: #0a0a14; color: #ffffff; overflow-x: hidden;
-      scroll-behavior: smooth;
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>JFB Ganadería Inteligente</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+    // Configuración de Tailwind para usar el color verde del diseño
+    tailwind.config = {
+        theme: {
+            extend: {
+                colors: {
+                    'brand-green': '#166534', // Un verde oscuro para textos y acentos
+                    'brand-green-light': '#22c55e', // Verde brillante para botones
+                    'brand-bg': '#f4f6f9', // Un gris muy claro para el fondo
+                }
+            }
+        }
     }
-    .vista{ display:none !important; height:0; overflow:hidden; }
-    .vista.activa{ display:flex !important; height:auto; }
-    .main-container{
-      min-height:100vh; width:100%; display:flex; align-items:center;
-      justify-content:center; padding:20px;
-    }
-    .background-wrapper{
-    position:fixed; top:0; left:0; width:100%; height:100%;
-    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364); /* Nuevo gradiente más vibrante */
-    background-size: 400% 400%; /* Permite la animación */
-    animation: gradientAnimation 15s ease infinite; /* Animación */
-    z-index:-1; overflow:hidden;
-}
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+        
+        /* --- ESTILOS GENERALES (NUEVO DISEÑO) --- */
+        html, body {
+            height: 100%;
+            margin: 0;
+            font-family: 'Poppins', sans-serif;
+            background-color: #f4f6f9; /* Color de fondo principal */
+            color: #333; /* Color de texto principal */
+            -webkit-tap-highlight-color: transparent; /* Evita el destello azul en móviles */
+        }
+        
+        #app-content {
+            padding-bottom: 100px; /* Espacio para la barra de navegación inferior */
+        }
+        
+        /* --- ESTILOS PARA LA BARRA DE NAVEGACIÓN INFERIOR (NUEVO DISEÑO) --- */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 80px;
+            background: #ffffff;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.08);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 1000;
+        }
 
-#animated-background {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: -2; /* Asegura que esté detrás de todo, pero sobre el background-wrapper */
-    opacity: 0.6; /* Un poco de transparencia para que el gradiente de fondo se vea */
-}
-/* Animación del gradiente */
-@keyframes gradientAnimation {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-}
+        .nav-button {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: none;
+            border: none;
+            color: #888; /* Color para íconos inactivos */
+            font-size: 0.7rem;
+            font-weight: 500;
+            transition: color 0.2s ease-in-out;
+            padding: 8px;
+            height: 100%;
+            flex-grow: 1;
+        }
 
-    
-    @keyframes move-particles { from{transform:translateY(0)} to{transform:translateY(-2000px)} }
-    .particles{ position:absolute; width:1px; height:1px; border-radius:50%; background:white; animation:move-particles 60s linear infinite; }
-    .p1{ box-shadow:0 0 10px 0 white; top:30%; left:25%; animation-duration:50s; }
-    .p2{ box-shadow:0 0 10px 1px white; top:70%; left:70%; animation-duration:40s; }
-    .p3{ box-shadow:0 0 5px 0 white; top:10%; left:90%; animation-duration:70s; }
-    .p4{ box-shadow:0 0 8px 0 white; top:50%; left:10%; animation-duration:35s; }
-    .p5{ box-shadow:0 0 12px 1px white; top:80%; left:45%; animation-duration:65s; }
-    .p6{ box-shadow:0 0 7px 0 white; top:20%; left:5%; animation-duration:80s; }
-    .p7{ box-shadow:0 0 9px 1px white; top:90%; left:85%; animation-duration:45s; }
-    .p8{ box-shadow:0 0 6px 0 white; top:60%; left:95%; animation-duration:60s; }
-    
-    #app{ width:100%; position:relative; z-index:1; }
-    .app-content{ max-width:1200px; margin:auto; }
-    .glass-panel{
-      background: rgba(10,10,20,.4); backdrop-filter: blur(8px); border-radius: 20px;
-      border: 1px solid rgba(255,255,255,.1); padding: 2rem;
-      box-shadow: 0 8px 32px 0 rgba(0,0,0,.37);
-    }
-    h1,h2,h3{ background:linear-gradient(90deg,#4facfe,#00f2fe); -webkit-background-clip:text; -webkit-text-fill-color:transparent; font-weight:600; }
-    
-    input,select,textarea{
-      background-color: rgba(255,255,255,.05) !important;
-      border: 1px solid rgba(255,255,255,.2) !important; color:white !important;
-      border-radius:10px !important; padding: 0.9rem; font-size: 1rem; width:100%;
-      transition: box-shadow 0.3s ease, border-color 0.3s ease;
-    }
-    input::placeholder, textarea::placeholder{ color:#a7a7a7 !important; }
-    select option{ background-color:#1b2735; color:white; }
-    
-    input:focus,select:focus,textarea:focus{ 
-      outline:none !important; 
-      border-color: rgba(0, 242, 254, 0.5) !important;
-      box-shadow: 0 0 0 2px rgba(79, 172, 254, 0.4), 0 0 15px rgba(0, 242, 254, 0.3) !important;
-    }
-    
-    .btn{
-      display:inline-block; padding:12px 30px; font-size:1em; text-decoration:none; color:#fff;
-      border:2px solid #00f2fe; border-radius:50px; background:transparent; transition: all .3s ease; 
-      cursor:pointer; position:relative; overflow:hidden; z-index:1;
-    }
-    .btn::before{ content:''; position:absolute; top:0; left:-100%; width:100%; height:100%; background:linear-gradient(90deg,#4facfe,#00f2fe); transition:.35s; z-index:-1; }
-    .btn:hover::before{ left:0; }
-    
-    .btn:hover{ 
-      color:#0a0a14; 
-      border-color:transparent; 
-      transform:translateY(-3px); 
-      box-shadow: 0 10px 25px rgba(0, 242, 254, 0.4); 
-    }
-    .btn:disabled{ cursor:not-allowed; background:#334155; border-color:#475569; color:#94a3b8; transform: none; box-shadow: none; }
-    .btn:disabled::before{ display:none; }
+        .nav-button i {
+            font-size: 1.6rem;
+            margin-bottom: 4px;
+        }
+        
+        /* El botón activo ahora es verde */
+        .nav-button.active {
+            color: #166534; /* Verde oscuro de la marca */
+        }
 
-    .btn-logout{ background:transparent; border-color:#fb7185; color:#fb7185; }
-    .btn-logout:hover{ background:#be123c; color:white; border-color:#be123c; box-shadow:0 5px 15px rgba(251,113,133,.4); }
-    .btn-logout:hover::before{ display:none; }
-
-    .nav-link{ color:#00f2fe; cursor:pointer; text-decoration:underline; transition:color .3s; }
-    .nav-link:hover{ color:#4facfe; }
-    .info-box{ background:rgba(0,242,254,.1); padding:1rem; border-radius:10px; border-left:4px solid #00f2fe; }
-    
-    .logo{ 
-      max-width:160px; margin:0 auto 1.5rem auto; 
-      filter:drop-shadow(0 0 15px rgba(0,191,255,.7));
-      animation: pulse-glow 4s infinite ease-in-out;
-    }
-    @keyframes pulse-glow {
-        0%, 100% { filter: drop-shadow(0 0 15px rgba(0, 191, 255, 0.7)); transform: scale(1); }
-        50% { filter: drop-shadow(0 0 25px rgba(79, 172, 254, 1)); transform: scale(1.03); }
-    }
-
-    .vaca-card{ background: rgba(255,255,255,.05); }
-  .tab-lote.active-tab {
-    color: #22d3ee; /* Cian */
-    border-color: #22d3ee; /* Cian */
-}
-/* --- Estilos para la Barra de Navegación Inferior --- */
-.bottom-nav {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 80px;
-    background: rgba(10, 10, 20, 0.6);
-    backdrop-filter: blur(10px);
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    display: flex;
-    justify-content: space-around;
-    align-items: center;
-    z-index: 100;
-}
-
-.nav-button {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    background: none;
-    border: none;
-    color: #a0aec0; /* Gris */
-    font-size: 0.75rem;
-    transition: color 0.2s ease-in-out;
-    padding: 8px;
-    height: 100%;
-    flex-grow: 1;
-}
-
-.nav-button i {
-    font-size: 1.5rem;
-    margin-bottom: 4px;
-}
-
-.nav-button.active,
-.nav-button:hover {
-    color: #ffffff; /* Blanco */
-}
-  </style>
+        /* --- BOTÓN FLOTANTE (+) --- */
+        .fab {
+            position: fixed;
+            bottom: 100px; /* Justo encima de la barra de navegación */
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background-color: #166534; /* Verde oscuro */
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            z-index: 999;
+            cursor: pointer;
+        }
+        
+        /* --- CÍRCULOS DE PROGRESO PARA LOTES (CON CSS PURO) --- */
+        .progress-ring {
+            position: relative;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            background: conic-gradient(var(--color, #22c55e) calc(var(--value) * 1%), #e0e0e0 0);
+        }
+        .progress-ring::before {
+            content: "";
+            position: absolute;
+            width: 48px;
+            height: 48px;
+            background: white;
+            border-radius: 50%;
+        }
+        .progress-ring-percent {
+            position: relative;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #166534;
+        }
+        
+    </style>
 </head>
-<body>
-    <canvas id="animated-background" class="fixed top-0 left-0 w-full h-full z-0"></canvas>
+<body class="bg-brand-bg">
 
-    <main id="app-content" class="relative z-10 min-h-screen"></main>
+    <main id="app-content" class="relative z-10"></main>
 
-    <div id="nav-container">
-        <nav id="nav-propietario" class="bottom-nav hidden">
+    <div id="nav-container" class="hidden">
+        <nav id="nav-propietario" class="bottom-nav">
             <button class="nav-button active" data-vista="inicio-propietario"><i class="fa-solid fa-house"></i><span>Inicio</span></button>
             <button class="nav-button" data-vista="mis-vacas"><i class="fa-solid fa-cow"></i><span>Mis Vacas</span></button>
-            <button class="nav-button" data-vista="mi-mvz"><i class="fa-solid fa-user-doctor"></i><span>Mi MVZ</span></button>
+            <button class="nav-button" data-vista="mi-mvz"><i class="fa-solid fa-user-doctor"></i><span>MVZ</span></button>
             <button class="nav-button" data-vista="estadisticas"><i class="fa-solid fa-chart-pie"></i><span>Estadísticas</span></button>
             <button class="nav-button" data-vista="ajustes"><i class="fa-solid fa-gear"></i><span>Ajustes</span></button>
         </nav>
         <nav id="nav-mvz" class="bottom-nav hidden">
             </nav>
-    </div>
-
-    <template id="template-login">
-        <div class="min-h-screen flex items-center justify-center p-4">
-            <div id="vista-login" class="w-full max-w-md animate-fade-in">
-                <div class="text-center mb-8">
-                <img src="/assets/logo.png" alt="Logo JFB" class="w-24 h-24 mx-auto mb-4">
-                    <h1 class="text-3xl font-bold text-white">Bienvenido</h1>
-                    <p class="text-gray-400">Inicia sesión para gestionar tu ganado</p>
-                </div>
-                <form id="form-login" novalidate>
-                    <div class="mb-4"><input type="email" id="login-email" placeholder="Correo Electrónico" required class="w-full"></div>
-                    <div class="mb-4"><input type="password" id="login-password" placeholder="Contraseña" required class="w-full"></div>
-                    <label class="flex items-center text-sm text-gray-400 mb-6"><input type="checkbox" id="remember-me" class="mr-2">Recuérdame</label>
-                    <button type="submit" class="w-full btn-primary">Ingresar</button>
-                    <div id="login-mensaje" class="text-center mt-2 text-sm h-4"></div>
-                </form>
-                <p class="text-center text-sm text-gray-400 mt-6">¿Aún no tienes cuenta? <a href="#" id="link-a-registro" class="text-cyan-400 hover:underline">Regístrate aquí</a></p>
-            </div>
+        <div id="fab-container">
+             <button class="fab">+</button>
         </div>
-    </template>
-
+    </div>
+    
+    <template id="template-login">
+        </template>
+    
     <template id="template-registro">
-        <div class="min-h-screen flex items-center justify-center p-4">
-            <div id="vista-registro" class="w-full max-w-md animate-fade-in">
-                 <div class="text-center mb-8">
-                    <h1 class="text-3xl font-bold text-white">Crear Cuenta</h1>
-                    <p class="text-gray-400">Completa tus datos para empezar</p>
+        </template>
+
+    <template id="template-inicio-propietario">
+        <div class="p-5">
+            <header class="flex justify-between items-center mb-6">
+                <div>
+                    <h1 class="text-2xl font-bold text-brand-green">¡Bienvenido, <span id="dash-nombre-propietario"></span>!</h1>
+                    <p class="text-sm text-gray-500" id="dash-fecha-actual"></p>
                 </div>
-                <form id="form-registro" novalidate>
-                    <div class="mb-4"><input type="text" name="nombre" placeholder="Nombre Completo" required class="w-full"></div>
-                    <div class="mb-4"><input type="email" name="email" placeholder="Correo Electrónico" required class="w-full"></div>
-                    <div class="mb-4"><input type="password" name="password" placeholder="Contraseña" required class="w-full"></div>
-                    <div class="mb-4">
-                        <select name="rol" id="registro-rol" class="w-full">
-                            <option value="mvz">Soy Veterinario (MVZ)</option>
-                            <option value="propietario" selected>Soy Propietario</option>
-                        </select>
+                <div class="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
+                    <i class="fa-solid fa-user text-2xl text-gray-500"></i>
+                </div>
+            </header>
+
+            <section class="mb-8">
+                <h2 class="text-lg font-semibold mb-3">Resumen del Rancho</h2>
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="bg-white p-4 rounded-xl shadow-md text-center">
+                        <p class="text-3xl font-bold text-brand-green" id="resumen-total-vacas">--</p>
+                        <h3 class="text-xs text-gray-500 mt-1">Vacas en Rancho</h3>
                     </div>
-                    <div id="campo-rancho" class="mb-4">
-                         <input type="text" name="rancho_nombre" placeholder="Nombre de tu Rancho" class="w-full">
+                    <div class="bg-white p-4 rounded-xl shadow-md text-center">
+                        <p class="text-3xl font-bold text-brand-green" id="resumen-vacas-gestantes">--</p>
+                        <h3 class="text-xs text-gray-500 mt-1">Vacas Gestantes</h3>
                     </div>
-                    <button type="submit" class="w-full btn-primary">Registrarme</button>
-                    <div id="registro-mensaje" class="text-center mt-2 text-sm h-4"></div>
-                </form>
-                <p class="text-center text-sm text-gray-400 mt-6">¿Ya tienes una cuenta? <a href="#" id="link-a-login" class="text-cyan-400 hover:underline">Inicia sesión</a></p>
-            </div>
+                    <div class="bg-white p-4 rounded-xl shadow-md text-center">
+                        <p class="text-3xl font-bold text-red-500" id="resumen-alertas">--</p>
+                        <h3 class="text-xs text-gray-500 mt-1">Alertas de Salud</h3>
+                    </div>
+                </div>
+            </section>
+
+            <section class="mb-8">
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="text-lg font-semibold">Estado de Lotes</h2>
+                    <button class="text-sm font-medium text-brand-green">Ver Todos los Lotes</button>
+                </div>
+                <div id="lotes-container" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <p class="text-gray-500">Cargando lotes...</p>
+                </div>
+            </section>
+
+            <section>
+                <h2 class="text-lg font-semibold mb-3">Actividad y Eventos</h2>
+                <div class="bg-white p-4 rounded-xl shadow-md">
+                    <div>
+                        <h3 class="font-semibold text-gray-800 mb-2"><i class="fa-solid fa-check-circle text-green-500 mr-2"></i>Últimas Noticias</h3>
+                        <p class="text-sm text-gray-600 ml-6 pb-3 border-b border-gray-200">MVZ Dr. Hernández registró 2 tratamientos en Lote C.</p>
+                    </div>
+                    <div class="mt-3">
+                        <h3 class="font-semibold text-gray-800 mb-2"><i class="fa-solid fa-calendar-days text-brand-green mr-2"></i>Próximos Eventos</h3>
+                        <p class="text-sm text-gray-600 ml-6">Próxima visita del MVZ: Jueves, 27 Octubre.</p>
+                        <p class="text-sm text-gray-600 ml-6 mt-1">Vacunación general de Lote 1 programada.</p>
+                    </div>
+                </div>
+            </section>
         </div>
     </template>
     
-    <template id="template-inicio-propietario">
-        <div class="p-6 md:p-8 animate-fade-in">
-            <div class="flex justify-between items-center mb-8">
-                <div>
-                    <h1 class="text-3xl font-bold text-white">Bienvenido, <span id="dash-nombre-propietario"></span></h1>
-                    <p class="text-gray-400" id="dash-fecha-actual"></p>
-                </div>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div class="bg-black/20 p-6 rounded-xl border border-white/10 text-center"><p class="text-4xl font-bold" id="resumen-total-vacas">--</p><h3 class="text-gray-400 text-sm mt-2">Vacas en Rancho</h3></div>
-                <div class="bg-black/20 p-6 rounded-xl border border-white/10 text-center"><p class="text-4xl font-bold" id="resumen-vacas-gestantes">--</p><h3 class="text-gray-400 text-sm mt-2">Vacas Gestantes</h3></div>
-                <div class="bg-black/20 p-6 rounded-xl border border-white/10 text-center"><p class="text-4xl font-bold" id="resumen-alertas">--</p><h3 class="text-gray-400 text-sm mt-2">Alertas</h3></div>
-            </div>
-        </div>
-    </template>
+    <template id="template-inicio-mvz">
+        </template>
     
     <template id="template-mis-vacas">
-        </template>
+        <h1 class="text-center p-8 text-2xl">Vista de Mis Vacas (en construcción)</h1>
+    </template>
+    
     <template id="template-estadisticas">
-        </template>
+         <h1 class="text-center p-8 text-2xl">Vista de Estadísticas (en construcción)</h1>
+    </template>
 
     <script src="main.js"></script>
 
