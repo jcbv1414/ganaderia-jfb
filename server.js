@@ -422,12 +422,12 @@ app.post('/api/rancho/invitar-mvz', async (req, res) => {
 // =================================================================
 // ===== ESTADÍSTICAS ==============================================
 // =================================================================
+// EN TU ARCHIVO server.js, REEMPLAZA ESTA FUNCIÓN COMPLETA
 
 app.get('/api/rancho/:ranchoId/estadisticas', async (req, res) => {
     const { ranchoId } = req.params;
 
     try {
-        // 1. Obtenemos todas las vacas del rancho
         const { data: vacas, error: vacasError } = await supabase
             .from('vacas')
             .select('id, lote, raza')
@@ -435,11 +435,9 @@ app.get('/api/rancho/:ranchoId/estadisticas', async (req, res) => {
 
         if (vacasError) throw vacasError;
         if (!vacas || vacas.length === 0) {
-            return res.json({}); // Devuelve un objeto vacío si no hay vacas
+            return res.json({});
         }
 
-        // 2. Obtenemos el último estado de "Palpación" de cada vaca
-        // Usamos una función de base de datos (RPC) para eficiencia
         const cowIds = vacas.map(v => v.id);
         const { data: ultimasActividades, error: rpcError } = await supabase.rpc('get_latest_palpacion_for_cows', {
             cow_ids: cowIds
@@ -447,42 +445,42 @@ app.get('/api/rancho/:ranchoId/estadisticas', async (req, res) => {
 
         if (rpcError) throw rpcError;
 
-        // 3. Procesamos los datos para crear las estadísticas
         const stats = {};
-
-        // Creamos un mapa para buscar fácilmente el último estado de una vaca
         const estadoMap = new Map();
+
+        // --- INICIO DEL CÓDIGO CORREGIDO ---
+        // Este bloque ahora es a prueba de errores.
         ultimasActividades.forEach(act => {
-            estadoMap.set(act.vaca_id, JSON.parse(act.descripcion));
+            try {
+                // Si la descripción existe y es un string, la procesamos.
+                // Si no, la tratamos como un objeto vacío para no causar un error.
+                const desc = act.descripcion ? JSON.parse(JSON.stringify(act.descripcion)) : {};
+                estadoMap.set(act.vaca_id, desc);
+            } catch (e) {
+                // Si JSON.parse falla, se registrará el error en la consola del servidor,
+                // pero la aplicación no se detendrá.
+                console.error(`Error al procesar JSON para la vaca ID ${act.vaca_id}:`, act.descripcion);
+                estadoMap.set(act.vaca_id, {}); // Le asignamos un objeto vacío para continuar.
+            }
         });
+        // --- FIN DEL CÓDIGO CORREGIDO ---
 
         vacas.forEach(vaca => {
             const lote = vaca.lote || 'Sin Lote';
             const ultimoEstado = estadoMap.get(vaca.id) || {};
-
-            // Si el lote no existe en nuestro objeto de stats, lo inicializamos
             if (!stats[lote]) {
                 stats[lote] = {
                     totalVacas: 0,
-                    estados: {
-                        Gestante: 0,
-                        Estatica: 0,
-                        Ciclando: 0,
-                        Sucia: 0,
-                        // Puedes agregar más estados si los necesitas
-                    },
+                    estados: { Gestante: 0, Estatica: 0, Ciclando: 0, Sucia: 0 },
                     razas: {}
                 };
             }
-
-            // Contamos las vacas y sus estados
             stats[lote].totalVacas++;
             if (ultimoEstado.gestante === 'Sí') stats[lote].estados.Gestante++;
             if (ultimoEstado.estatica === 'Sí') stats[lote].estados.Estatica++;
             if (ultimoEstado.ciclando === 'Sí') stats[lote].estados.Ciclando++;
-            if (ultimoEstado.sucia === 'Sí') stats[lote].estados.Sucia++;
-
-            // Contamos las razas
+            // Tu diseño no muestra "Sucia" en el resumen, pero lo mantenemos en los datos
+            if (ultimoEstado.sucia) stats[lote].estados.Sucia++; 
             const raza = vaca.raza || 'Desconocida';
             stats[lote].razas[raza] = (stats[lote].razas[raza] || 0) + 1;
         });
@@ -490,7 +488,7 @@ app.get('/api/rancho/:ranchoId/estadisticas', async (req, res) => {
         res.json(stats);
 
     } catch (error) {
-        console.error("Error generando estadísticas:", error);
+        console.error("Error crítico generando estadísticas:", error);
         res.status(500).json({ message: "Error al generar estadísticas" });
     }
 });

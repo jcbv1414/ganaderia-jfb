@@ -116,7 +116,11 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('dash-nombre-mvz').textContent = currentUser?.nombre.split(' ')[0] || '';
             document.getElementById('dash-fecha-actual-mvz').textContent = new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
             if (fab) fab.classList.add('hidden');
+            cargarDashboardMVZ();
             initMvzListeners();
+        }
+        else if (viewId === 'actividades-mvz') { // La vista de registro de actividades
+            initMvzListeners(); 
         }
     }
 
@@ -245,7 +249,6 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('lotes-container').innerHTML = '<p class="text-red-500">No se pudieron cargar los datos.</p>';
         }
     }
-
     // --- NUEVA LÓGICA PARA LA VISTA DE ESTADÍSTICAS ---
     async function renderizarVistaEstadisticas() {
         try {
@@ -357,6 +360,64 @@ document.addEventListener('DOMContentLoaded', () => {
             <p><strong class="font-bold text-gray-800">Ciclando:</strong> ${estados.Ciclando || 0} vacas</p>
             <p><strong class="font-bold text-gray-800">Raza:</strong> ${Object.keys(datosLote.razas)[0] || 'N/A'}</p>
         `;
+    }
+     function cargarDashboardMVZ() {
+        // Por ahora, usamos datos de ejemplo.
+        // En el futuro, esto vendrá de un nuevo endpoint en server.js
+        const datosDashboard = {
+            visitas: 3,
+            detalleVisitas: "2 ranchos, 1 remota",
+            alertas: 5,
+            detalleAlertas: "4 críticos, 1 parto",
+            pendientes: [
+                { id: 1, texto: "Lote 1: Revisión 3 vacas", rancho: "(El Roble)", completado: false },
+                { id: 2, texto: "Lote B: Vacunación general", rancho: "(La Cabaña)", completado: true }
+            ],
+            eventos: [
+                { fecha: "Mañana", texto: "Parto esperado vaca #123 (El Roble)" },
+                { fecha: "Jueves", texto: "Chequeo reproductivo (La Hacienda)" }
+            ]
+        };
+
+        // Rellenar Resumen Diario
+        document.getElementById('resumen-visitas').textContent = datosDashboard.visitas;
+        document.getElementById('detalle-visitas').textContent = datosDashboard.detalleVisitas;
+        document.getElementById('resumen-alertas').textContent = datosDashboard.alertas;
+        document.getElementById('detalle-alertas').textContent = datosDashboard.detalleAlertas;
+        
+        // Rellenar Pendientes
+        const pendientesContainer = document.getElementById('lista-pendientes');
+        pendientesContainer.innerHTML = ''; // Limpiar
+        datosDashboard.pendientes.forEach((pendiente, index) => {
+            const estadoHTML = pendiente.completado
+                ? `<button class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-semibold">Completado</button>`
+                : `<button class="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-semibold">Ver Detalles</button>`;
+            
+            pendientesContainer.innerHTML += `
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="font-semibold text-gray-800"><span class="text-blue-600 font-bold">${index + 1}</span> ${pendiente.texto}</p>
+                        <p class="text-sm text-gray-500 ml-4">${pendiente.rancho}</p>
+                    </div>
+                    ${estadoHTML}
+                </div>
+            `;
+        });
+        
+        // Rellenar Eventos
+        const eventosContainer = document.getElementById('lista-eventos');
+        eventosContainer.innerHTML = ''; // Limpiar
+        datosDashboard.eventos.forEach(evento => {
+            eventosContainer.innerHTML += `
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="font-semibold text-gray-800"><i class="fa-solid fa-calendar-alt text-brand-green mr-2"></i>${evento.fecha}:</p>
+                        <p class="text-sm text-gray-600 ml-6">${evento.texto}</p>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-gray-400"></i>
+                </div>
+            `;
+        });
     }
     // --- LÓGICA DEL MVZ ---
     function initMvzListeners() {

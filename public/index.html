@@ -172,81 +172,115 @@
         </div>
     </template>
     
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    </head>
+<body>
+
+    <main id="app-content" class="relative z-10"></main>
+
+    <div id="nav-container" class="hidden">
+        <nav id="nav-propietario" class="bottom-nav">
+             </nav>
+
+        <nav id="nav-mvz" class="bottom-nav hidden">
+            <button class="nav-button active" data-vista="inicio-mvz"><i class="fa-solid fa-house-user"></i><span>Inicio</span></button>
+            <button class="nav-button" data-vista="actividades-mvz"><i class="fa-solid fa-clipboard-list"></i><span>Actividades</span></button>
+            <button class="nav-button" data-vista="mvz-ranchos"><i class="fa-solid fa-house-medical"></i><span>Ranchos</span></button>
+            <button class="nav-button" data-vista="mvz-ajustes"><i class="fa-solid fa-gear"></i><span>Ajustes</span></button>
+        </nav>
+        <div id="fab-container">
+             <button class="fab">+</button>
+        </div>
+    </div>
+    
+    <template id="template-login"></template>
+    <template id="template-registro"></template>
+    <template id="template-inicio-propietario"></template>
+    
+    <!DOCTYPE html>
+<html lang="es">
+<head>
+    </head>
+<body>
+
+    <main id="app-content" class="relative z-10"></main>
+
+    <div id="nav-container" class="hidden">
+        <nav id="nav-propietario" class="bottom-nav">
+             </nav>
+
+        <nav id="nav-mvz" class="bottom-nav hidden">
+            <button class="nav-button active" data-vista="inicio-mvz"><i class="fa-solid fa-house-user"></i><span>Inicio</span></button>
+            <button class="nav-button" data-vista="actividades-mvz"><i class="fa-solid fa-clipboard-list"></i><span>Actividades</span></button>
+            <button class="nav-button" data-vista="mvz-ranchos"><i class="fa-solid fa-house-medical"></i><span>Ranchos</span></button>
+            <button class="nav-button" data-vista="mvz-ajustes"><i class="fa-solid fa-gear"></i><span>Ajustes</span></button>
+        </nav>
+        <div id="fab-container">
+             <button class="fab">+</button>
+        </div>
+    </div>
+    
+    <template id="template-login"></template>
+    <template id="template-registro"></template>
+    <template id="template-inicio-propietario"></template>
+    
     <template id="template-inicio-mvz">
         <div class="p-5">
             <header class="flex justify-between items-center mb-6">
-                <div><h1 class="text-2xl font-bold text-brand-green">Hola, <span id="dash-nombre-mvz"></span></h1><p class="text-sm text-gray-500" id="dash-fecha-actual-mvz"></p></div>
-                 <div class="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center"><i class="fa-solid fa-user-doctor text-2xl text-gray-500"></i></div>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">¡Hola, <span id="dash-nombre-mvz"></span>!</h1>
+                    <p class="text-sm text-gray-500" id="dash-fecha-actual-mvz"></p>
+                </div>
+                <div class="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
+                    <i class="fa-solid fa-user-doctor text-2xl text-gray-500"></i>
+                </div>
+            </header>
+
+            <section class="mb-8">
+                <h2 class="text-lg font-semibold mb-3">Resumen Diario</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-white p-4 rounded-xl shadow-md text-center">
+                        <p class="text-4xl font-bold text-brand-green" id="resumen-visitas">--</p>
+                        <h3 class="text-sm text-gray-600 mt-1" id="detalle-visitas"></h3>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow-md text-center">
+                        <p class="text-4xl font-bold text-red-500" id="resumen-alertas">--</p>
+                        <h3 class="text-sm text-gray-600 mt-1" id="detalle-alertas"></h3>
+                    </div>
+                </div>
+            </section>
+            
+            <section class="mb-8">
+                <h2 class="text-lg font-semibold mb-3">Pendientes Hoy</h2>
+                <div id="lista-pendientes" class="bg-white p-4 rounded-xl shadow-md space-y-4">
+                    </div>
+            </section>
+
+            <section>
+                <h2 class="text-lg font-semibold mb-3">Próximos Eventos</h2>
+                <div id="lista-eventos" class="bg-white p-4 rounded-xl shadow-md space-y-3">
+                    </div>
+            </section>
+        </div>
+    </template>
+
+    <template id="template-actividades-mvz">
+        <div class="p-5">
+            <header class="flex items-center mb-4">
+                <button onclick="navigateTo('inicio-mvz')" class="text-2xl mr-4"><i class="fa-solid fa-arrow-left"></i></button>
+                <h1 class="text-xl font-bold text-gray-800">Registrar Actividad</h1>
             </header>
             <div id="panel-actividad-mvz" class="space-y-6">
-                <section id="seccion-seleccionar-rancho">
-                    <h2 class="text-lg font-semibold mb-3">Paso 1: Selecciona un Rancho</h2>
-                    <div class="bg-white p-4 rounded-xl shadow-md">
-                        <label for="codigo-rancho" class="block text-sm font-medium text-gray-700 mb-1">Ingresa el Código del Rancho</label>
-                        <div class="flex items-center space-x-2"><input type="text" id="codigo-rancho" placeholder="Ej: A1B2C3" class="w-full p-2 border border-gray-300 rounded-lg"><button id="btn-validar-rancho" class="bg-brand-green text-white px-4 py-2 rounded-lg font-semibold">Validar</button></div>
-                        <div id="mensaje-rancho" class="text-sm mt-2 h-4"></div>
-                    </div>
-                </section>
-                <section id="seccion-registrar-actividad" class="hidden">
-                    <h2 class="text-lg font-semibold mb-3">Paso 2: Registrar Actividad en <span id="nombre-rancho-activo" class="font-bold text-brand-green"></span></h2>
-                    <div class="bg-white p-4 rounded-xl shadow-md space-y-4">
-                        <div class="grid grid-cols-2 gap-4">
-                             <div><label for="actividad-tipo" class="block text-sm font-medium text-gray-700 mb-1">Procedimiento</label><select id="actividad-tipo" class="w-full p-2 border border-gray-300 rounded-lg bg-white"></select></div>
-                            <div><label for="actividad-lote" class="block text-sm font-medium text-gray-700 mb-1">Lote</label><select id="actividad-lote" class="w-full p-2 border border-gray-300 rounded-lg bg-white"></select></div>
-                        </div>
-                        <form id="form-actividad-vaca">
-                            <div id="campos-dinamicos-procedimiento" class="space-y-3 border-t border-b border-gray-200 py-4"></div>
-                            <div class="mt-4">
-                                <label for="actividad-arete" class="block text-sm font-medium text-gray-700 mb-1">Número de Arete</label>
-                                <div class="flex items-center space-x-2">
-                                    <input type="text" id="actividad-arete" placeholder="Buscar arete..." class="w-full p-2 border border-gray-300 rounded-lg" list="lista-aretes-autocompletar" required>
-                                    <datalist id="lista-aretes-autocompletar"></datalist>
-                                    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold whitespace-nowrap">Agregar Vaca</button>
-                                </div>
-                                <div id="mensaje-vaca" class="text-sm mt-2 h-4"></div>
-                            </div>
-                        </form>
-                    </div>
-                </section>
-                <section id="seccion-lote-actual" class="hidden">
-                    <h2 class="text-lg font-semibold mb-3">Lote Actual para <span id="lote-activo-procedimiento" class="font-bold text-brand-green"></span></h2>
-                     <div class="bg-white p-4 rounded-xl shadow-md">
-                        <div id="lote-actual-lista" class="space-y-2 mb-4"><p class="text-gray-500">Aún no has agregado vacas a este lote.</p></div>
-                        <button id="btn-finalizar-lote" class="w-full bg-brand-green-light text-white py-2 rounded-lg font-bold">Finalizar y Generar Reporte</button>
-                    </div>
-                </section>
+                <section id="seccion-seleccionar-rancho"></section>
+                <section id="seccion-registrar-actividad" class="hidden"></section>
+                <section id="seccion-lote-actual" class="hidden"></section>
             </div>
         </div>
     </template>
-
-    <template id="template-mis-vacas">
-         <h1 class="text-center p-8 text-2xl">Vista de Mis Vacas (en construcción)</h1>
-    </template>
-    <template id="template-estadisticas">
-    <div class="p-5">
-        <header class="flex items-center mb-4">
-            <button onclick="navigateTo('inicio-propietario')" class="text-2xl mr-4"><i class="fa-solid fa-arrow-left"></i></button>
-            <h1 class="text-xl font-bold text-gray-800">Estadísticas de Lotes</h1>
-        </header>
-
-        <div id="tabs-lotes-container" class="flex items-center border-b border-gray-200 mb-4">
-            </div>
-
-        <div id="contenido-estadisticas" class="bg-white p-4 rounded-xl shadow-md">
-            <div class="mb-4">
-                <h2 id="stats-titulo-lote" class="text-lg font-bold text-gray-900"></h2>
-                <p id="stats-fecha-actualizacion" class="text-sm text-gray-500"></p>
-            </div>
-
-            <div class="relative h-64 w-full mx-auto mb-4">
-                <canvas id="grafico-reproductivo"></canvas>
-            </div>
-            
-            <div id="stats-resumen-texto" class="space-y-1 text-center">
-                </div>
-        </div>
-    </div>
-</template>
+    <template id="template-mis-vacas"></template>
+    <template id="template-estadisticas"></template>
 
     <script src="main.js"></script>
 
