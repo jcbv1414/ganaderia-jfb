@@ -77,7 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const el = document.getElementById(elId);
         if (!el) return;
         el.textContent = texto;
-        el.className = `text-center mt-2 text-sm h-4 ${esError ? 'text-red-400' : 'text-green-400'}`;
+        el.className = `text-sm mt-2 h-4 ${esError ? 'text-red-500' : 'text-green-600'}`;
         setTimeout(() => { if(el) el.textContent = ''; }, 4000);
     };
     const logout = () => {
@@ -162,73 +162,62 @@ document.addEventListener('DOMContentLoaded', () => {
     function navigateTo(viewId) {
         if (!appContent) { console.error('Elemento #app-content no encontrado.'); return; }
         
-         // Ocultar el botón flotante por defecto, se mostrará solo si es necesario
         const fab = document.getElementById('fab-container');
         if (fab) fab.classList.add('hidden');
 
         appContent.innerHTML = '';
         const template = document.getElementById(`template-${viewId}`);
         if (!template) {
-            appContent.innerHTML = `<p class="text-center p-8 text-red-500">Error: No se encontró la plantilla para la vista: ${viewId}</p>`;
+            appContent.innerHTML = `<p class="text-center p-8 text-red-500">Error: No se encontró la plantilla para: ${viewId}</p>`;
             return;
         }
         appContent.appendChild(template.content.cloneNode(true));
 
+        // Lógica específica para cada vista
         if (viewId === 'login') {
             document.getElementById('form-login').addEventListener('submit', handleLogin);
             document.getElementById('link-a-registro').addEventListener('click', () => navigateTo('registro'));
-            const savedEmail = localStorage.getItem('rememberedEmail');
-            if (savedEmail && document.getElementById('login-email')) {
-                document.getElementById('login-email').value = savedEmail;
-                document.getElementById('remember-me').checked = true;
-            }
         } else if (viewId === 'registro') {
             document.getElementById('form-registro').addEventListener('submit', handleRegister);
             document.getElementById('link-a-login').addEventListener('click', () => navigateTo('login'));
-            const registroRol = document.getElementById('registro-rol');
-            if(registroRol) {
-                registroRol.addEventListener('change', (e) => {
-                    document.getElementById('campo-rancho').classList.toggle('hidden', e.target.value !== 'propietario');
-                });
-            }
         } else if (viewId === 'inicio-propietario') {
             document.getElementById('dash-nombre-propietario').textContent = currentUser?.nombre.split(' ')[0] || '';
             document.getElementById('dash-fecha-actual').textContent = new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
-            if (fab) fab.classList.remove('hidden'); // Mostrar el botón flotante en el inicio
+            if (fab) fab.classList.remove('hidden');
             cargarDatosDashboard();
-        } else if (viewId === 'mis-vacas') {
-            cargarVacasPropietario();
-            initMisVacasListeners();
-        } else if (viewId === 'estadisticas') {
-            mostrarEstadisticas();
         } else if (viewId === 'inicio-mvz') {
-            document.getElementById('dash-nombre-mvz').textContent = currentUser?.nombre || '';
-            document.getElementById('dash-fecha-actual-mvz').textContent = new Date().toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            document.getElementById('dash-nombre-mvz').textContent = currentUser?.nombre.split(' ')[0] || '';
+            document.getElementById('dash-fecha-actual-mvz').textContent = new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
+            if (fab) fab.classList.add('hidden'); // MVZ no usa el FAB por ahora
+            initMvzListeners(); // Función para activar los botones del MVZ
         }
     }
+
     const iniciarSesion = () => {
         if (!currentUser) return;
         navContainer.classList.remove('hidden');
         const isPropietario = currentUser.rol === 'propietario';
         document.getElementById('nav-propietario').classList.toggle('hidden', !isPropietario);
         document.getElementById('nav-mvz').classList.toggle('hidden', isPropietario);
-       
-       // Activar el botón de 'Inicio' por defecto
+        
         document.querySelector('.nav-button.active')?.classList.remove('active');
-        document.querySelector('.nav-button[data-vista="inicio-propietario"]')?.classList.add('active');
-       
+        const firstButtonSelector = isPropietario ? '.nav-button[data-vista="inicio-propietario"]' : '.nav-button[data-vista="inicio-mvz"]';
+        document.querySelector(firstButtonSelector)?.classList.add('active');
+
         navigateTo(isPropietario ? 'inicio-propietario' : 'inicio-mvz');
     };
-     function setupNavigation() {
+
+    function setupNavigation() {
         document.querySelectorAll('.nav-button').forEach(button => {
-            button.addEventListener('click', () => {
-                const viewId = button.dataset.vista;
-                document.querySelector('.nav-button.active')?.classList.remove('active');
-                button.classList.add('active');
-                navigateTo(viewId);
+            button.addEventListener('click', (e) => {
+                const nav = e.currentTarget.closest('nav');
+                nav.querySelector('.nav-button.active')?.classList.remove('active');
+                e.currentTarget.classList.add('active');
+                navigateTo(button.dataset.vista);
             });
         });
     }
+
   
     // =================================================================
     // ===== 5. MANEJADORES DE EVENTOS (HANDLERS) ======================
@@ -264,6 +253,7 @@ document.addEventListener('DOMContentLoaded', () => {
             mostrarMensaje('registro-mensaje', err.message);
         }
     }
+
 
     // =================================================================
     // ===== 6. LÓGICA DE VISTAS Y DATOS ===========================
@@ -342,7 +332,218 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('lotes-container').innerHTML = '<p class="text-red-500">No se pudieron cargar los datos de los lotes.</p>';
         }
     }
-        // =================================================================
+
+       function initMvzListeners() {
+        // Botón de validar rancho
+        document.getElementById('btn-validar-rancho').addEventListener('click', handleValidarRancho);
+        
+        // Formulario para agregar vaca
+        document.getElementById('form-actividad-vaca').addEventListener('submit', handleAgregarVacaAlLote);
+
+        // Select de tipo de actividad
+        const actividadTipoSelect = document.getElementById('actividad-tipo');
+        if (actividadTipoSelect) {
+            actividadTipoSelect.innerHTML = '<option value="" selected disabled>Seleccione...</option>';
+            Object.keys(PROCEDIMIENTOS).forEach(key => {
+                actividadTipoSelect.add(new Option(PROCEDIMIENTOS[key].titulo, key));
+            });
+            actividadTipoSelect.addEventListener('change', (e) => renderizarCamposProcedimiento(e.target.value));
+        }
+        
+        // Botón de finalizar lote
+        document.getElementById('btn-finalizar-lote').addEventListener('click', handleFinalizarLote);
+
+        // Poblar select de lotes (ejemplo hasta 10)
+        const selLote = document.getElementById('actividad-lote');
+        selLote.innerHTML = '';
+        for (let i = 1; i <= 10; i++) selLote.add(new Option(`Lote ${i}`, i));
+    }
+
+    async function handleValidarRancho() {
+        const codigo = document.getElementById('codigo-rancho').value.trim().toUpperCase();
+        if (!codigo) {
+            mostrarMensaje('mensaje-rancho', 'El código no puede estar vacío.');
+            return;
+        }
+        try {
+            const res = await fetch(`${API_URL}/rancho/validate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ codigo })
+            });
+            const respuesta = await res.json();
+            if (!res.ok) throw new Error(respuesta.message);
+            
+            currentRancho = respuesta; // Guardamos los datos del rancho validado
+            mostrarMensaje('mensaje-rancho', `Rancho "${currentRancho.nombre}" validado.`, false);
+            document.getElementById('nombre-rancho-activo').textContent = currentRancho.nombre;
+            document.getElementById('seccion-registrar-actividad').classList.remove('hidden');
+            document.getElementById('seccion-lote-actual').classList.remove('hidden');
+            await cargarVacasParaMVZ(); // Cargar vacas para el autocompletar
+        } catch (err) {
+            mostrarMensaje('mensaje-rancho', err.message);
+            currentRancho = null;
+            document.getElementById('seccion-registrar-actividad').classList.add('hidden');
+            document.getElementById('seccion-lote-actual').classList.add('hidden');
+        }
+    }
+    
+    function renderizarCamposProcedimiento(tipo) {
+        const contenedor = document.getElementById('campos-dinamicos-procedimiento');
+        contenedor.innerHTML = '';
+        const procedimiento = PROCEDIMIENTOS[tipo];
+        if (!procedimiento) return;
+
+        procedimiento.campos.forEach(campo => {
+            let campoHTML = `<div class="w-full">
+                <label for="campo-${campo.id}" class="block text-sm font-medium text-gray-700">${campo.label}</label>`;
+            
+            if (campo.tipo === 'select') {
+                const opciones = campo.opciones.map(op => `<option value="${op}">${op}</option>`).join('');
+                campoHTML += `<select id="campo-${campo.id}" name="${campo.id}" class="mt-1 w-full p-2 border border-gray-300 rounded-lg bg-white">${opciones}</select>`;
+            } else if (campo.tipo === 'textarea') {
+                campoHTML += `<textarea id="campo-${campo.id}" name="${campo.id}" rows="2" class="mt-1 w-full p-2 border border-gray-300 rounded-lg"></textarea>`;
+            } else if (campo.tipo === 'checkbox') {
+                 campoHTML += `<input type="checkbox" id="campo-${campo.id}" name="${campo.id}" class="mt-1 h-5 w-5 rounded border-gray-300">`;
+            } else {
+                campoHTML += `<input type="text" id="campo-${campo.id}" name="${campo.id}" class="mt-1 w-full p-2 border border-gray-300 rounded-lg">`;
+            }
+            campoHTML += `</div>`;
+            contenedor.innerHTML += campoHTML;
+        });
+    }
+
+    async function cargarVacasParaMVZ() {
+        if (!currentRancho) return;
+        try {
+            const res = await fetch(`${API_URL}/vacas/rancho/${currentRancho.id}`);
+            const vacas = await res.json();
+            const datalist = document.getElementById('lista-aretes-autocompletar');
+            datalist.innerHTML = '';
+            vacasIndex.clear();
+            vacas.forEach(v => {
+                datalist.insertAdjacentHTML('beforeend', `<option value="${v.numero_arete}">`);
+                vacasIndex.set(String(v.numero_arete).trim(), { id: v.id, nombre: v.nombre, raza: v.raza || '' });
+            });
+        } catch (err) {
+            console.error("Error cargando vacas para MVZ:", err);
+        }
+    }
+
+    function handleAgregarVacaAlLote(e) {
+        e.preventDefault();
+        const tipoActividad = document.getElementById('actividad-tipo').value;
+        const arete = document.getElementById('actividad-arete').value.trim();
+        const loteNumero = document.getElementById('actividad-lote').value;
+
+        if (!tipoActividad || !arete || !loteNumero) {
+            mostrarMensaje('mensaje-vaca', 'Completa procedimiento, lote y arete.');
+            return;
+        }
+
+        const vacaInfo = vacasIndex.get(arete);
+        if (!vacaInfo) {
+            mostrarMensaje('mensaje-vaca', 'Ese arete no está registrado en este rancho.');
+            return;
+        }
+
+        const form = document.getElementById('form-actividad-vaca');
+        const formData = new FormData(form);
+        const detalles = {};
+        formData.forEach((value, key) => {
+            detalles[key] = value;
+        });
+
+        loteActual.push({
+            areteVaca: arete,
+            raza: vacaInfo.raza,
+            loteNumero: loteNumero,
+            tipo: tipoActividad,
+            tipoLabel: PROCEDIMIENTOS[tipoActividad].titulo,
+            fecha: new Date().toISOString().split('T')[0],
+            detalles: detalles
+        });
+        
+        renderLoteActual();
+        form.reset();
+        document.getElementById('actividad-arete').focus();
+    }
+    
+    function renderLoteActual() {
+        const lista = document.getElementById('lote-actual-lista');
+        const tipoActividad = document.getElementById('actividad-tipo').value;
+        document.getElementById('lote-activo-procedimiento').textContent = PROCEDIMIENTOS[tipoActividad]?.titulo || '...';
+        
+        if (loteActual.length === 0) {
+            lista.innerHTML = '<p class="text-gray-500">Aún no has agregado vacas a este lote.</p>';
+            return;
+        }
+
+        lista.innerHTML = loteActual.map((item, idx) => `
+            <div class="bg-gray-100 p-2 rounded-lg flex justify-between items-center text-sm">
+                <span>Arete: <strong>${item.areteVaca}</strong> (${item.raza})</span>
+                <button class="text-red-500 hover:text-red-700 font-bold text-lg" onclick="window.removerDelLote(${idx})">&times;</button>
+            </div>`).join('');
+    }
+
+    // Hacemos la función global para que el onclick la encuentre
+    window.removerDelLote = (index) => {
+        loteActual.splice(index, 1);
+        renderLoteActual();
+    };
+
+    async function handleFinalizarLote() {
+        if (loteActual.length === 0) {
+            alert('El lote está vacío. Agrega al menos una vaca.');
+            return;
+        }
+
+        const btn = document.getElementById('btn-finalizar-lote');
+        btn.disabled = true;
+        btn.textContent = 'Procesando...';
+
+        try {
+            const res = await fetch(`${API_URL}/lote/pdf`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    mvzId: currentUser.id,
+                    ranchoId: currentRancho.id,
+                    lote: loteActual
+                })
+            });
+
+            if (!res.ok) throw new Error('El servidor no pudo generar el PDF.');
+            
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = `reporte_${currentRancho.nombre}_${new Date().toISOString().split('T')[0]}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            
+            // Limpiar todo para el siguiente lote
+            loteActual = [];
+            renderLoteActual();
+            document.getElementById('seccion-registrar-actividad').classList.add('hidden');
+            document.getElementById('seccion-lote-actual').classList.add('hidden');
+            document.getElementById('codigo-rancho').value = '';
+            currentRancho = null;
+
+        } catch (err) {
+            console.error("Error al finalizar lote:", err);
+            alert('Hubo un error al generar el reporte. Inténtalo de nuevo.');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Finalizar y Generar Reporte';
+        }
+    }
+
+
+            // =================================================================
     // ===== 7. FUNCIONES GLOBALES (ACCESIBLES DESDE HTML) =============
     // =================================================================
     window.app = {
