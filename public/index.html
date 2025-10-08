@@ -212,6 +212,42 @@
     <main id="app-content" class="relative z-10"></main>
     <div id="nav-container" class="hidden"></div>
     
+
+    <template id="template-inicio-mvz">
+        <div class="p-5">
+            <header class="flex justify-between items-center mb-6">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">¡Hola, <span id="dash-nombre-mvz"></span>!</h1>
+                    <p class="text-sm text-gray-500" id="dash-fecha-actual-mvz"></p>
+                </div>
+                <div class="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
+                    <i class="fa-solid fa-user-doctor text-2xl text-gray-500"></i>
+                </div>
+            </header>
+            <section class="mb-8">
+                <h2 class="text-lg font-semibold mb-3">Resumen Diario</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-white p-4 rounded-xl shadow-md text-center">
+                        <p class="text-4xl font-bold text-brand-green" id="resumen-visitas">--</p>
+                        <h3 class="text-sm text-gray-600 mt-1" id="detalle-visitas"></h3>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow-md text-center">
+                        <p class="text-4xl font-bold text-red-500" id="resumen-alertas">--</p>
+                        <h3 class="text-sm text-gray-600 mt-1" id="detalle-alertas"></h3>
+                    </div>
+                </div>
+            </section>
+            <section class="mb-8">
+                <h2 class="text-lg font-semibold mb-3">Pendientes Hoy</h2>
+                <div id="lista-pendientes" class="bg-white p-4 rounded-xl shadow-md space-y-4"></div>
+            </section>
+            <section>
+                <h2 class="text-lg font-semibold mb-3">Próximos Eventos</h2>
+                <div id="lista-eventos" class="bg-white p-4 rounded-xl shadow-md space-y-3"></div>
+            </section>
+        </div>
+
+
     <template id="template-manejo-reproductivo-mvz">
         <div class="p-5">
             <div id="modo-seleccion-container">
