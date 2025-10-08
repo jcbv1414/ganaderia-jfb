@@ -82,9 +82,11 @@
              <button class="nav-button" data-vista="ajustes"><i class="fa-solid fa-gear"></i><span>Ajustes</span></button>
         </nav>
         <nav id="nav-mvz" class="bottom-nav hidden">
-            <button class="nav-button active" data-vista="inicio-mvz"><i class="fa-solid fa-clipboard-list"></i><span>Actividad</span></button>
-            <button class="nav-button" data-vista="mvz-ranchos"><i class="fa-solid fa-house-medical"></i><span>Mis Ranchos</span></button>
-            <button class="nav-button" data-vista="mvz-ajustes"><i class="fa-solid fa-gear"></i><span>Ajustes</span></button>
+            <button class="nav-button active" data-vista="inicio-mvz"><i class="fa-solid fa-house-user"></i><span>Inicio</span></button>
+            <button class="nav-button" data-vista="manejo-reproductivo-mvz"><i class="fa-solid fa-clipboard-list"></i><span>Manejo Reprod.</span></button>
+            <button class="nav-button" data-vista="mis-ranchos-mvz"><i class="fa-solid fa-house-medical"></i><span>Mis Ranchos</span></button>
+            <button class="nav-button" data-vista="estadisticas-mvz"><i class="fa-solid fa-chart-pie"></i><span>Estadísticas</span></button>
+            <button class="nav-button" data-vista="ajustes-mvz"><i class="fa-solid fa-gear"></i><span>Ajustes</span></button>
         </nav>
         <div id="fab-container">
              <button class="fab">+</button>
@@ -177,7 +179,6 @@
 <head>
     </head>
 <body>
-
     <main id="app-content" class="relative z-10"></main>
 
     <div id="nav-container" class="hidden">
@@ -186,19 +187,50 @@
 
         <nav id="nav-mvz" class="bottom-nav hidden">
             <button class="nav-button active" data-vista="inicio-mvz"><i class="fa-solid fa-house-user"></i><span>Inicio</span></button>
-            <button class="nav-button" data-vista="actividades-mvz"><i class="fa-solid fa-clipboard-list"></i><span>Actividades</span></button>
-            <button class="nav-button" data-vista="mvz-ranchos"><i class="fa-solid fa-house-medical"></i><span>Ranchos</span></button>
-            <button class="nav-button" data-vista="mvz-ajustes"><i class="fa-solid fa-gear"></i><span>Ajustes</span></button>
+            <button class="nav-button" data-vista="manejo-reproductivo-mvz"><i class="fa-solid fa-clipboard-list"></i><span>Manejo Reprod.</span></button>
+            <button class="nav-button" data-vista="mis-ranchos-mvz"><i class="fa-solid fa-house-medical"></i><span>Mis Ranchos</span></button>
+            <button class="nav-button" data-vista="estadisticas-mvz"><i class="fa-solid fa-chart-pie"></i><span>Estadísticas</span></button>
+            <button class="nav-button" data-vista="ajustes-mvz"><i class="fa-solid fa-gear"></i><span>Ajustes</span></button>
         </nav>
-        <div id="fab-container">
-             <button class="fab">+</button>
-        </div>
+        <div id="fab-container"></div>
     </div>
     
     <template id="template-login"></template>
     <template id="template-registro"></template>
     <template id="template-inicio-propietario"></template>
-    
+    <template id="template-estadisticas"></template>
+    <template id="template-mis-vacas"></template>
+
+    <template id="template-inicio-mvz">
+        </template>
+
+    <template id="template-manejo-reproductivo-mvz">
+        <div class="p-5">
+            <div id="rancho-access-container">
+                <header class="mb-6 text-center">
+                    <h1 class="text-2xl font-bold text-gray-800">Manejo Reproductivo</h1>
+                    <p class="text-sm text-gray-500">Ingresa a un rancho para comenzar</p>
+                </header>
+                <div class="bg-white p-4 rounded-xl shadow-md">
+                    </div>
+            </div>
+            <div id="rancho-actions-container" class="hidden">
+                 </div>
+        </div>
+    </template>
+
+    <template id="template-mis-ranchos-mvz">
+        <h1 class="text-center p-8 text-2xl">Mis Ranchos (en construcción)</h1>
+    </template>
+    <template id="template-estadisticas-mvz">
+        <h1 class="text-center p-8 text-2xl">Estadísticas MVZ (en construcción)</h1>
+    </template>
+    <template id="template-ajustes-mvz">
+        <h1 class="text-center p-8 text-2xl">Ajustes (en construcción)</h1>
+    </template>
+    <script src="main.js"></script>
+</body>
+</html>
     <!DOCTYPE html>
 <html lang="es">
 <head>

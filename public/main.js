@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ]
         }
     };
-    const RAZAS_BOVINAS = ['Aberdeen Angus', 'Ayrshire', 'Bazadaise', 'Beefmaster', 'Belgian Blue', 'Brahman', 'Brangus', 'Charolais', 'Chianina', 'Criollo', 'Galloway', 'Gelbvieh', 'Gir', 'Guzerá', 'Gyr Lechero', 'Guernsey', 'Hereford', 'Holstein', 'Jersey', 'Limousin', 'Maine-Anjou', 'Marchigiana', 'Montbéliarde', 'Normando', 'Pardo Suizo', 'Piemontese', 'Pinzgauer', 'Romagnola', 'Sahiwal', 'Santa Gertrudis', 'Sardo Negro', 'Shorthorn', 'Simbrah', 'Simmental', 'Sindi', 'Tarentaise', 'Wagyu'].sort((a, b) => a.localeCompare(b));
+    const RAZAS_BOVINAS = ['Aberdeen Angus', 'Ayrshire', 'Bazadaise', 'Beefmaster', 'Belgian Blue', 'Brahman', 'Brangus', 'Charolais', 'Chianina', 'Criollo', 'Suizo', 'Galloway', 'Gelbvieh', 'Gyr', 'Guzerá', 'Gyr Lechero', 'Guernsey', 'Hereford', 'Holstein', 'Jersey', 'Limousin', 'Maine-Anjou', 'Marchigiana', 'Montbéliarde', 'Normando', 'Pardo Suizo', 'Piemontese', 'Pinzgauer', 'Romagnola', 'Sahiwal', 'Santa Gertrudis', 'Sardo Negro', 'Shorthorn', 'Simbrah', 'Simmental', 'Sindi', 'Tarentaise', 'Wagyu'].sort((a, b) => a.localeCompare(b));
 
 
     // =================================================================
@@ -114,13 +114,14 @@ document.addEventListener('DOMContentLoaded', () => {
             cargarDatosDashboard();
         } else if (viewId === 'inicio-mvz') {
             document.getElementById('dash-nombre-mvz').textContent = currentUser?.nombre.split(' ')[0] || '';
-            document.getElementById('dash-fecha-actual-mvz').textContent = new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
+            document.getElementById('dash-fecha-actual-mvz').textContent = new Date().toLocaleString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
             if (fab) fab.classList.add('hidden');
             cargarDashboardMVZ();
-            initMvzListeners();
-        }
-        else if (viewId === 'actividades-mvz') { // La vista de registro de actividades
-            initMvzListeners(); 
+        } 
+        // Cambiamos 'actividades-mvz' por el nuevo nombre
+        else if (viewId === 'manejo-reproductivo-mvz') { 
+            // Y llamamos a la función con el nuevo nombre
+            initManejoReproductivoListeners(); 
         }
     }
 
@@ -420,22 +421,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     // --- LÓGICA DEL MVZ ---
-    function initMvzListeners() {
-        document.getElementById('btn-validar-rancho').addEventListener('click', handleValidarRancho);
-        document.getElementById('form-actividad-vaca').addEventListener('submit', handleAgregarVacaAlLote);
-        const actividadTipoSelect = document.getElementById('actividad-tipo');
-        if (actividadTipoSelect) {
-            actividadTipoSelect.innerHTML = '<option value="" selected disabled>Seleccione...</option>';
-            Object.keys(PROCEDIMIENTOS).forEach(key => {
-                actividadTipoSelect.add(new Option(PROCEDIMIENTOS[key].titulo, key));
-            });
-            actividadTipoSelect.addEventListener('change', (e) => renderizarCamposProcedimiento(e.target.value));
-        }
-        document.getElementById('btn-finalizar-lote').addEventListener('click', handleFinalizarLote);
-        const selLote = document.getElementById('actividad-lote');
-        selLote.innerHTML = '';
-        for (let i = 1; i <= 10; i++) selLote.add(new Option(`Lote ${i}`, i));
+    function initManejoReproductivoListeners() {
+        document.getElementById('rancho-access-container').classList.remove('hidden');
+        document.getElementById('rancho-actions-container').classList.add('hidden');
+        document.getElementById('codigo-rancho').value = '';
+        
+        const btnValidar = document.getElementById('btn-validar-rancho');
+        btnValidar.onclick = handleValidarRancho; 
     }
+
 
     async function handleValidarRancho() {
         const codigo = document.getElementById('codigo-rancho').value.trim().toUpperCase();
