@@ -36,6 +36,22 @@
         #app-content {
             padding-bottom: 100px; /* Espacio para la barra de navegación inferior */
         }
+
+        /* Estilos para login/registro (pueden ser diferentes) */
+        .auth-container {
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            color: white;
+            min-height: 100vh;
+        }
+        .auth-container input, .auth-container select {
+             background-color: rgba(255,255,255,.05) !important;
+             border: 1px solid rgba(255,255,255,.2) !important; color:white !important;
+             border-radius:10px !important; padding: 0.9rem; font-size: 1rem; width:100%;
+        }
+        .auth-container input::placeholder { color:#a7a7a7 !important; }
+        .auth-container h1 { background:linear-gradient(90deg,#4facfe,#00f2fe); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+        .auth-container .btn-primary { display:inline-block; padding:12px 30px; font-size:1em; text-decoration:none; color:#fff; border:2px solid #00f2fe; border-radius:50px; background:transparent; width: 100%; }
+
         
         /* --- ESTILOS PARA LA BARRA DE NAVEGACIÓN INFERIOR (NUEVO DISEÑO) --- */
         .bottom-nav {
@@ -73,7 +89,6 @@
             margin-bottom: 4px;
         }
         
-        /* El botón activo ahora es verde */
         .nav-button.active {
             color: #166534; /* Verde oscuro de la marca */
         }
@@ -136,18 +151,59 @@
             <button class="nav-button" data-vista="estadisticas"><i class="fa-solid fa-chart-pie"></i><span>Estadísticas</span></button>
             <button class="nav-button" data-vista="ajustes"><i class="fa-solid fa-gear"></i><span>Ajustes</span></button>
         </nav>
-        <nav id="nav-mvz" class="bottom-nav hidden">
-            </nav>
+        <nav id="nav-mvz" class="bottom-nav hidden"></nav>
         <div id="fab-container">
              <button class="fab">+</button>
         </div>
     </div>
     
     <template id="template-login">
-        </template>
+        <div class="auth-container flex items-center justify-center p-4">
+            <div id="vista-login" class="w-full max-w-md">
+                <div class="text-center mb-8">
+                    <img src="/assets/logo.png" alt="Logo JFB" class="w-24 h-24 mx-auto mb-4">
+                    <h1 class="text-3xl font-bold">Bienvenido</h1>
+                    <p class="text-gray-400">Inicia sesión para gestionar tu ganado</p>
+                </div>
+                <form id="form-login" novalidate>
+                    <div class="mb-4"><input type="email" id="login-email" placeholder="Correo Electrónico" required></div>
+                    <div class="mb-4"><input type="password" id="login-password" placeholder="Contraseña" required></div>
+                    <label class="flex items-center text-sm text-gray-400 mb-6"><input type="checkbox" id="remember-me" class="mr-2">Recuérdame</label>
+                    <button type="submit" class="btn-primary">Ingresar</button>
+                    <div id="login-mensaje" class="text-center mt-2 text-sm h-4"></div>
+                </form>
+                <p class="text-center text-sm text-gray-400 mt-6">¿Aún no tienes cuenta? <a href="#" id="link-a-registro" class="text-cyan-400 hover:underline">Regístrate aquí</a></p>
+            </div>
+        </div>
+    </template>
     
     <template id="template-registro">
-        </template>
+        <div class="auth-container flex items-center justify-center p-4">
+            <div id="vista-registro" class="w-full max-w-md">
+                 <div class="text-center mb-8">
+                    <h1 class="text-3xl font-bold">Crear Cuenta</h1>
+                    <p class="text-gray-400">Completa tus datos para empezar</p>
+                </div>
+                <form id="form-registro" novalidate>
+                    <div class="mb-4"><input type="text" name="nombre" placeholder="Nombre Completo" required></div>
+                    <div class="mb-4"><input type="email" name="email" placeholder="Correo Electrónico" required></div>
+                    <div class="mb-4"><input type="password" name="password" placeholder="Contraseña" required></div>
+                    <div class="mb-4">
+                        <select name="rol" id="registro-rol">
+                            <option value="mvz">Soy Veterinario (MVZ)</option>
+                            <option value="propietario" selected>Soy Propietario</option>
+                        </select>
+                    </div>
+                    <div id="campo-rancho" class="mb-4">
+                         <input type="text" name="rancho_nombre" placeholder="Nombre de tu Rancho">
+                    </div>
+                    <button type="submit" class="btn-primary">Registrarme</button>
+                    <div id="registro-mensaje" class="text-center mt-2 text-sm h-4"></div>
+                </form>
+                <p class="text-center text-sm text-gray-400 mt-6">¿Ya tienes una cuenta? <a href="#" id="link-a-login" class="text-cyan-400 hover:underline">Inicia sesión</a></p>
+            </div>
+        </div>
+    </template>
 
     <template id="template-inicio-propietario">
         <div class="p-5">
@@ -160,7 +216,6 @@
                     <i class="fa-solid fa-user text-2xl text-gray-500"></i>
                 </div>
             </header>
-
             <section class="mb-8">
                 <h2 class="text-lg font-semibold mb-3">Resumen del Rancho</h2>
                 <div class="grid grid-cols-3 gap-3">
@@ -178,7 +233,6 @@
                     </div>
                 </div>
             </section>
-
             <section class="mb-8">
                 <div class="flex justify-between items-center mb-3">
                     <h2 class="text-lg font-semibold">Estado de Lotes</h2>
@@ -188,7 +242,6 @@
                     <p class="text-gray-500">Cargando lotes...</p>
                 </div>
             </section>
-
             <section>
                 <h2 class="text-lg font-semibold mb-3">Actividad y Eventos</h2>
                 <div class="bg-white p-4 rounded-xl shadow-md">
@@ -207,7 +260,8 @@
     </template>
     
     <template id="template-inicio-mvz">
-        </template>
+        <h1 class="text-center p-8 text-2xl">Vista de MVZ (en construcción)</h1>
+    </template>
     
     <template id="template-mis-vacas">
         <h1 class="text-center p-8 text-2xl">Vista de Mis Vacas (en construcción)</h1>
