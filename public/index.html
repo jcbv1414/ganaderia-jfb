@@ -7,14 +7,13 @@
     <title>JFB Ganadería Inteligente</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
-    // Configuración de Tailwind para usar el color verde del diseño
     tailwind.config = {
         theme: {
             extend: {
                 colors: {
-                    'brand-green': '#166534', // Un verde oscuro para textos y acentos
-                    'brand-green-light': '#22c55e', // Verde brillante para botones
-                    'brand-bg': '#f4f6f9', // Un gris muy claro para el fondo
+                    'brand-green': '#166534',
+                    'brand-green-light': '#22c55e',
+                    'brand-bg': '#f4f6f9',
                 }
             }
         }
@@ -22,26 +21,15 @@
     </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
-        
-        /* --- ESTILOS GENERALES (NUEVO DISEÑO) --- */
         html, body {
-            height: 100%;
-            margin: 0;
-            font-family: 'Poppins', sans-serif;
-            background-color: #f4f6f9; /* Color de fondo principal */
-            color: #333; /* Color de texto principal */
-            -webkit-tap-highlight-color: transparent; /* Evita el destello azul en móviles */
+            height: 100%; margin: 0; font-family: 'Poppins', sans-serif;
+            background-color: #f4f6f9; color: #333;
+            -webkit-tap-highlight-color: transparent;
         }
-        
-        #app-content {
-            padding-bottom: 100px; /* Espacio para la barra de navegación inferior */
-        }
-
-        /* Estilos para login/registro (pueden ser diferentes) */
+        #app-content { padding-bottom: 100px; }
         .auth-container {
             background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-            color: white;
-            min-height: 100vh;
+            color: white; min-height: 100vh;
         }
         .auth-container input, .auth-container select {
              background-color: rgba(255,255,255,.05) !important;
@@ -51,95 +39,37 @@
         .auth-container input::placeholder { color:#a7a7a7 !important; }
         .auth-container h1 { background:linear-gradient(90deg,#4facfe,#00f2fe); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
         .auth-container .btn-primary { display:inline-block; padding:12px 30px; font-size:1em; text-decoration:none; color:#fff; border:2px solid #00f2fe; border-radius:50px; background:transparent; width: 100%; }
-
-        
-        /* --- ESTILOS PARA LA BARRA DE NAVEGACIÓN INFERIOR (NUEVO DISEÑO) --- */
         .bottom-nav {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 80px;
-            background: #ffffff;
-            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.08);
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            z-index: 1000;
+            position: fixed; bottom: 0; left: 0; right: 0; height: 80px;
+            background: #ffffff; box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.08);
+            display: flex; justify-content: space-around; align-items: center; z-index: 1000;
         }
-
         .nav-button {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background: none;
-            border: none;
-            color: #888; /* Color para íconos inactivos */
-            font-size: 0.7rem;
-            font-weight: 500;
-            transition: color 0.2s ease-in-out;
-            padding: 8px;
-            height: 100%;
-            flex-grow: 1;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background: none; border: none; color: #888; font-size: 0.7rem; font-weight: 500;
+            transition: color 0.2s ease-in-out; padding: 8px; height: 100%; flex-grow: 1;
         }
-
-        .nav-button i {
-            font-size: 1.6rem;
-            margin-bottom: 4px;
-        }
-        
-        .nav-button.active {
-            color: #166534; /* Verde oscuro de la marca */
-        }
-
-        /* --- BOTÓN FLOTANTE (+) --- */
+        .nav-button i { font-size: 1.6rem; margin-bottom: 4px; }
+        .nav-button.active { color: #166534; }
         .fab {
-            position: fixed;
-            bottom: 100px; /* Justo encima de la barra de navegación */
-            right: 20px;
-            width: 60px;
-            height: 60px;
-            background-color: #166534; /* Verde oscuro */
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2rem;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-            z-index: 999;
-            cursor: pointer;
+            position: fixed; bottom: 100px; right: 20px; width: 60px; height: 60px;
+            background-color: #166534; color: white; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 2rem; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); z-index: 999; cursor: pointer;
         }
-        
-        /* --- CÍRCULOS DE PROGRESO PARA LOTES (CON CSS PURO) --- */
         .progress-ring {
-            position: relative;
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            display: grid;
-            place-items: center;
+            position: relative; width: 60px; height: 60px; border-radius: 50%;
+            display: grid; place-items: center;
             background: conic-gradient(var(--color, #22c55e) calc(var(--value) * 1%), #e0e0e0 0);
         }
         .progress-ring::before {
-            content: "";
-            position: absolute;
-            width: 48px;
-            height: 48px;
-            background: white;
-            border-radius: 50%;
+            content: ""; position: absolute; width: 48px; height: 48px;
+            background: white; border-radius: 50%;
         }
-        .progress-ring-percent {
-            position: relative;
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: #166534;
-        }
-        
+        .progress-ring-percent { position: relative; font-size: 0.9rem; font-weight: 600; color: #166534; }
     </style>
 </head>
-<body class="bg-brand-bg">
+<body>
 
     <main id="app-content" class="relative z-10"></main>
 
@@ -162,56 +92,110 @@
     </div>
     
     <template id="template-login">
-        </template>
+        <div class="auth-container flex items-center justify-center p-4">
+            <div id="vista-login" class="w-full max-w-md">
+                <div class="text-center mb-8">
+                    <img src="/assets/logo.png" alt="Logo JFB" class="w-24 h-24 mx-auto mb-4">
+                    <h1 class="text-3xl font-bold">Bienvenido</h1>
+                    <p class="text-gray-400">Inicia sesión para gestionar tu ganado</p>
+                </div>
+                <form id="form-login" novalidate>
+                    <div class="mb-4"><input type="email" id="login-email" placeholder="Correo Electrónico" required></div>
+                    <div class="mb-4"><input type="password" id="login-password" placeholder="Contraseña" required></div>
+                    <label class="flex items-center text-sm text-gray-400 mb-6"><input type="checkbox" id="remember-me" class="mr-2">Recuérdame</label>
+                    <button type="submit" class="btn-primary">Ingresar</button>
+                    <div id="login-mensaje" class="text-center mt-2 text-sm h-4"></div>
+                </form>
+                <p class="text-center text-sm text-gray-400 mt-6">¿Aún no tienes cuenta? <a href="#" id="link-a-registro" class="text-cyan-400 hover:underline">Regístrate aquí</a></p>
+            </div>
+        </div>
+    </template>
+    
     <template id="template-registro">
-        </template>
+        <div class="auth-container flex items-center justify-center p-4">
+            <div id="vista-registro" class="w-full max-w-md">
+                 <div class="text-center mb-8">
+                    <h1 class="text-3xl font-bold">Crear Cuenta</h1>
+                    <p class="text-gray-400">Completa tus datos para empezar</p>
+                </div>
+                <form id="form-registro" novalidate>
+                    <div class="mb-4"><input type="text" name="nombre" placeholder="Nombre Completo" required></div>
+                    <div class="mb-4"><input type="email" name="email" placeholder="Correo Electrónico" required></div>
+                    <div class="mb-4"><input type="password" name="password" placeholder="Contraseña" required></div>
+                    <div class="mb-4">
+                        <select name="rol" id="registro-rol">
+                            <option value="mvz">Soy Veterinario (MVZ)</option>
+                            <option value="propietario" selected>Soy Propietario</option>
+                        </select>
+                    </div>
+                    <div id="campo-rancho" class="mb-4">
+                         <input type="text" name="rancho_nombre" placeholder="Nombre de tu Rancho">
+                    </div>
+                    <button type="submit" class="btn-primary">Registrarme</button>
+                    <div id="registro-mensaje" class="text-center mt-2 text-sm h-4"></div>
+                </form>
+                <p class="text-center text-sm text-gray-400 mt-6">¿Ya tienes una cuenta? <a href="#" id="link-a-login" class="text-cyan-400 hover:underline">Inicia sesión</a></p>
+            </div>
+        </div>
+    </template>
+
     <template id="template-inicio-propietario">
-        </template>
+        <div class="p-5">
+            <header class="flex justify-between items-center mb-6">
+                <div>
+                    <h1 class="text-2xl font-bold text-brand-green">¡Bienvenido, <span id="dash-nombre-propietario"></span>!</h1>
+                    <p class="text-sm text-gray-500" id="dash-fecha-actual"></p>
+                </div>
+                <div class="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
+                    <i class="fa-solid fa-user text-2xl text-gray-500"></i>
+                </div>
+            </header>
+            <section class="mb-8">
+                <h2 class="text-lg font-semibold mb-3">Resumen del Rancho</h2>
+                <div class="grid grid-cols-3 gap-3">
+                    <div class="bg-white p-4 rounded-xl shadow-md text-center"><p class="text-3xl font-bold text-brand-green" id="resumen-total-vacas">--</p><h3 class="text-xs text-gray-500 mt-1">Vacas en Rancho</h3></div>
+                    <div class="bg-white p-4 rounded-xl shadow-md text-center"><p class="text-3xl font-bold text-brand-green" id="resumen-vacas-gestantes">--</p><h3 class="text-xs text-gray-500 mt-1">Vacas Gestantes</h3></div>
+                    <div class="bg-white p-4 rounded-xl shadow-md text-center"><p class="text-3xl font-bold text-red-500" id="resumen-alertas">--</p><h3 class="text-xs text-gray-500 mt-1">Alertas de Salud</h3></div>
+                </div>
+            </section>
+            <section class="mb-8">
+                <div class="flex justify-between items-center mb-3"><h2 class="text-lg font-semibold">Estado de Lotes</h2><button class="text-sm font-medium text-brand-green">Ver Todos los Lotes</button></div>
+                <div id="lotes-container" class="grid grid-cols-1 sm:grid-cols-2 gap-4"><p class="text-gray-500">Cargando lotes...</p></div>
+            </section>
+            <section>
+                <h2 class="text-lg font-semibold mb-3">Actividad y Eventos</h2>
+                <div class="bg-white p-4 rounded-xl shadow-md">
+                    <div><h3 class="font-semibold text-gray-800 mb-2"><i class="fa-solid fa-check-circle text-green-500 mr-2"></i>Últimas Noticias</h3><p class="text-sm text-gray-600 ml-6 pb-3 border-b border-gray-200">MVZ Dr. Hernández registró 2 tratamientos en Lote C.</p></div>
+                    <div class="mt-3"><h3 class="font-semibold text-gray-800 mb-2"><i class="fa-solid fa-calendar-days text-brand-green mr-2"></i>Próximos Eventos</h3><p class="text-sm text-gray-600 ml-6">Próxima visita del MVZ: Jueves, 27 Octubre.</p><p class="text-sm text-gray-600 ml-6 mt-1">Vacunación general de Lote 1 programada.</p></div>
+                </div>
+            </section>
+        </div>
+    </template>
     
     <template id="template-inicio-mvz">
         <div class="p-5">
             <header class="flex justify-between items-center mb-6">
-                <div>
-                    <h1 class="text-2xl font-bold text-brand-green">Hola, <span id="dash-nombre-mvz"></span></h1>
-                    <p class="text-sm text-gray-500" id="dash-fecha-actual-mvz"></p>
-                </div>
-                 <div class="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
-                    <i class="fa-solid fa-user-doctor text-2xl text-gray-500"></i>
-                </div>
+                <div><h1 class="text-2xl font-bold text-brand-green">Hola, <span id="dash-nombre-mvz"></span></h1><p class="text-sm text-gray-500" id="dash-fecha-actual-mvz"></p></div>
+                 <div class="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center"><i class="fa-solid fa-user-doctor text-2xl text-gray-500"></i></div>
             </header>
-            
             <div id="panel-actividad-mvz" class="space-y-6">
-                
                 <section id="seccion-seleccionar-rancho">
                     <h2 class="text-lg font-semibold mb-3">Paso 1: Selecciona un Rancho</h2>
                     <div class="bg-white p-4 rounded-xl shadow-md">
                         <label for="codigo-rancho" class="block text-sm font-medium text-gray-700 mb-1">Ingresa el Código del Rancho</label>
-                        <div class="flex items-center space-x-2">
-                           <input type="text" id="codigo-rancho" placeholder="Ej: A1B2C3" class="w-full p-2 border border-gray-300 rounded-lg">
-                           <button id="btn-validar-rancho" class="bg-brand-green text-white px-4 py-2 rounded-lg font-semibold">Validar</button>
-                        </div>
+                        <div class="flex items-center space-x-2"><input type="text" id="codigo-rancho" placeholder="Ej: A1B2C3" class="w-full p-2 border border-gray-300 rounded-lg"><button id="btn-validar-rancho" class="bg-brand-green text-white px-4 py-2 rounded-lg font-semibold">Validar</button></div>
                         <div id="mensaje-rancho" class="text-sm mt-2 h-4"></div>
                     </div>
                 </section>
-                
                 <section id="seccion-registrar-actividad" class="hidden">
                     <h2 class="text-lg font-semibold mb-3">Paso 2: Registrar Actividad en <span id="nombre-rancho-activo" class="font-bold text-brand-green"></span></h2>
                     <div class="bg-white p-4 rounded-xl shadow-md space-y-4">
                         <div class="grid grid-cols-2 gap-4">
-                             <div>
-                                <label for="actividad-tipo" class="block text-sm font-medium text-gray-700 mb-1">Procedimiento</label>
-                                <select id="actividad-tipo" class="w-full p-2 border border-gray-300 rounded-lg bg-white"></select>
-                            </div>
-                            <div>
-                                <label for="actividad-lote" class="block text-sm font-medium text-gray-700 mb-1">Lote</label>
-                                <select id="actividad-lote" class="w-full p-2 border border-gray-300 rounded-lg bg-white"></select>
-                            </div>
+                             <div><label for="actividad-tipo" class="block text-sm font-medium text-gray-700 mb-1">Procedimiento</label><select id="actividad-tipo" class="w-full p-2 border border-gray-300 rounded-lg bg-white"></select></div>
+                            <div><label for="actividad-lote" class="block text-sm font-medium text-gray-700 mb-1">Lote</label><select id="actividad-lote" class="w-full p-2 border border-gray-300 rounded-lg bg-white"></select></div>
                         </div>
-
                         <form id="form-actividad-vaca">
-                            <div id="campos-dinamicos-procedimiento" class="space-y-3 border-t border-b border-gray-200 py-4">
-                                </div>
-                            
+                            <div id="campos-dinamicos-procedimiento" class="space-y-3 border-t border-b border-gray-200 py-4"></div>
                             <div class="mt-4">
                                 <label for="actividad-arete" class="block text-sm font-medium text-gray-700 mb-1">Número de Arete</label>
                                 <div class="flex items-center space-x-2">
@@ -224,25 +208,23 @@
                         </form>
                     </div>
                 </section>
-                
                 <section id="seccion-lote-actual" class="hidden">
                     <h2 class="text-lg font-semibold mb-3">Lote Actual para <span id="lote-activo-procedimiento" class="font-bold text-brand-green"></span></h2>
                      <div class="bg-white p-4 rounded-xl shadow-md">
-                        <div id="lote-actual-lista" class="space-y-2 mb-4">
-                           <p class="text-gray-500">Aún no has agregado vacas a este lote.</p>
-                        </div>
+                        <div id="lote-actual-lista" class="space-y-2 mb-4"><p class="text-gray-500">Aún no has agregado vacas a este lote.</p></div>
                         <button id="btn-finalizar-lote" class="w-full bg-brand-green-light text-white py-2 rounded-lg font-bold">Finalizar y Generar Reporte</button>
                     </div>
                 </section>
-
             </div>
         </div>
     </template>
+
     <template id="template-mis-vacas">
-        </template>
-    
+         <h1 class="text-center p-8 text-2xl">Vista de Mis Vacas (en construcción)</h1>
+    </template>
     <template id="template-estadisticas">
-         </template>
+         <h1 class="text-center p-8 text-2xl">Vista de Estadísticas (en construcción)</h1>
+    </template>
 
     <script src="main.js"></script>
 
