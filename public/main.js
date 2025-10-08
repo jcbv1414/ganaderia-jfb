@@ -113,8 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (fab) fab.classList.remove('hidden');
             cargarDatosDashboard();
         } else if (viewId === 'inicio-mvz') {
-            document.getElementById('dash-nombre-mvz').textContent = currentUser?.nombre.split(' ')[0] || '';
-            document.getElementById('dash-fecha-actual-mvz').textContent = new Date().toLocaleString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
+            
             if (fab) fab.classList.add('hidden');
             cargarDashboardMVZ();
         } 
@@ -421,17 +420,24 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     // --- LÓGICA DEL MVZ ---
-    function initManejoReproductivoListeners() {
-        document.getElementById('rancho-access-container').classList.remove('hidden');
+   function initManejoReproductivoListeners() {
+        // Estado inicial de la pantalla
+        document.getElementById('modo-seleccion-container').classList.remove('hidden');
+        document.getElementById('rancho-access-container').classList.add('hidden');
         document.getElementById('rancho-actions-container').classList.add('hidden');
-        document.getElementById('codigo-rancho').value = '';
+        loteActual = []; // Limpiamos el lote al entrar
         
-        const btnValidar = document.getElementById('btn-validar-rancho');
-        btnValidar.onclick = handleValidarRancho; 
+        // Listeners para los botones de modo
+        document.getElementById('btn-show-rancho-registrado').onclick = () => {
+            document.getElementById('rancho-access-container').classList.remove('hidden');
+        };
+        document.getElementById('btn-iniciar-independiente').onclick = () => {
+            iniciarActividad('Rancho Independiente');
+        };
+        document.getElementById('btn-validar-rancho').onclick = handleValidarRancho; 
     }
 
-
-    async function handleValidarRancho() {
+   async function handleValidarRancho() {
         const codigo = document.getElementById('codigo-rancho').value.trim().toUpperCase();
         if (!codigo) { mostrarMensaje('mensaje-rancho', 'El código no puede estar vacío.'); return; }
         try {
@@ -439,18 +445,86 @@ document.addEventListener('DOMContentLoaded', () => {
             const respuesta = await res.json();
             if (!res.ok) throw new Error(respuesta.message);
             currentRancho = respuesta;
-            mostrarMensaje('mensaje-rancho', `Rancho "${currentRancho.nombre}" validado.`, false);
-            document.getElementById('nombre-rancho-activo').textContent = currentRancho.nombre;
-            document.getElementById('seccion-registrar-actividad').classList.remove('hidden');
-            document.getElementById('seccion-lote-actual').classList.remove('hidden');
-            await cargarVacasParaMVZ();
+            iniciarActividad(currentRancho.nombre, currentRancho.logo_url);
+            await cargarVacasParaMVZ(); // Cargar vacas solo si es un rancho registrado
         } catch (err) {
             mostrarMensaje('mensaje-rancho', err.message);
-            currentRancho = null;
-            document.getElementById('seccion-registrar-actividad').classList.add('hidden');
-            document.getElementById('seccion-lote-actual').classList.add('hidden');
         }
     }
+     function iniciarActividad(nombreRancho, logoUrl = 'https://i.imgur.com/s6l2h27.png') {
+        document.getElementById('modo-seleccion-container').classList.add('hidden');
+        document.getElementById('rancho-actions-container').classList.remove('hidden');
+        document.getElementById('rancho-nombre-activo').textContent = nombreRancho;
+        document.getElementById('rancho-logo').src = logoUrl;
+
+        // Listeners para las acciones
+        document.getElementById('btn-abrir-modal-palpacion').onclick = () => abrirModalActividad('palpacion');
+        
+        // Listener para finalizar (se puede mover si es necesario)
+        document.querySelector('#rancho-actions-container button:last-of-type').onclick = handleFinalizarLote;
+    }
+    
+    // Nueva función para abrir el modal
+    function abrirModalActividad(tipo) {
+        const modal = document.getElementById('modal-palpacion'); // Por ahora solo tenemos este
+        modal.classList.remove('hidden');
+        
+        // Poblar select de Lotes
+        const selLote = document.getElementById('actividad-lote');
+        selLote.innerHTML = '';
+        for (let i = 1; i <= 10; i++) selLote.add(new Option(`Lote ${i}`, i));
+        
+        // Renderizar campos dinámicos
+        renderizarCamposProcedimiento(tipo);
+
+        // Listeners del modal
+        document.getElementById('btn-cerrar-modal-palpacion').onclick = () => modal.classList.add('hidden');
+        document.getElementById('btn-agregar-vaca').onclick = (e) => {
+            e.preventDefault();
+            handleAgregarVacaAlLote(tipo);
+        };
+    }
+
+    // Lógica para agregar vaca (ahora llamada desde el modal)
+    function handleAgregarVacaAlLote(tipoActividad) {
+        const arete = document.getElementById('actividad-arete').value.trim();
+        const loteNumero = document.getElementById('actividad-lote').value;
+        if (!arete || !loteNumero) { mostrarMensaje('mensaje-vaca', 'Completa lote y arete.'); return; }
+
+        const form = document.getElementById('form-actividad-vaca');
+        const formData = new FormData(form);
+        const detalles = {};
+        for (const [key, value] of formData.entries()) {
+            if (key !== 'actividad-lote' && key !== 'actividad-arete') {
+                detalles[key] = value;
+            }
+        }
+        
+        loteActual.push({
+            areteVaca: arete,
+            raza: vacasIndex.get(arete)?.raza || 'N/A', // Busca la raza si el rancho está registrado
+            loteNumero: loteNumero,
+            tipo: tipoActividad,
+            tipoLabel: PROCEDIMIENTOS[tipoActividad].titulo,
+            fecha: new Date().toISOString().split('T')[0],
+            detalles: detalles
+        });
+
+        mostrarMensaje('mensaje-vaca', `Vaca ${arete} agregada. Total en lote: ${loteActual.length}`, false);
+        document.getElementById('lote-info').textContent = `${loteActual.length} vacas (Lote ${loteNumero})`;
+        document.getElementById('actividad-arete').value = '';
+        document.getElementById('actividad-arete').focus();
+    }
+    
+    // Las demás funciones de apoyo
+    function renderizarCamposProcedimiento(tipo) { /* ... (código sin cambios) ... */ }
+    async function cargarVacasParaMVZ() { /* ... (código sin cambios) ... */ }
+    async function handleFinalizarLote() { /* ... (código casi sin cambios, solo la alerta) ... */ 
+         if (loteActual.length === 0) {
+            alert('Aún no has registrado ninguna vaca en esta actividad.');
+            return;
+         }
+        }
     
     function renderizarCamposProcedimiento(tipo) {
         const contenedor = document.getElementById('campos-dinamicos-procedimiento');
