@@ -172,16 +172,27 @@
                 </div>
             </div>
             <div id="rancho-actions-container" class="hidden">
-                <header class="mb-6">
-                    <div class="flex items-center space-x-3 mb-2"><img id="rancho-logo" src="https://i.imgur.com/s6l2h27.png" class="w-12 h-12 rounded-lg object-cover bg-gray-200"><div><h1 class="text-2xl font-bold text-gray-800" id="rancho-nombre-activo"></h1><p class="text-sm text-gray-500">Lote actual: <span id="lote-info" class="font-semibold">Ninguno</span></p></div></div>
-                </header>
-                <div class="space-y-3">
-                    <h3 class="font-semibold text-gray-600">Acciones Rápidas</h3>
-                    <button id="btn-abrir-modal-palpacion" class="w-full text-left bg-blue-600 text-white p-4 rounded-lg font-bold flex items-center"><i class="fa-solid fa-syringe mr-3"></i>Palpación / Chequeo Reproductivo</button><button class="w-full text-left bg-gray-400 text-white p-4 rounded-lg font-bold flex items-center cursor-not-allowed"><i class="fa-solid fa-vial mr-3"></i>Inseminación Artificial (Próximamente)</button>
-                    <h3 class="font-semibold text-gray-600 pt-4">Documentos y Reportes</h3><button class="w-full text-left bg-brand-green-light text-white p-4 rounded-lg font-bold flex items-center"><i class="fa-solid fa-file-pdf mr-3"></i>Finalizar y Generar Reporte</button>
-                </div>
+    <header class="mb-6">
+        <div class="flex items-center space-x-3 mb-2">
+            <img id="rancho-logo" src="https://i.imgur.com/s6l2h27.png" class="w-12 h-12 rounded-lg object-cover bg-gray-200">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800" id="rancho-nombre-activo"></h1>
+                <p class="text-sm text-gray-500">Lote actual: <span id="lote-info" class="font-semibold">Ninguno</span></p>
             </div>
         </div>
+    </header>
+
+    <div id="rancho-independiente-input-container" class="hidden mb-6">
+        <label for="rancho-independiente-nombre" class="block text-sm font-bold text-gray-700 mb-2">Nombre del Rancho Atendido:</label>
+        <input type="text" id="rancho-independiente-nombre" placeholder="Ej: Rancho 'El Amanecer'" class="w-full p-3 border border-gray-300 rounded-lg">
+    </div>
+    <div class="space-y-3">
+        <h3 class="font-semibold text-gray-600">Acciones Rápidas</h3>
+        <button id="btn-abrir-modal-palpacion" class="w-full text-left bg-blue-600 text-white p-4 rounded-lg font-bold flex items-center"><i class="fa-solid fa-syringe mr-3"></i>Palpación / Chequeo Reproductivo</button>
+        <button class="w-full text-left bg-gray-400 text-white p-4 rounded-lg font-bold flex items-center cursor-not-allowed"><i class="fa-solid fa-vial mr-3"></i>Inseminación Artificial (Próximamente)</button>
+        
+        </div>
+</div>
     </template>
     
     <template id="template-mis-ranchos-mvz"><h1 class="text-center p-8 text-2xl">Mis Ranchos (en construcción)</h1></template>
@@ -202,7 +213,14 @@
                     <div id="mensaje-vaca" class="text-sm mt-2 h-4 text-center"></div>
                 </form>
             </main>
-            <footer class="p-4 bg-gray-50 rounded-b-2xl flex justify-end"><button id="btn-agregar-vaca" class="bg-blue-600 text-white px-6 py-2 rounded-lg font-semibold">Agregar Vaca al Lote</button></footer>
+            <footer class="p-4 bg-gray-50 rounded-b-2xl grid grid-cols-2 gap-3">
+    <button id="btn-guardar-siguiente" class="w-full bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold flex items-center justify-center">
+        <i class="fa-solid fa-floppy-disk mr-2"></i>Guardar y Siguiente
+    </button>
+    <button id="btn-finalizar-reporte-modal" class="w-full bg-brand-green text-white px-4 py-3 rounded-lg font-semibold flex items-center justify-center">
+        <i class="fa-solid fa-file-pdf mr-2"></i>Finalizar y Reportar
+    </button>
+    </footer>
         </div>
     </div>
 

@@ -452,69 +452,111 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
      function iniciarActividad(nombreRancho, logoUrl = 'https://i.imgur.com/s6l2h27.png') {
-        document.getElementById('modo-seleccion-container').classList.add('hidden');
-        document.getElementById('rancho-actions-container').classList.remove('hidden');
-        document.getElementById('rancho-nombre-activo').textContent = nombreRancho;
-        document.getElementById('rancho-logo').src = logoUrl;
-
-        // Listeners para las acciones
-        document.getElementById('btn-abrir-modal-palpacion').onclick = () => abrirModalActividad('palpacion');
-        
-        // Listener para finalizar (se puede mover si es necesario)
-        document.querySelector('#rancho-actions-container button:last-of-type').onclick = handleFinalizarLote;
-    }
+    document.getElementById('modo-seleccion-container').classList.add('hidden');
+    document.getElementById('rancho-actions-container').classList.remove('hidden');
+    document.getElementById('rancho-nombre-activo').textContent = nombreRancho;
+    document.getElementById('rancho-logo').src = logoUrl;
     
-    // Nueva función para abrir el modal
-    function abrirModalActividad(tipo) {
-        const modal = document.getElementById('modal-palpacion'); // Por ahora solo tenemos este
-        modal.classList.remove('hidden');
-        
-        // Poblar select de Lotes
-        const selLote = document.getElementById('actividad-lote');
-        selLote.innerHTML = '';
-        for (let i = 1; i <= 10; i++) selLote.add(new Option(`Lote ${i}`, i));
-        
-        // Renderizar campos dinámicos
-        renderizarCamposProcedimiento(tipo);
-
-        // Listeners del modal
-        document.getElementById('btn-cerrar-modal-palpacion').onclick = () => modal.classList.add('hidden');
-        document.getElementById('btn-agregar-vaca').onclick = (e) => {
-            e.preventDefault();
-            handleAgregarVacaAlLote(tipo);
-        };
+    // ===== LÓGICA PARA MOSTRAR CAMPO DE NOMBRE EN MODO INDEPENDIENTE =====
+    const nombreIndependienteContainer = document.getElementById('rancho-independiente-input-container');
+    if (nombreRancho === 'Rancho Independiente') {
+        nombreIndependienteContainer.classList.remove('hidden');
+        document.getElementById('rancho-independiente-nombre').value = ''; // Limpiamos el campo
+    } else {
+        nombreIndependienteContainer.classList.add('hidden');
     }
+    // =====================================================================
 
-    // Lógica para agregar vaca (ahora llamada desde el modal)
-    function handleAgregarVacaAlLote(tipoActividad) {
-        const arete = document.getElementById('actividad-arete').value.trim();
-        const loteNumero = document.getElementById('actividad-lote').value;
-        if (!arete || !loteNumero) { mostrarMensaje('mensaje-vaca', 'Completa lote y arete.'); return; }
+    // Listeners para las acciones
+    document.getElementById('btn-abrir-modal-palpacion').onclick = () => abrirModalActividad('palpacion');
+    
+    // !!! HEMOS QUITADO EL LISTENER DEL BOTÓN DE FINALIZAR DE AQUÍ !!!
+}
+    
+    function abrirModalActividad(tipo) {
+    const modal = document.getElementById('modal-palpacion');
+    modal.classList.remove('hidden');
+    
+    // Poblar select de Lotes
+    const selLote = document.getElementById('actividad-lote');
+    selLote.innerHTML = '';
+    // Puedes mejorar esto para que cargue los lotes reales del rancho si existe
+    const lotesDisponibles = currentRancho?.lotes || [1, 2, 3, 4, 5];
+    lotesDisponibles.forEach(l => selLote.add(new Option(`Lote ${l}`, l)));
+    
+    // Renderizar campos dinámicos
+    renderizarCamposProcedimiento(tipo);
 
-        const form = document.getElementById('form-actividad-vaca');
-        const formData = new FormData(form);
-        const detalles = {};
-        for (const [key, value] of formData.entries()) {
-            if (key !== 'actividad-lote' && key !== 'actividad-arete') {
-                detalles[key] = value;
-            }
+    // Listeners del modal
+    document.getElementById('btn-cerrar-modal-palpacion').onclick = () => modal.classList.add('hidden');
+    
+    // ===== NUEVOS LISTENERS PARA LOS BOTONES DEL FOOTER =====
+    document.getElementById('btn-guardar-siguiente').onclick = (e) => {
+        e.preventDefault();
+        handleAgregarVacaAlLote(tipo); // Solo guarda y limpia para la siguiente
+    };
+
+    document.getElementById('btn-finalizar-reporte-modal').onclick = (e) => {
+        e.preventDefault();
+        // Primero, intenta agregar la vaca actual por si hay datos en el formulario
+        const areteActual = document.getElementById('actividad-arete').value.trim();
+        if (areteActual) {
+            handleAgregarVacaAlLote(tipo, false); // El `false` es para que no limpie el campo arete
         }
         
-        loteActual.push({
-            areteVaca: arete,
-            raza: vacasIndex.get(arete)?.raza || 'N/A', // Busca la raza si el rancho está registrado
-            loteNumero: loteNumero,
-            tipo: tipoActividad,
-            tipoLabel: PROCEDIMIENTOS[tipoActividad].titulo,
-            fecha: new Date().toISOString().split('T')[0],
-            detalles: detalles
-        });
+        // Luego, finaliza y genera el reporte
+        handleFinalizarLote();
+        
+        // Y finalmente cierra el modal
+        modal.classList.add('hidden');
+    };
+    // ========================================================
+}
 
-        mostrarMensaje('mensaje-vaca', `Vaca ${arete} agregada. Total en lote: ${loteActual.length}`, false);
-        document.getElementById('lote-info').textContent = `${loteActual.length} vacas (Lote ${loteNumero})`;
-        document.getElementById('actividad-arete').value = '';
-        document.getElementById('actividad-arete').focus();
+    // Lógica para agregar vaca (ahora llamada desde el modal)
+   // Añadimos un segundo parámetro `limpiarForm = true`
+function handleAgregarVacaAlLote(tipoActividad, limpiarForm = true) {
+    const areteInput = document.getElementById('actividad-arete');
+    const loteNumero = document.getElementById('actividad-lote').value;
+    const arete = areteInput.value.trim();
+
+    if (!arete || !loteNumero) { 
+        mostrarMensaje('mensaje-vaca', 'Completa lote y arete.'); 
+        return; 
     }
+
+    const form = document.getElementById('form-actividad-vaca');
+    const formData = new FormData(form);
+    const detalles = {};
+    for (const [key, value] of formData.entries()) {
+        if (!['actividad-lote', 'actividad-arete'].includes(key)) {
+            detalles[key] = value;
+        }
+    }
+    
+    loteActual.push({
+        areteVaca: arete,
+        raza: vacasIndex.get(arete)?.raza || 'N/A',
+        loteNumero: loteNumero,
+        tipo: tipoActividad,
+        tipoLabel: PROCEDIMIENTOS[tipoActividad].titulo,
+        fecha: new Date().toISOString().split('T')[0],
+        detalles: detalles
+    });
+
+    mostrarMensaje('mensaje-vaca', `Vaca ${arete} agregada. Total en lote: ${loteActual.length}`, false);
+    document.getElementById('lote-info').textContent = `${loteActual.length} vacas (Lote ${loteNumero})`;
+    
+    if (limpiarForm) {
+        // Limpiamos solo los campos de la actividad, no el lote.
+        document.getElementById('campos-dinamicos-procedimiento').querySelectorAll('input, select, textarea').forEach(el => {
+            if (el.type === 'checkbox') el.checked = false;
+            else el.value = el.options ? el.options[0].value : '';
+        });
+        areteInput.value = '';
+        areteInput.focus();
+    }
+}
     
     // Las demás funciones de apoyo
     function renderizarCamposProcedimiento(tipo) { /* ... (código sin cambios) ... */ }
@@ -563,23 +605,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (err) { console.error("Error cargando vacas para MVZ:", err); }
     }
 
-    function handleAgregarVacaAlLote(e) {
-        e.preventDefault();
-        const tipoActividad = document.getElementById('actividad-tipo').value;
-        const arete = document.getElementById('actividad-arete').value.trim();
-        const loteNumero = document.getElementById('actividad-lote').value;
-        if (!tipoActividad || !arete || !loteNumero) { mostrarMensaje('mensaje-vaca', 'Completa procedimiento, lote y arete.'); return; }
-        const vacaInfo = vacasIndex.get(arete);
-        if (!vacaInfo) { mostrarMensaje('mensaje-vaca', 'Ese arete no está registrado.'); return; }
-        const form = document.getElementById('form-actividad-vaca');
-        const formData = new FormData(form);
-        const detalles = {};
-        formData.forEach((value, key) => { detalles[key] = value; });
-        loteActual.push({ areteVaca: arete, raza: vacaInfo.raza, loteNumero: loteNumero, tipo: tipoActividad, tipoLabel: PROCEDIMIENTOS[tipoActividad].titulo, fecha: new Date().toISOString().split('T')[0], detalles: detalles });
-        renderLoteActual();
-        document.getElementById('actividad-arete').value = '';
-        document.getElementById('actividad-arete').focus();
-    }
+   
     
     function renderLoteActual() {
         const lista = document.getElementById('lote-actual-lista');
@@ -599,28 +625,75 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     async function handleFinalizarLote() {
-        if (loteActual.length === 0) { alert('El lote está vacío.'); return; }
-        const btn = document.getElementById('btn-finalizar-lote');
-        btn.disabled = true; btn.textContent = 'Procesando...';
-        try {
-            const res = await fetch(`${API_URL}/lote/pdf`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mvzId: currentUser.id, ranchoId: currentRancho.id, lote: loteActual }) });
-            if (!res.ok) throw new Error('El servidor no pudo generar el PDF.');
-            const blob = await res.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.style.display = 'none'; a.href = url; a.download = `reporte_${currentRancho.nombre}_${new Date().toISOString().split('T')[0]}.pdf`;
-            document.body.appendChild(a); a.click(); window.URL.revokeObjectURL(url);
-            loteActual = []; renderLoteActual();
-            document.getElementById('seccion-registrar-actividad').classList.add('hidden');
-            document.getElementById('seccion-lote-actual').classList.add('hidden');
-            document.getElementById('codigo-rancho').value = ''; currentRancho = null;
-        } catch (err) {
-            console.error("Error al finalizar lote:", err);
-            alert('Hubo un error al generar el reporte.');
-        } finally {
-            btn.disabled = false; btn.textContent = 'Finalizar y Generar Reporte';
-        }
+    if (loteActual.length === 0) {
+        mostrarMensaje('mensaje-vaca', 'No hay vacas registradas para generar un reporte.');
+        return;
     }
+
+    // Esta lógica para obtener el nombre está perfecta.
+    let nombreRanchoParaReporte = currentRancho ? currentRancho.nombre : 'Rancho Independiente';
+    const esIndependiente = !currentRancho || currentRancho.nombre === 'Rancho Independiente';
+
+    if (esIndependiente) {
+        const nombreIngresado = document.getElementById('rancho-independiente-nombre').value.trim();
+        if (!nombreIngresado) {
+            alert('Por favor, especifica el nombre del rancho atendido antes de finalizar.');
+            return;
+        }
+        nombreRanchoParaReporte = nombreIngresado;
+    }
+
+    // ---- INICIO DE AJUSTES ----
+
+    // AJUSTE 1: Apuntar al botón correcto del modal y mejorar el feedback.
+    const btn = document.getElementById('btn-finalizar-reporte-modal');
+    btn.disabled = true; 
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Procesando...';
+
+    try {
+        // AJUSTE 2: Crear un "payload" que siempre envíe los datos correctos.
+        const payload = {
+            mvzId: currentUser.id,
+            ranchoId: currentRancho?.id || null, // Envía el ID si existe, si no, null.
+            ranchoNombre: nombreRanchoParaReporte, // Envía siempre el nombre que se usará.
+            lote: loteActual
+        };
+
+        const res = await fetch(`${API_URL}/lote/pdf`, { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify(payload) // Enviamos el nuevo payload
+        });
+
+        if (!res.ok) throw new Error('El servidor no pudo generar el PDF.');
+        
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none'; 
+        a.href = url; 
+        
+        // AJUSTE 3: Usar la variable correcta para el nombre del archivo.
+        a.download = `reporte_${nombreRanchoParaReporte.replace(/ /g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+        
+        document.body.appendChild(a); 
+        a.click(); 
+        window.URL.revokeObjectURL(url);
+        
+        // AJUSTE 4: Limpiar el estado y navegar a la pantalla de inicio del MVZ.
+        loteActual = []; 
+        currentRancho = null;
+        navigateTo('manejo-reproductivo-mvz');
+
+    } catch (err) {
+        console.error("Error al finalizar lote:", err);
+        alert('Hubo un error al generar el reporte.');
+        // Si hay un error, volvemos a habilitar el botón.
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-file-pdf mr-2"></i>Finalizar y Reportar';
+    } 
+    // Ya no necesitamos el bloque "finally" porque si todo sale bien, navegamos a otra pantalla.
+}
 
     // =================================================================
     // ===== 8. INICIALIZACIÓN DE LA APLICACIÓN ========================
