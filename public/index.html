@@ -169,7 +169,33 @@
         </div>
     </template>
     
-    <template id="template-mi-mvz"><h1 class="text-center p-8 text-2xl">Gestión de MVZ (en construcción)</h1></template>
+    <template id="template-mi-mvz">
+    <div class="p-5">
+        <header class="mb-6">
+            <h1 class="text-2xl font-bold text-gray-800">Mis Veterinarios (MVZ)</h1>
+            <p class="text-sm text-gray-500">Gestiona los accesos a la información de tu rancho.</p>
+        </header>
+
+        <section class="mb-8 bg-white p-4 rounded-xl shadow-md">
+            <h2 class="text-lg font-semibold mb-3">Invitar a un Veterinario</h2>
+            <form id="form-invitar-mvz">
+                <label for="email-mvz" class="block text-sm font-medium text-gray-700 mb-1">Correo Electrónico del MVZ</label>
+                <div class="flex items-center space-x-2">
+                    <input type="email" id="email-mvz" placeholder="veterinario@ejemplo.com" required class="w-full p-2 border border-gray-300 rounded-lg">
+                    <button type="submit" class="bg-brand-green text-white px-4 py-2 rounded-lg font-semibold">Invitar</button>
+                </div>
+            </form>
+            <div id="mvz-mensaje" class="text-sm mt-2 h-4 text-center"></div>
+        </section>
+
+        <section>
+            <h2 class="text-lg font-semibold mb-3">Veterinarios con Acceso</h2>
+            <div id="lista-mvz-container" class="space-y-3">
+                <p class="text-gray-500">Cargando veterinarios...</p>
+            </div>
+        </section>
+    </div>
+</template>
     
     <template id="template-estadisticas">
         <div class="p-5">

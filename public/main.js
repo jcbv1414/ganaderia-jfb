@@ -113,6 +113,8 @@ document.addEventListener('DOMContentLoaded', () => {
             cargarDatosDashboardPropietario();
         } else if (viewId === 'mis-vacas') {
             renderizarVistaMisVacas();
+            } else if (viewId === 'mi-mvz') { // <-- AÑADE ESTO
+    renderizarVistaMiMvz();
         } else if (viewId === 'estadisticas') {
             renderizarVistaEstadisticas();
         } else if (viewId === 'inicio-mvz') {
@@ -245,6 +247,78 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('lotes-container').innerHTML = '<p class="text-red-500">No se pudieron cargar los datos.</p>';
         }
     }
+    // AGREGA ESTA NUEVA FUNCIÓN COMPLETA EN main.js
+
+async function renderizarVistaMiMvz() {
+    const ranchoId = currentUser.ranchos?.[0]?.id;
+    if (!ranchoId) return;
+
+    const container = document.getElementById('lista-mvz-container');
+    const form = document.getElementById('form-invitar-mvz');
+
+    // Función para cargar y mostrar la lista de veterinarios
+    async function cargarMvz() {
+        try {
+            const res = await fetch(`/api/rancho/${ranchoId}/mvz`);
+            const mvzList = await res.json();
+
+            if (mvzList.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center">Aún no has invitado a ningún veterinario.</p>';
+                return;
+            }
+
+            container.innerHTML = mvzList.map(item => `
+                <div class="bg-white p-4 rounded-xl shadow-md flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
+                            <i class="fa-solid fa-user-doctor text-xl text-gray-500"></i>
+                        </div>
+                        <div>
+                            <p class="font-semibold text-gray-800">${item.usuarios.nombre}</p>
+                            <p class="text-sm text-gray-500">${item.usuarios.email}</p>
+                        </div>
+                    </div>
+                    <button class="text-red-500 hover:text-red-700" title="Revocar acceso">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </div>
+            `).join('');
+        } catch (error) {
+            container.innerHTML = '<p class="text-red-500 text-center">No se pudo cargar la lista de veterinarios.</p>';
+        }
+    }
+
+    // Lógica para el formulario de invitación
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const emailInput = document.getElementById('email-mvz');
+        const email = emailInput.value.trim();
+        if (!email) return;
+
+        try {
+            const res = await fetch('/api/rancho/invitar-mvz', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ranchoId: ranchoId,
+                    mvzEmail: email,
+                    permisos: 'editor' // Permiso por defecto
+                })
+            });
+            const respuesta = await res.json();
+            if (!res.ok) throw new Error(respuesta.message);
+
+            mostrarMensaje('mvz-mensaje', '¡Invitación enviada con éxito!', false);
+            emailInput.value = '';
+            cargarMvz(); // Recargar la lista para mostrar al nuevo veterinario
+        } catch (error) {
+            mostrarMensaje('mvz-mensaje', error.message, true);
+        }
+    });
+
+    // Carga inicial de la lista
+    cargarMvz();
+}
 
     async function renderizarVistaMisVacas() {
         const ranchoId = currentUser.ranchos?.[0]?.id;

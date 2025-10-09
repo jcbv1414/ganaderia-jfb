@@ -100,6 +100,29 @@ app.get('/api/vacas/rancho/:ranchoId', async (req, res) => {
         res.status(500).json({ message: "Error al obtener el ganado." });
     }
 });
+// AGREGA ESTE ENDPOINT EN server.js
+
+// Obtiene la lista de veterinarios asociados a un rancho
+app.get('/api/rancho/:ranchoId/mvz', async (req, res) => {
+    const { ranchoId } = req.params;
+    try {
+        // Esta consulta busca en la tabla de permisos y trae los datos del usuario correspondiente
+        const { data, error } = await supabase
+            .from('rancho_mvz_permisos')
+            .select(`
+                id,
+                permisos,
+                usuarios ( id, nombre, email )
+            `)
+            .eq('rancho_id', ranchoId);
+
+        if (error) throw error;
+        res.json(data);
+    } catch (err) {
+        console.error("Error fetching MVZ list:", err);
+        res.status(500).json({ message: "Error al obtener la lista de veterinarios." });
+    }
+});
 
 // ¡ENDPOINT CORREGIDO PARA ACEPTAR FOTOS!
 app.post('/api/vacas', upload.single('fotoVaca'), async (req, res) => {
