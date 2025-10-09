@@ -595,7 +595,7 @@ function abrirModalVaca() {
         }
         
         renderizarHistorialMVZ();
-        document.getElementById('btn-generar-pdf-historial')?.onclick = handleGenerarPdfDeHistorial;
+        
     }
 
     function abrirModalActividad(tipo) {
