@@ -525,9 +525,8 @@ function initActividadesMvzListeners() {
     document.getElementById('btn-validar-rancho').onclick = handleValidarRancho;
 }
 
+// REEMPLAZA ESTA FUNCIÓN
 function iniciarActividadUI() {
-    // Esta función se ejecuta DESPUÉS de elegir un modo.
-    // Ahora SÍ puede encontrar los elementos porque ya son visibles.
     document.getElementById('modo-seleccion-container').classList.add('hidden');
     document.getElementById('rancho-actions-container').classList.remove('hidden');
 
@@ -535,14 +534,13 @@ function iniciarActividadUI() {
     document.getElementById('rancho-independiente-input-container').classList.toggle('hidden', !esIndependiente);
     document.getElementById('rancho-nombre-activo').textContent = esIndependiente ? 'Trabajo Independiente' : currentRancho.nombre;
     document.getElementById('rancho-logo').src = currentRancho.logo_url || 'logo.png';
-    
     // Aquí es el lugar CORRECTO para crear los botones
     const accionesContainer = document.getElementById('acciones-rapidas-container');
     accionesContainer.innerHTML = ''; // Limpiar
     const colores = ['bg-teal-600', 'bg-sky-600', 'bg-lime-600', 'bg-amber-600'];
     const iconos = ['fa-syringe', 'fa-vial', 'fa-egg', 'fa-pills'];
 
-    Object.keys(PROCEDIMIENTOS).forEach((key, index) => {
+        Object.keys(PROCEDIMIENTOS).forEach((key, index) => {
         const proc = PROCEDIMIENTOS[key];
         const color = colores[index % colores.length];
         const icono = iconos[index % iconos.length];
@@ -552,9 +550,14 @@ function iniciarActividadUI() {
         button.innerHTML = `<i class="fa-solid ${icono} w-6 text-center mr-3"></i>${proc.titulo}`;
         button.onclick = () => abrirModalActividad(key);
         accionesContainer.appendChild(button);
+        // ¡NUEVO! Carga el historial al iniciar y activa el botón de PDF
+    renderizarHistorialMVZ();
+    document.getElementById('btn-generar-pdf-historial').onclick = handleGenerarPdfDeHistorial;
     });
     
-    document.getElementById('btn-generar-pdf-historial').onclick = () => alert("Función para PDF de historial en desarrollo.");
+    // ¡NUEVO! Carga el historial al iniciar y activa el botón de PDF
+    renderizarHistorialMVZ();
+    document.getElementById('btn-generar-pdf-historial').onclick = handleGenerarPdfDeHistorial;
 }
     async function handleValidarRancho() {
         const codigo = document.getElementById('codigo-rancho').value.trim().toUpperCase();
@@ -625,63 +628,106 @@ function iniciarActividadUI() {
         modal.classList.add('hidden');
     };
 }
-    // ¡NUEVA FUNCIÓN PARA FINALIZAR Y GENERAR PDF!
-    async function handleFinalizarYReportar() {
-        if (loteActividadActual.length === 0) return;
+   // REEMPLAZA ESTA FUNCIÓN
+async function handleFinalizarYReportar() {
+    if (loteActividadActual.length === 0) return;
 
-        const btn = document.getElementById('btn-finalizar-actividad-modal');
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Procesando...';
+    const btn = document.getElementById('btn-finalizar-actividad-modal');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Guardando...';
 
-        try {
-            // 1. Guardar la actividad en la base de datos
-            const payload = {
-                mvzId: currentUser.id,
-                ranchoId: currentRancho?.id || null,
-                loteActividad: loteActividadActual
-            };
-            const resSave = await fetch('/api/actividades', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-            });
-            if (!resSave.ok) throw new Error('No se pudo guardar la actividad.');
-            const saveResult = await resSave.json();
+    try {
+        // Solo guarda la actividad en la base de datos
+        const payload = {
+            mvzId: currentUser.id,
+            ranchoId: currentRancho?.id || null,
+            ranchoNombre: currentRancho?.id ? currentRancho.nombre : document.getElementById('rancho-independiente-nombre').value.trim(),
+            loteActividad: loteActividadActual
+        };
+        const resSave = await fetch('/api/actividades', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+        });
+        if (!resSave.ok) throw new Error('No se pudo guardar la actividad.');
 
-            // 2. Generar y descargar el PDF
-            let ranchoNombreParaReporte = currentRancho?.id ? currentRancho.nombre : document.getElementById('rancho-independiente-nombre').value.trim();
-            if (!ranchoNombreParaReporte) ranchoNombreParaReporte = 'Independiente';
-
-            const pdfPayload = {
-                actividades: saveResult.actividades,
-                ranchoNombre: ranchoNombreParaReporte,
-                mvzNombre: currentUser.nombre
-            };
-            const resPdf = await fetch('/api/actividades/pdf', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(pdfPayload)
-            });
-            if (!resPdf.ok) throw new Error('El servidor no pudo generar el PDF.');
-            
-            const blob = await resPdf.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `reporte_${ranchoNombreParaReporte.replace(/ /g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            window.URL.revokeObjectURL(url);
-            
-            // 3. Limpiar estado
-            loteActividadActual = [];
-            document.getElementById('lote-info').textContent = `0 vacas`;
-            
-        } catch (err) {
-            console.error("Error al finalizar y reportar:", err);
-            alert('Hubo un error al generar el reporte.');
-        } finally {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fa-solid fa-file-pdf mr-2"></i>Finalizar y Reportar';
-        }
+        // Limpia el estado y actualiza el historial en pantalla
+        loteActividadActual = [];
+        document.getElementById('lote-info').textContent = `0 vacas`;
+        renderizarHistorialMVZ(); // ¡Actualiza la lista!
+        
+    } catch (err) {
+        console.error("Error al finalizar:", err);
+        alert('Hubo un error al guardar la actividad.');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-check-circle mr-2"></i>Finalizar Actividad';
     }
+}
+// AGREGA ESTAS DOS NUEVAS FUNCIONES
+
+async function renderizarHistorialMVZ() {
+    const historialContainer = document.getElementById('historial-actividades-mvz');
+    historialContainer.innerHTML = '<p class="text-gray-500 text-center">Cargando historial...</p>';
+
+    try {
+        const res = await fetch(`/api/actividades/mvz/${currentUser.id}`);
+        if (!res.ok) throw new Error('No se pudo cargar el historial.');
+        const sesiones = await res.json();
+
+        if (sesiones.length === 0) {
+            historialContainer.innerHTML = '<p class="text-gray-500 text-center">No hay actividades recientes.</p>';
+            return;
+        }
+
+        historialContainer.innerHTML = sesiones.map(sesion => `
+            <div class="bg-gray-100 p-3 rounded-lg flex items-center justify-between">
+                <div class="flex items-center">
+                    <input type="checkbox" data-sesion-id="${sesion.sesion_id}" class="h-5 w-5 rounded border-gray-300 mr-3">
+                    <div>
+                        <p class="font-semibold text-gray-800">${sesion.tipo_actividad} en <em>${sesion.rancho_nombre}</em></p>
+                        <p class="text-xs text-gray-500">${sesion.conteo} animales - ${new Date(sesion.fecha).toLocaleDateString('es-MX', {day: 'numeric', month: 'long'})}</p>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+    } catch (error) {
+        historialContainer.innerHTML = '<p class="text-red-500 text-center">Error al cargar historial.</p>';
+    }
+}
+
+async function handleGenerarPdfDeHistorial() {
+    const checkboxes = document.querySelectorAll('#historial-actividades-mvz input[type="checkbox"]:checked');
+    const sesionesSeleccionadas = Array.from(checkboxes).map(cb => cb.dataset.sesionId);
+
+    if (sesionesSeleccionadas.length === 0) {
+        alert('Por favor, selecciona al menos una actividad del historial para generar el reporte.');
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/historial/pdf', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sesion_ids: sesionesSeleccionadas, mvzNombre: currentUser.nombre })
+        });
+
+        if (!res.ok) throw new Error('El servidor no pudo generar el PDF.');
+        
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `reporte_historial_${new Date().toISOString().split('T')[0]}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+
+    } catch (err) {
+        console.error("Error al generar PDF de historial:", err);
+        alert('Hubo un error al generar el reporte.');
+    }
+}
     
     function renderizarCamposProcedimiento(tipo) {
         const container = document.getElementById('campos-dinamicos-procedimiento');

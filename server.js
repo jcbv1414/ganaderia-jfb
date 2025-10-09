@@ -347,7 +347,66 @@ app.get('/api/rancho/:ranchoId/estadisticas', async (req, res) => {
         res.status(500).json({ message: "Error al generar estadísticas" });
     }
 });
+// AGREGA ESTOS DOS ENDPOINTS A TU server.js
 
+// Obtiene el historial de actividades de un MVZ, agrupadas por sesión
+app.get('/api/actividades/mvz/:mvzId', async (req, res) => {
+    const { mvzId } = req.params;
+    try {
+        const { data, error } = await supabase.rpc('get_sesiones_actividad_mvz', { mvz_id: mvzId });
+        if (error) throw error;
+        res.json(data);
+    } catch (err) {
+        console.error("Error fetching MVZ history:", err);
+        res.status(500).json({ message: "Error al obtener historial." });
+    }
+});
+
+// Genera un PDF a partir de una lista de IDs de sesión
+app.post('/api/historial/pdf', async (req, res) => {
+    const { sesion_ids, mvzNombre } = req.body;
+    try {
+        const { data: actividades, error } = await supabase
+            .from('actividades')
+            .select('*')
+            .in('sesion_id', sesion_ids)
+            .order('fecha_actividad', { ascending: false });
+
+        if (error) throw error;
+        if (actividades.length === 0) return res.status(404).json({ message: 'Actividades no encontradas.' });
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="reporte_historial.pdf"`);
+        
+        const doc = new PDFDocument({ size: 'LETTER', margin: 40 });
+        doc.pipe(res);
+        
+        doc.fontSize(16).font('Helvetica-Bold').text('Reporte de Actividades', { align: 'center' });
+        doc.fontSize(10).font('Helvetica').text(`Médico Veterinario: ${mvzNombre}`, { align: 'center' });
+        doc.moveDown(2);
+
+        let ranchoActual = null;
+        actividades.forEach(item => {
+            const ranchoNombre = item.extra_data.rancho_nombre || 'Rancho no especificado';
+            if (ranchoNombre !== ranchoActual) {
+                doc.moveDown(1);
+                doc.fontSize(12).font('Helvetica-Bold').text(`Rancho: ${ranchoNombre}`);
+                doc.moveTo(40, doc.y).lineTo(doc.page.width - 40, doc.y).stroke();
+                doc.moveDown(0.5);
+                ranchoActual = ranchoNombre;
+            }
+            
+            const detalles = Object.entries(item.descripcion || {}).map(([key, value]) => `${prettyLabel(key)}: ${value}`).join(', ');
+            doc.fontSize(10).font('Helvetica').text(`- Arete ${item.extra_data.arete} (${formatDate(item.fecha_actividad)}): ${detalles}`);
+        });
+
+        doc.end();
+
+    } catch (err) {
+        console.error("Error generando PDF de historial:", err);
+        res.status(500).json({ message: 'Error al generar el PDF.' });
+    }
+});
 
 // ================== INICIO DEL SERVIDOR ==================
 app.listen(PORT, () => {
