@@ -1,16 +1,20 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // =================================================================
     // ESTADO GLOBAL Y CONFIGURACIÓN
+    // =================================================================
     let currentUser = null;
     let currentRancho = null;
     let loteActividadActual = [];
     let vacasIndex = new Map();
     let datosEstadisticasCompletos = null;
     let miGrafico = null;
-    const API_URL = ''; // Cambiar si tu API está en otro dominio
+    const API_URL = '';
     const appContent = document.getElementById('app-content');
     const navContainer = document.getElementById('nav-container');
-    
-    // DEFINICIONES
+
+    // =================================================================
+    // DEFINICIONES DE DATOS (PROCEDIMIENTOS, RAZAS)
+    // =================================================================
     const PROCEDIMIENTOS = {
         palpacion: {
           titulo: "Palpación",
@@ -66,7 +70,9 @@ document.addEventListener('DOMContentLoaded', () => {
     'Shorthorn','Simbrah','Simmental','Sindi','Tarentaise','Wagyu'
     ].sort((a,b) => a.localeCompare(b));
 
+     // =================================================================
     // FUNCIONES DE AYUDA (HELPERS)
+    // =================================================================
     const mostrarMensaje = (elId, texto, esError = true) => {
         const el = document.getElementById(elId);
         if (!el) return;
@@ -76,18 +82,17 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => { if (el) el.textContent = ''; }, 4000);
     };
 
+  // =================================================================
     // NAVEGACIÓN Y RENDERIZADO DE VISTAS
+    // =================================================================
     function navigateTo(viewId) {
         if (!appContent) return;
-        
-        const fabContainer = document.getElementById('fab-container');
-        if (fabContainer) fabContainer.innerHTML = ''; // Limpiar FAB por defecto
         
         document.body.className = 'bg-brand-bg';
         appContent.innerHTML = '';
         const template = document.getElementById(`template-${viewId}`);
         if (!template) {
-            appContent.innerHTML = `<p class="text-center p-8 text-red-500">Error: No se encontró la plantilla para: ${viewId}</p>`;
+            appContent.innerHTML = `<p class="text-center p-8 text-red-500">Error: Plantilla no encontrada: ${viewId}</p>`;
             return;
         }
         appContent.appendChild(template.content.cloneNode(true));
@@ -143,7 +148,10 @@ document.addEventListener('DOMContentLoaded', () => {
         navigateTo(isPropietario ? 'inicio-propietario' : 'inicio-mvz');
     };
 
+
+    // =================================================================
     // MANEJADORES DE AUTENTICACIÓN
+    // =================================================================
     async function handleLogin(e) {
         e.preventDefault();
         const btn = e.target.querySelector('button[type="submit"]');
@@ -182,7 +190,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
+    // =================================================================
     // LÓGICA DEL PROPIETARIO
+    // =================================================================
     async function cargarDatosDashboardPropietario() {
         if (!currentUser || currentUser.rol !== 'propietario') return;
         const ranchoId = currentUser.ranchos?.[0]?.id;
@@ -285,12 +295,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    function abrirModalVaca(vaca = null) {
+        function abrirModalVaca() {
         const modal = document.getElementById('modal-agregar-vaca');
         modal.classList.remove('hidden');
-
         const form = document.getElementById('form-agregar-vaca');
         form.reset();
+
+        // Limpiar el nombre del archivo al abrir
+        document.getElementById('file-name-display').textContent = '';
         
         // Autocompletado de razas
         const datalistRazas = document.getElementById('lista-razas');
@@ -329,14 +341,21 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('btn-cerrar-modal-vaca').onclick = () => modal.classList.add('hidden');
         form.onsubmit = handleGuardarVaca;
     }
+    // Listener para mostrar el nombre del archivo
+        const fotoInput = document.getElementById('vaca-foto');
+        fotoInput.onchange = () => {
+            const fileName = fotoInput.files[0]?.name || '';
+            document.getElementById('file-name-display').textContent = fileName;
+        };
+
+        document.getElementById('btn-cerrar-modal-vaca').onclick = () => modal.classList.add('hidden');
+        form.onsubmit = handleGuardarVaca;
+    
 
     // Lógica del Propietario (handleGuardarVaca corregido)
     async function handleGuardarVaca(e) {
         e.preventDefault();
-        const form = e.target;
-        const formData = new FormData(form);
-
-        // Añadimos los datos que no están en el formulario directamente
+        const formData = new FormData(e.target);
         formData.append('propietarioId', currentUser.id);
         formData.append('ranchoId', currentUser.ranchos?.[0]?.id);
 
@@ -344,9 +363,7 @@ document.addEventListener('DOMContentLoaded', () => {
             mostrarMensaje('vaca-mensaje', 'Nombre y SINIIGA son obligatorios.');
             return;
         }
-
         try {
-            // ¡IMPORTANTE! No se pone 'Content-Type', el navegador lo hace solo con FormData
             const res = await fetch('/api/vacas', { method: 'POST', body: formData });
             const respuesta = await res.json();
             if (!res.ok) throw new Error(respuesta.message);
@@ -356,7 +373,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('modal-agregar-vaca').classList.add('hidden');
                 renderizarVistaMisVacas();
             }, 1500);
-
         } catch (error) {
             mostrarMensaje('vaca-mensaje', error.message);
         }
@@ -430,54 +446,7 @@ document.addEventListener('DOMContentLoaded', () => {
              return;
         }
 
-        // Estructura HTML para la vista de estadísticas
-        contenidoContainer.innerHTML = `
-            <div class="bg-white p-4 rounded-xl shadow-md">
-                <div class="mb-4">
-                    <h2 class="text-lg font-bold text-gray-900">Lote ${loteId}: Estado Reproductivo</h2>
-                    <p class="text-sm text-gray-500">Última Actualización: ${new Date().toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })}</p>
-                </div>
-                <div class="relative h-64 w-full mx-auto mb-4">
-                    <canvas id="grafico-reproductivo"></canvas>
-                    <div class="absolute inset-0 flex flex-col items-center justify-center">
-                        <span class="text-3xl font-bold text-gray-800">${datosLote.totalVacas}</span>
-                        <span class="text-sm text-gray-500">Total de Vacas</span>
-                    </div>
-                </div>
-                <div id="stats-resumen-texto" class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm"></div>
-            </div>`;
-
-        const ctx = document.getElementById('grafico-reproductivo').getContext('2d');
-        const estados = datosLote.estados || {};
-        const totalVacas = datosLote.totalVacas || 1;
-        const data = {
-            labels: ['Gestantes', 'Estáticas', 'Ciclando'],
-            datasets: [{
-                data: [estados.Gestante || 0, estados.Estatica || 0, estados.Ciclando || 0],
-                backgroundColor: ['#10b981', '#f59e0b', '#f97316'],
-                borderColor: '#ffffff',
-                borderWidth: 4,
-                hoverOffset: 8
-            }]
-        };
-        
-        if (miGrafico) miGrafico.destroy();
-
-        miGrafico = new Chart(ctx, {
-            type: 'doughnut', data, options: {
-            responsive: true, maintainAspectRatio: false, cutout: '70%',
-            plugins: { legend: { display: false } }
-        }});
-        
-        document.getElementById('stats-resumen-texto').innerHTML = `
-            <p><strong>Gestantes:</strong> ${estados.Gestante || 0} vacas (${Math.round((estados.Gestante/totalVacas)*100)}%)</p>
-            <p><strong>Estáticas:</strong> ${estados.Estatica || 0} vacas (${Math.round((estados.Estatica/totalVacas)*100)}%)</p>
-            <p><strong>Ciclando:</strong> ${estados.Ciclando || 0} vacas (${Math.round((estados.Ciclando/totalVacas)*100)}%)</p>
-            <p><strong>Raza Pred.:</strong> ${Object.keys(datosLote.razas)[0] || 'N/A'}</p>
-        `;
-    }
-
-    // LÓGICA DEL MVZ
+        // LÓGICA DEL MVZ
     function cargarDashboardMVZ() { /* Sin cambios, se mantiene funcional */ 
         const datosDashboard = {
             visitas: 3, detalleVisitas: "2 ranchos, 1 remota", alertas: 5, detalleAlertas: "4 críticos, 1 parto",
@@ -506,55 +475,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const colores = ['bg-teal-600', 'bg-sky-600', 'bg-lime-600', 'bg-amber-600'];
         const iconos = ['fa-syringe', 'fa-vial', 'fa-egg', 'fa-pills'];
 
-
-    // REEMPLAZA LAS FUNCIONES ANTIGUAS CON ESTAS DOS
-
-function initActividadesMvzListeners() {
-    // Esta función SÓLO prepara la pantalla inicial de selección.
-    document.getElementById('modo-seleccion-container').classList.remove('hidden');
-    document.getElementById('rancho-actions-container').classList.add('hidden');
-    loteActividadActual = [];
-    
-    document.getElementById('btn-show-rancho-registrado').onclick = () => document.getElementById('rancho-access-container').classList.toggle('hidden');
-    
-    document.getElementById('btn-iniciar-independiente').onclick = () => {
-        currentRancho = { id: null, nombre: 'Rancho Independiente' };
-        iniciarActividadUI(); // Llama a la siguiente función para construir la vista de actividades
-    };
-
-    document.getElementById('btn-validar-rancho').onclick = handleValidarRancho;
-}
-
-// REEMPLAZA ESTA FUNCIÓN
-function iniciarActividadUI() {
-    document.getElementById('modo-seleccion-container').classList.add('hidden');
-    document.getElementById('rancho-actions-container').classList.remove('hidden');
-
-    const esIndependiente = !currentRancho.id;
-    document.getElementById('rancho-independiente-input-container').classList.toggle('hidden', !esIndependiente);
-    document.getElementById('rancho-nombre-activo').textContent = esIndependiente ? 'Trabajo Independiente' : currentRancho.nombre;
-    document.getElementById('rancho-logo').src = currentRancho.logo_url || 'logo.png';
-    // Aquí es el lugar CORRECTO para crear los botones
-    const accionesContainer = document.getElementById('acciones-rapidas-container');
-    accionesContainer.innerHTML = ''; // Limpiar
-    const colores = ['bg-teal-600', 'bg-sky-600', 'bg-lime-600', 'bg-amber-600'];
-    const iconos = ['fa-syringe', 'fa-vial', 'fa-egg', 'fa-pills'];
-
-    Object.keys(PROCEDIMIENTOS).forEach((key, index) => {
-        const proc = PROCEDIMIENTOS[key];
-        const color = colores[index % colores.length];
-        const icono = iconos[index % iconos.length];
-        const button = document.createElement('button');
-        button.className = `flex-shrink-0 w-4/5 mr-4 text-left ${color} text-white p-4 rounded-lg font-bold flex items-center shadow-lg`;
-        button.dataset.actividad = key;
-        button.innerHTML = `<i class="fa-solid ${icono} w-6 text-center mr-3"></i>${proc.titulo}`;
-        button.onclick = () => abrirModalActividad(key);
-        accionesContainer.appendChild(button);
-    });    
-    // ¡NUEVO! Carga el historial al iniciar y activa el botón de PDF
-    renderizarHistorialMVZ();
-    document.getElementById('btn-generar-pdf-historial').onclick = handleGenerarPdfDeHistorial;
-}
+        function initActividadesMvzListeners() {
+        document.getElementById('modo-seleccion-container').classList.remove('hidden');
+        document.getElementById('rancho-actions-container').classList.add('hidden');
+        loteActividadActual = [];
+        
+        document.getElementById('btn-show-rancho-registrado').onclick = () => document.getElementById('rancho-access-container').classList.toggle('hidden');
+        document.getElementById('btn-iniciar-independiente').onclick = () => {
+            currentRancho = { id: null, nombre: 'Rancho Independiente' };
+            iniciarActividadUI();
+        };
+        document.getElementById('btn-validar-rancho').onclick = handleValidarRancho;
+    }
     async function handleValidarRancho() {
         const codigo = document.getElementById('codigo-rancho').value.trim().toUpperCase();
         if (!codigo) { mostrarMensaje('mensaje-rancho', 'El código no puede estar vacío.'); return; }
@@ -570,97 +502,94 @@ function iniciarActividadUI() {
         }
     }
 
-    function iniciarActividadUI() {
-    document.getElementById('modo-seleccion-container').classList.add('hidden');
-    document.getElementById('rancho-actions-container').classList.remove('hidden');
-
-    const esIndependiente = !currentRancho.id;
-    document.getElementById('rancho-independiente-input-container').classList.toggle('hidden', !esIndependiente);
-    document.getElementById('rancho-nombre-activo').textContent = esIndependiente ? 'Trabajo Independiente' : currentRancho.nombre;
-    document.getElementById('rancho-logo').src = currentRancho.logo_url || 'logo.png';
+    async function handleValidarRancho() {
+        const codigo = document.getElementById('codigo-rancho').value.trim().toUpperCase();
+        if (!codigo) { mostrarMensaje('mensaje-rancho', 'El código no puede estar vacío.'); return; }
+        try {
+            const res = await fetch(`/api/rancho/validate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ codigo }) });
+            const respuesta = await res.json();
+            if (!res.ok) throw new Error(respuesta.message);
+            currentRancho = respuesta;
+            iniciarActividadUI();
+            await cargarVacasParaMVZ();
+        } catch (err) {
+            mostrarMensaje('mensaje-rancho', err.message);
+        }
+    }
     
-    // --- INICIO DE LA CORRECCIÓN ---
-    // Se eliminó el forEach que causaba el error y se dejó solo el código que sí se necesita.
-    const accionesContainer = document.getElementById('acciones-rapidas-container');
-    accionesContainer.innerHTML = ''; // Limpiar por si acaso
-    const colores = ['bg-teal-600', 'bg-sky-600', 'bg-lime-600', 'bg-amber-600'];
-    const iconos = ['fa-syringe', 'fa-vial', 'fa-egg', 'fa-pills'];
-
-    Object.keys(PROCEDIMIENTOS).forEach((key, index) => {
-        const proc = PROCEDIMIENTOS[key];
-        const color = colores[index % colores.length];
-        const icono = iconos[index % iconos.length];
-        const button = document.createElement('button');
-        // Se corrigió la clase para que los botones tengan margen y no se peguen
-        button.className = `flex-shrink-0 w-4/5 mr-4 text-left ${color} text-white p-4 rounded-lg font-bold flex items-center`;
-        button.dataset.actividad = key;
-        button.innerHTML = `<i class="fa-solid ${icono} w-6 text-center mr-3"></i>${proc.titulo}`;
-        button.onclick = () => abrirModalActividad(key);
-        accionesContainer.appendChild(button);
-    });
-        document.getElementById('btn-generar-pdf-historial').onclick = () => alert("Función para generar PDF de historial en desarrollo.");
+    function iniciarActividadUI() {
+        document.getElementById('modo-seleccion-container').classList.add('hidden');
+        document.getElementById('rancho-actions-container').classList.remove('hidden');
+    
+        const esIndependiente = !currentRancho.id;
+        document.getElementById('rancho-independiente-input-container').classList.toggle('hidden', !esIndependiente);
+        document.getElementById('rancho-nombre-activo').textContent = esIndependiente ? 'Trabajo Independiente' : currentRancho.nombre;
+        document.getElementById('rancho-logo').src = currentRancho.logo_url || 'logo.png';
+        
+        const accionesContainer = document.getElementById('acciones-rapidas-container');
+        accionesContainer.innerHTML = '';
+        const colores = ['bg-teal-600', 'bg-sky-600', 'bg-lime-600', 'bg-amber-600'];
+        const iconos = ['fa-syringe', 'fa-vial', 'fa-egg', 'fa-pills'];
+    
+        Object.keys(PROCEDIMIENTOS).forEach((key, index) => {
+            const proc = PROCEDIMIENTOS[key];
+            const button = document.createElement('button');
+            button.className = `flex-shrink-0 w-4/5 mr-4 text-left ${colores[index % colores.length]} text-white p-4 rounded-lg font-bold flex items-center shadow-lg`;
+            button.dataset.actividad = key;
+            button.innerHTML = `<i class="fa-solid ${iconos[index % iconos.length]} w-6 text-center mr-3"></i>${proc.titulo}`;
+            button.onclick = () => abrirModalActividad(key);
+            accionesContainer.appendChild(button);
+        });
+        
+        renderizarHistorialMVZ();
+        document.getElementById('btn-generar-pdf-historial').onclick = handleGenerarPdfDeHistorial;
     }
 
     function abrirModalActividad(tipo) {
-    const modal = document.getElementById('modal-actividad');
-    const form = document.getElementById('form-actividad-vaca');
-    form.reset(); // LIMPIAR EL FORMULARIO
-    
-    modal.classList.remove('hidden');
-    document.getElementById('modal-actividad-titulo').textContent = PROCEDIMientos[tipo].titulo;
-    
-    const selLote = document.getElementById('actividad-lote');
-    selLote.innerHTML = [1, 2, 3, 4, 5].map(l => `<option value="${l}">Lote ${l}</option>`).join('');
-    
-    renderizarCamposProcedimiento(tipo);
-    document.getElementById('btn-cerrar-modal-actividad').onclick = () => modal.classList.add('hidden');
-    document.getElementById('btn-guardar-siguiente').onclick = () => handleAgregarVacaAlLote(tipo, true);
-    
-    // ----- LÍNEA CORREGIDA -----
-    // Ahora llama a la función asíncrona correcta 'handleFinalizarYReportar'
-    document.getElementById('btn-finalizar-actividad-modal').onclick = async () => {
-        handleAgregarVacaAlLote(tipo, false);
-        await handleFinalizarYReportar(); // <-- LLAMADA CORRECTA
-        modal.classList.add('hidden');
-    };
-}
-   // REEMPLAZA ESTA FUNCIÓN
-async function handleFinalizarYReportar() {
-    if (loteActividadActual.length === 0) return;
-
-    const btn = document.getElementById('btn-finalizar-actividad-modal');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Guardando...';
-
-    try {
-        // Solo guarda la actividad en la base de datos
-        const payload = {
-            mvzId: currentUser.id,
-            ranchoId: currentRancho?.id || null,
-            ranchoNombre: currentRancho?.id ? currentRancho.nombre : document.getElementById('rancho-independiente-nombre').value.trim(),
-            loteActividad: loteActividadActual
-        };
-        const resSave = await fetch('/api/actividades', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-        });
-        if (!resSave.ok) throw new Error('No se pudo guardar la actividad.');
-
-        // Limpia el estado y actualiza el historial en pantalla
-        loteActividadActual = [];
-        document.getElementById('lote-info').textContent = `0 vacas`;
-        renderizarHistorialMVZ(); // ¡Actualiza la lista!
+        const modal = document.getElementById('modal-actividad');
+        const form = document.getElementById('form-actividad-vaca');
+        form.reset();
+        modal.classList.remove('hidden');
+        document.getElementById('modal-actividad-titulo').textContent = PROCEDIMIENTOS[tipo].titulo;
         
-    } catch (err) {
-        console.error("Error al finalizar:", err);
-        alert('Hubo un error al guardar la actividad.');
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-check-circle mr-2"></i>Finalizar Actividad';
+        document.getElementById('actividad-lote').innerHTML = [1, 2, 3, 4, 5].map(l => `<option value="${l}">Lote ${l}</option>`).join('');
+        
+        renderizarCamposProcedimiento(tipo);
+        document.getElementById('btn-cerrar-modal-actividad').onclick = () => modal.classList.add('hidden');
+        document.getElementById('btn-guardar-siguiente').onclick = () => handleAgregarVacaAlLote(tipo, true);
+        document.getElementById('btn-finalizar-actividad-modal').onclick = async () => {
+            handleAgregarVacaAlLote(tipo, false);
+            await handleFinalizarYReportar();
+            modal.classList.add('hidden');
+        };
     }
-}
-// AGREGA ESTAS DOS NUEVAS FUNCIONES
 
-async function renderizarHistorialMVZ() {
+    async function handleFinalizarYReportar() {
+        if (loteActividadActual.length === 0) return;
+        const btn = document.getElementById('btn-finalizar-actividad-modal');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Guardando...';
+        try {
+            const payload = {
+                mvzId: currentUser.id, ranchoId: currentRancho?.id || null,
+                ranchoNombre: currentRancho?.id ? currentRancho.nombre : document.getElementById('rancho-independiente-nombre').value.trim(),
+                loteActividad: loteActividadActual
+            };
+            const resSave = await fetch('/api/actividades', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if (!resSave.ok) throw new Error('No se pudo guardar la actividad.');
+            loteActividadActual = [];
+            document.getElementById('lote-info').textContent = `0 vacas`;
+            renderizarHistorialMVZ();
+        } catch (err) {
+            console.error("Error al finalizar:", err);
+            alert('Hubo un error al guardar la actividad.');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-check-circle mr-2"></i>Finalizar Actividad';
+        }
+    }
+
+    async function renderizarHistorialMVZ() {
     const historialContainer = document.getElementById('historial-actividades-mvz');
     historialContainer.innerHTML = '<p class="text-gray-500 text-center">Cargando historial...</p>';
 
@@ -802,6 +731,53 @@ async function handleGenerarPdfDeHistorial() {
         }
     }
 
+        // Estructura HTML para la vista de estadísticas
+        contenidoContainer.innerHTML = `
+            <div class="bg-white p-4 rounded-xl shadow-md">
+                <div class="mb-4">
+                    <h2 class="text-lg font-bold text-gray-900">Lote ${loteId}: Estado Reproductivo</h2>
+                    <p class="text-sm text-gray-500">Última Actualización: ${new Date().toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })}</p>
+                </div>
+                <div class="relative h-64 w-full mx-auto mb-4">
+                    <canvas id="grafico-reproductivo"></canvas>
+                    <div class="absolute inset-0 flex flex-col items-center justify-center">
+                        <span class="text-3xl font-bold text-gray-800">${datosLote.totalVacas}</span>
+                        <span class="text-sm text-gray-500">Total de Vacas</span>
+                    </div>
+                </div>
+                <div id="stats-resumen-texto" class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm"></div>
+            </div>`;
+
+        const ctx = document.getElementById('grafico-reproductivo').getContext('2d');
+        const estados = datosLote.estados || {};
+        const totalVacas = datosLote.totalVacas || 1;
+        const data = {
+            labels: ['Gestantes', 'Estáticas', 'Ciclando'],
+            datasets: [{
+                data: [estados.Gestante || 0, estados.Estatica || 0, estados.Ciclando || 0],
+                backgroundColor: ['#10b981', '#f59e0b', '#f97316'],
+                borderColor: '#ffffff',
+                borderWidth: 4,
+                hoverOffset: 8
+            }]
+        };
+        
+        if (miGrafico) miGrafico.destroy();
+
+        miGrafico = new Chart(ctx, {
+            type: 'doughnut', data, options: {
+            responsive: true, maintainAspectRatio: false, cutout: '70%',
+            plugins: { legend: { display: false } }
+        }});
+        
+        document.getElementById('stats-resumen-texto').innerHTML = `
+            <p><strong>Gestantes:</strong> ${estados.Gestante || 0} vacas (${Math.round((estados.Gestante/totalVacas)*100)}%)</p>
+            <p><strong>Estáticas:</strong> ${estados.Estatica || 0} vacas (${Math.round((estados.Estatica/totalVacas)*100)}%)</p>
+            <p><strong>Ciclando:</strong> ${estados.Ciclando || 0} vacas (${Math.round((estados.Ciclando/totalVacas)*100)}%)</p>
+            <p><strong>Raza Pred.:</strong> ${Object.keys(datosLote.razas)[0] || 'N/A'}</p>
+        `;
+    }
+    s
         // INICIALIZACIÓN DE LA APLICACIÓN
     function initApp() {
         setupNavigation();
