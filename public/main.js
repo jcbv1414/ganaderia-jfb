@@ -1,126 +1,98 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-    // ESTADO GLOBAL Y CONFIGURACIÓN
+    // =================================================================
+    // ===== ESTADO GLOBAL Y CONFIGURACIÓN ===========================
+    // =================================================================
     let currentUser = null;
-    let currentRancho = null;
-    let loteActual = []; 
-    let vacasIndex = new Map();
-    let datosEstadisticasCompletos = null; // Para guardar los datos de estadísticas
-    let miGrafico = null; // Para poder destruir la gráfica anterior
-
+    let currentRancho = null; // Rancho activo para el MVZ
+    let actividadActual = []; // Almacena registros de la actividad en curso del MVZ
+    
     const API_URL = '/api';
     const appContent = document.getElementById('app-content');
     const navContainer = document.getElementById('nav-container');
     
+    // Definiciones de campos para los modales de actividad del MVZ
     const PROCEDIMIENTOS = {
         palpacion: {
-            titulo: "Palpación",
+            titulo: "Palpación / Chequeo Reproductivo",
             campos: [
-                { id: "estatica", label: "Estática", tipo: "select", opciones: ["Sí", "No"] },
-                { id: "ciclando", label: "Ciclando", tipo: "select", opciones: ["Sí", "No"], revela: "ciclando_detalle" },
-                { id: "ciclando_detalle", label: "Detalle Ciclo", tipo: "select", opciones: ["I1", "I2", "I3", "D1", "D2", "D3"], oculto: true },
-                { id: "gestante", label: "Gestante", tipo: "select", opciones: ["Sí", "No"], revela: "gestante_detalle" },
-                { id: "gestante_detalle", label: "Edad Gestacional", tipo: "select", opciones: ["1 a 3 meses", "3 a 6 meses", "6 a 9 meses"], oculto: true },
-                { id: "sucia", label: "Sucia", tipo: "checkbox" },
+                { id: "gestante", label: "Gestante", tipo: "select", opciones: ["No", "Sí"] },
+                { id: "dias_gestacion", label: "Días de Gestación", tipo: "number" },
+                { id: "ovario_izq", label: "Ovario Izquierdo", tipo: "text", placeholder: "Ej: CL, Foliculos" },
+                { id: "ovario_der", label: "Ovario Derecho", tipo: "text", placeholder: "Ej: CL, Foliculos" },
+                { id: "utero", label: "Útero", tipo: "text", placeholder: "Ej: Tono, Contenido" },
                 { id: "observaciones", label: "Observaciones", tipo: "textarea" }
             ]
         },
         inseminacion: {
-            titulo: "Inseminación",
+            titulo: "Inseminación Artificial",
             campos: [
-                { id: "tecnica", label: "Técnica", tipo: "select", opciones: ["IATF", "IA Convencional"], revela: "fecha_celo" },
-                { id: "fecha_celo", label: "Fecha/Hora de Celo Detectado", tipo: "datetime-local", oculto: true },
-                { id: "pajilla_toro", label: "Pajilla / Toro", tipo: "text", placeholder: "Nombre del toro" },
-                { id: "dosis", label: "Dosis", tipo: "select", opciones: ["1 dosis", "2 dosis", "3 dosis", "4 dosis"] },
+                { id: "semental", label: "Semental Utilizado", tipo: "text", required: true },
+                { id: "tipo_semen", label: "Tipo de Semen", tipo: "select", opciones: ["Convencional", "Sexado"] },
+                { id: "protocolo", label: "Protocolo", tipo: "text", placeholder: "Ej: Ovsynch" },
+                { id: "inseminador", label: "Inseminador", tipo: "text" },
                 { id: "observaciones", label: "Observaciones", tipo: "textarea" }
             ]
         },
         transferencia: {
-            titulo: "Transferencia de embrión",
+            titulo: "Transferencia de Embrión",
             campos: [
-                { id: "donadora", label: "Donadora", tipo: "text", placeholder: "ID o nombre" },
-                { id: "receptora", label: "Receptora", tipo: "text", placeholder: "ID o nombre" },
-                { id: "embriologo", label: "Embriólogo", tipo: "text" },
-                { id: "calidad_embrion", label: "Calidad del embrión", tipo: "select", opciones: ["I", "II", "III"] },
-                { id: "estado_embrion", label: "Estado del embrión", tipo: "select", opciones: ["Fresco", "Congelado"] },
-                { id: "lote_pajilla", label: "Lote/Pajilla", tipo: "text" },
-                { id: "ubicacion", label: "Ubicación (cuerno)", tipo: "select", opciones: ["Derecho", "Izquierdo"] },
+                { id: "donadora", label: "Donadora", tipo: "text" },
+                { id: "semental_embrion", label: "Semental del Embrión", tipo: "text" },
+                { id: "dias_embrion", label: "Días del Embrión", tipo: "number" },
+                { id: "calidad", label: "Calidad", tipo: "select", opciones: ["1 (Excelente)", "2 (Buena)", "3 (Regular)"] },
                 { id: "observaciones", label: "Observaciones", tipo: "textarea" }
             ]
         },
         sincronizacion: {
             titulo: "Sincronización",
             campos: [
-                { id: "protocolo", label: "Protocolo", tipo: "select", opciones: ["Ovsynch", "Presynch", "CIDR", "Otro"] },
-                { id: "fecha_inicio", label: "Fecha de inicio", tipo: "date" },
-                { id: "fecha_fin", label: "Fecha de fin", tipo: "date" },
+                { id: "protocolo", label: "Protocolo de Sincronización", tipo: "text", placeholder: "Ej: J-Synch, Ovsynch", required: true },
+                { id: "dia_protocolo", label: "Día del Protocolo", tipo: "number", placeholder: "Ej: 0, 7, 9" },
+                { id: "medicamento", label: "Medicamento Aplicado", tipo: "text", placeholder: "Ej: GnRH, Prostaglandina" },
                 { id: "observaciones", label: "Observaciones", tipo: "textarea" }
+            ]
+        },
+        medicamento: {
+            titulo: "Aplicación de Medicamento",
+            campos: [
+                { id: "medicamento", label: "Medicamento", tipo: "text", required: true },
+                { id: "dosis", label: "Dosis", tipo: "text", placeholder: "Ej: 10ml" },
+                { id: "via_aplicacion", label: "Vía de Aplicación", tipo: "select", opciones: ["Intramuscular", "Subcutánea", "Intravenosa", "Oral"] },
+                { id: "motivo", label: "Motivo", tipo: "textarea" },
             ]
         }
     };
-    const RAZAS_BOVINAS = ['Aberdeen Angus', 'Ayrshire', 'Bazadaise', 'Beefmaster', 'Belgian Blue', 'Brahman', 'Brangus', 'Charolais', 'Chianina', 'Criollo', 'Suizo', 'Galloway', 'Gelbvieh', 'Gyr', 'Guzerá', 'Gyr Lechero', 'Guernsey', 'Hereford', 'Holstein', 'Jersey', 'Limousin', 'Maine-Anjou', 'Marchigiana', 'Montbéliarde', 'Normando', 'Pardo Suizo', 'Piemontese', 'Pinzgauer', 'Romagnola', 'Sahiwal', 'Santa Gertrudis', 'Sardo Negro', 'Shorthorn', 'Simbrah', 'Simmental', 'Sindi', 'Tarentaise', 'Wagyu'].sort((a, b) => a.localeCompare(b));
-
-
-    // =================================================================
-    // ===== 3. FUNCIONES DE AYUDA (HELPERS) ===========================
-    // =================================================================
-    const mostrarMensaje = (elId, texto, esError = true) => {
-        const el = document.getElementById(elId);
-        if (!el) return;
-        el.textContent = texto;
-        const colorClass = esError ? 'text-red-500' : 'text-green-600';
-        const authColorClass = esError ? 'text-red-400' : 'text-green-400';
-        // Adaptar color para la vista de login/registro
-        el.className = el.closest('.auth-container') ? `text-center mt-2 text-sm h-4 ${authColorClass}` : `text-sm mt-2 h-4 ${colorClass}`;
-        setTimeout(() => { if (el) el.textContent = ''; }, 4000);
-    };
+    const RAZAS_BOVINAS = ['Angus', 'Brahman', 'Hereford', 'Simmental', 'Brangus', 'Charolais', 'Limousin', 'Gyr', 'Pardo Suizo', 'Holstein'].sort();
 
     // =================================================================
-    // ===== 4. NAVEGACIÓN Y RENDERIZADO DE VISTAS =====================
+    // ===== NAVEGACIÓN Y RENDERIZADO DE VISTAS ========================
     // =================================================================
     function navigateTo(viewId) {
-        if (!appContent) { console.error('Elemento #app-content no encontrado.'); return; }
-        
-        if (viewId === 'estadisticas') {
-            renderizarVistaEstadisticas()
-        }
-
-        const fab = document.getElementById('fab-container');
-        if (fab) fab.classList.add('hidden');
-        document.body.className = 'bg-brand-bg'; // Estilo por defecto
-
         appContent.innerHTML = '';
         const template = document.getElementById(`template-${viewId}`);
         if (!template) {
-            appContent.innerHTML = `<p class="text-center p-8 text-red-500">Error: No se encontró la plantilla para: ${viewId}</p>`;
+            appContent.innerHTML = `<p class="p-8 text-center text-red-500">Error: No se encontró la plantilla para: ${viewId}</p>`;
             return;
         }
         appContent.appendChild(template.content.cloneNode(true));
+        document.body.className = ''; // Reset body class
 
-        if (viewId === 'login' || viewId === 'registro') {
-            document.body.className = ''; // Quitar clases para que el contenedor auth tome control
-        }
-
+        // Lógica específica después de cargar la vista
         if (viewId === 'login') {
             document.getElementById('form-login').addEventListener('submit', handleLogin);
             document.getElementById('link-a-registro').addEventListener('click', () => navigateTo('registro'));
-        } else if (viewId === 'registro') {
-            document.getElementById('form-registro').addEventListener('submit', handleRegister);
-            document.getElementById('link-a-login').addEventListener('click', () => navigateTo('login'));
         } else if (viewId === 'inicio-propietario') {
             document.getElementById('dash-nombre-propietario').textContent = currentUser?.nombre.split(' ')[0] || '';
             document.getElementById('dash-fecha-actual').textContent = new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
-            if (fab) fab.classList.remove('hidden');
-            cargarDatosDashboard();
-        } else if (viewId === 'inicio-mvz') {
-            
-            if (fab) fab.classList.add('hidden');
-            cargarDashboardMVZ();
-        } 
-        // Cambiamos 'actividades-mvz' por el nuevo nombre
-        else if (viewId === 'manejo-reproductivo-mvz') { 
-            // Y llamamos a la función con el nuevo nombre
-            initManejoReproductivoListeners(); 
+            cargarResumenDashboard();
+        } else if (viewId === 'mis-vacas') {
+            document.getElementById('btn-abrir-modal-vaca').addEventListener('click', () => abrirModalVaca());
+            cargarMisVacas();
+        } else if (viewId === 'manejo-reproductivo-mvz') {
+            initManejoReproductivoListeners();
+        } else if (viewId === 'historial-mvz') {
+            cargarHistorialMVZ();
         }
     }
 
@@ -131,11 +103,10 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('nav-propietario').classList.toggle('hidden', !isPropietario);
         document.getElementById('nav-mvz').classList.toggle('hidden', isPropietario);
         
-        document.querySelector('.nav-button.active')?.classList.remove('active');
-        const firstButtonSelector = isPropietario ? '#nav-propietario .nav-button[data-vista="inicio-propietario"]' : '#nav-mvz .nav-button[data-vista="inicio-mvz"]';
-        document.querySelector(firstButtonSelector)?.classList.add('active');
-
-        navigateTo(isPropietario ? 'inicio-propietario' : 'inicio-mvz');
+        document.querySelectorAll('.nav-button.active').forEach(b => b.classList.remove('active'));
+        const firstView = isPropietario ? 'inicio-propietario' : 'inicio-mvz';
+        document.querySelector(`.nav-button[data-vista="${firstView}"]`)?.classList.add('active');
+        navigateTo(firstView);
     };
 
     function setupNavigation() {
@@ -147,18 +118,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 navigateTo(button.dataset.vista);
             });
         });
-
-         window.navigateTo = navigateTo;
     }
 
-    
-
-
     // =================================================================
-    // ===== 5. MANEJADORES DE EVENTOS (HANDLERS) COMPLETOS ============
+    // ===== LÓGICA DE AUTENTICACIÓN ===================================
     // =================================================================
     async function handleLogin(e) {
         e.preventDefault();
+        const btn = e.target.querySelector('button[type="submit"]');
+        const originalText = btn.textContent;
+        btn.textContent = '';
+        btn.classList.add('loading');
+        btn.disabled = true;
+
         const email = document.getElementById('login-email').value;
         const password = document.getElementById('login-password').value;
         try {
@@ -170,536 +142,460 @@ document.addEventListener('DOMContentLoaded', () => {
             iniciarSesion();
         } catch (err) {
             mostrarMensaje('login-mensaje', err.message);
-        }
-    }
-
-    async function handleRegister(e) {
-        e.preventDefault();
-        const form = e.target;
-        const formData = new FormData(form);
-        try {
-            const res = await fetch(`${API_URL}/register`, { method: 'POST', body: formData });
-            const respuesta = await res.json();
-            if (!res.ok) throw new Error(respuesta.message);
-            mostrarMensaje('registro-mensaje', '¡Registro exitoso! Serás redirigido al login.', false);
-            setTimeout(() => navigateTo('login'), 2000);
-        } catch (err) {
-            mostrarMensaje('registro-mensaje', err.message);
+        } finally {
+            btn.textContent = originalText;
+            btn.classList.remove('loading');
+            btn.disabled = false;
         }
     }
 
     // =================================================================
-    // ===== 6. LÓGICA DE VISTAS Y DATOS COMPLETAS =====================
+    // ===== LÓGICA DE PROPIETARIO =====================================
     // =================================================================
-    
-    // --- LÓGICA DEL PROPIETARIO ---
-    async function cargarDatosDashboard() {
-        if (!currentUser || currentUser.rol !== 'propietario') return;
+    async function cargarResumenDashboard() {
+        const ranchoId = currentUser?.ranchos?.[0]?.id;
+        if (!ranchoId) return;
         try {
-            const ranchoId = currentUser.ranchos?.[0]?.id;
-            if (!ranchoId) return;
-
             const res = await fetch(`${API_URL}/rancho/${ranchoId}/estadisticas`);
-            if (!res.ok) throw new Error('No se pudieron cargar las estadísticas.');
             const stats = await res.json();
-
+            if (!res.ok) throw new Error(stats.message || 'Error del servidor.');
+            
             let totalVacas = 0, totalGestantes = 0;
-            for (const lote in stats) {
-                totalVacas += stats[lote].totalVacas || 0;
-                totalGestantes += (stats[lote].estados && stats[lote].estados.Gestante) || 0;
-            }
+            Object.values(stats).forEach(lote => {
+                totalVacas += lote.totalVacas || 0;
+                totalGestantes += lote.estados?.Gestante || 0;
+            });
             document.getElementById('resumen-total-vacas').textContent = totalVacas;
             document.getElementById('resumen-vacas-gestantes').textContent = totalGestantes;
-            document.getElementById('resumen-alertas').textContent = 3; 
-
-            const lotesContainer = document.getElementById('lotes-container');
-            if (!lotesContainer) return;
-            lotesContainer.innerHTML = '';
-            
-            if (Object.keys(stats).length === 0) {
-                 lotesContainer.innerHTML = '<p class="text-gray-500">No hay lotes con datos para mostrar.</p>';
-                 return;
-            }
-            
-            Object.entries(stats).forEach(([numeroLote, datosLote]) => {
-                const vacasEnLote = datosLote.totalVacas || 0;
-                const gestantesEnLote = datosLote.estados?.Gestante || 0;
-                const porcentajeGestacion = vacasEnLote > 0 ? Math.round((gestantesEnLote / vacasEnLote) * 100) : 0;
-                
-                let colorProgreso = '#22c55e';
-                if (numeroLote === 'B') { colorProgreso = '#ef4444'; }
-
-                const loteCardHTML = `
-                    <div class="bg-white p-4 rounded-xl shadow-md flex items-center justify-between">
-                        <div class="flex items-center">
-                            <div class="progress-ring mr-4" style="--value: ${porcentajeGestacion}; --color: ${colorProgreso};">
-                                <span class="progress-ring-percent">${porcentajeGestacion}%</span>
-                            </div>
-                            <div>
-                                <p class="font-semibold">Lote ${numeroLote}</p>
-                                <p class="text-sm text-gray-500">Gestación</p>
-                            </div>
-                        </div>
-                        <i class="fa-solid fa-chevron-right text-gray-400"></i>
-                    </div>`;
-                lotesContainer.innerHTML += loteCardHTML;
-            });
+            document.getElementById('resumen-alertas').textContent = '0'; // Placeholder
         } catch (error) {
-            console.error("Error al cargar datos del dashboard:", error);
-            document.getElementById('lotes-container').innerHTML = '<p class="text-red-500">No se pudieron cargar los datos.</p>';
+            console.error("Error cargando resumen:", error);
+            document.getElementById('resumen-total-vacas').textContent = 'Error';
         }
     }
-    // --- NUEVA LÓGICA PARA LA VISTA DE ESTADÍSTICAS ---
-    async function renderizarVistaEstadisticas() {
+
+    async function cargarMisVacas() {
+        const container = document.getElementById('lista-vacas-container');
+        container.innerHTML = `<p class="text-center text-gray-500">Cargando ganado...</p>`;
+        const ranchoId = currentUser?.ranchos?.[0]?.id;
+        if (!ranchoId) {
+            container.innerHTML = `<p class="text-center text-red-500">No se encontró un rancho asociado.</p>`;
+            return;
+        }
         try {
-            const ranchoId = currentUser?.ranchos?.[0]?.id;
-            if (!ranchoId) throw new Error('No se encontró rancho.');
+            const res = await fetch(`${API_URL}/vacas/rancho/${ranchoId}`);
+            if (!res.ok) throw new Error('No se pudo cargar el ganado.');
+            const vacas = await res.json();
             
-            const res = await fetch(`${API_URL}/rancho/${ranchoId}/estadisticas`);
-            if (!res.ok) throw new Error('No se pudieron cargar las estadísticas.');
-            
-            datosEstadisticasCompletos = await res.json();
-            
-            const tabsContainer = document.getElementById('tabs-lotes-container');
-            const lotes = Object.keys(datosEstadisticasCompletos);
-
-            if (!tabsContainer) return;
-            tabsContainer.innerHTML = ''; // Limpiar tabs anteriores
-
-            if (lotes.length === 0) {
-                document.getElementById('contenido-estadisticas').innerHTML = '<p class="text-center text-gray-500">No hay datos suficientes para mostrar estadísticas.</p>';
+            if (vacas.length === 0) {
+                container.innerHTML = `<p class="text-center text-gray-500">Aún no tienes ganado registrado. ¡Agrega el primero!</p>`;
                 return;
             }
 
-            // Crear las pestañas para cada lote
-            lotes.forEach(lote => {
-                const tabButton = document.createElement('button');
-                tabButton.className = 'py-2 px-4 text-gray-500 font-semibold border-b-2 border-transparent';
-                tabButton.textContent = lote === 'Sin Lote' ? 'Sin Asignar' : `Lote ${lote}`;
-                tabButton.dataset.loteId = lote;
-                tabsContainer.appendChild(tabButton);
+            container.innerHTML = '';
+            vacas.forEach(vaca => {
+                const card = document.createElement('div');
+                card.className = "bg-white p-4 rounded-lg shadow-md flex items-center gap-4";
+                card.innerHTML = `
+                    <img src="${vaca.foto_url || `https://ui-avatars.com/api/?name=${vaca.nombre}&background=a7f3d0&color=047857`}" alt="${vaca.nombre}" class="w-24 h-24 object-cover rounded-md bg-gray-200">
+                    <div class="flex-grow">
+                        <h3 class="text-xl font-bold">${vaca.nombre}</h3>
+                        <p class="text-sm text-gray-600"><strong>Raza:</strong> ${vaca.raza || 'N/D'}</p>
+                        <p class="text-sm text-gray-600"><strong>Nacimiento:</strong> ${vaca.fecha_nacimiento ? formatDate(vaca.fecha_nacimiento) : 'N/D'}</p>
+                        <p class="text-sm text-gray-600"><strong>Arete:</strong> #${vaca.numero_arete || 'N/D'}</p>
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <button data-vaca-id="${vaca.id}" class="btn-borrar-vaca bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600 text-xs"><i class="fa-solid fa-trash"></i> Borrar</button>
+                    </div>
+                `;
+                container.appendChild(card);
             });
 
-            // Añadir evento de clic a las pestañas
-            tabsContainer.querySelectorAll('button').forEach(tab => {
-                tab.addEventListener('click', (e) => {
-                    tabsContainer.querySelector('.active-tab')?.classList.remove('active-tab', 'text-brand-green', 'border-brand-green');
-                    e.currentTarget.classList.add('active-tab', 'text-brand-green', 'border-brand-green');
-                    renderizarGraficoLote(e.currentTarget.dataset.loteId);
+            document.querySelectorAll('.btn-borrar-vaca').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const vacaId = e.currentTarget.dataset.vacaId;
+                    if (confirm('¿Estás seguro de que quieres eliminar este animal? Esta acción no se puede deshacer.')) {
+                        try {
+                            const res = await fetch(`${API_URL}/vacas/${vacaId}`, { method: 'DELETE' });
+                            if (!res.ok) throw new Error('Error al eliminar');
+                            cargarMisVacas(); // Recargar la lista
+                        } catch (error) {
+                            alert('No se pudo eliminar el animal.');
+                        }
+                    }
                 });
             });
 
-            // Simular clic en la primera pestaña para mostrarla por defecto
-            if (tabsContainer.firstChild) {
-                tabsContainer.firstChild.click();
-            }
-
         } catch (error) {
-            console.error('Error al renderizar estadísticas:', error);
-            document.getElementById('contenido-estadisticas').innerHTML = `<p class="text-center text-red-500">${error.message}</p>`;
+            container.innerHTML = `<p class="text-center text-red-500">${error.message}</p>`;
         }
     }
 
-    function renderizarGraficoLote(loteId) {
-        const datosLote = datosEstadisticasCompletos[loteId];
-        if (!datosLote) return;
-
-        // Actualizar títulos
-        document.getElementById('stats-titulo-lote').textContent = `Lote ${loteId}: Vacas en Ordeño`; // Placeholder, se puede ajustar
-        document.getElementById('stats-fecha-actualizacion').textContent = `Última Actualización: ${new Date().toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })}`;
-
-        // Preparar datos para la gráfica
-        const ctx = document.getElementById('grafico-reproductivo').getContext('2d');
-        const estados = datosLote.estados || {};
-        
-        const data = {
-            labels: ['Gestantes', 'Estáticas', 'Ciclando', 'Secas'], // "Secas" es un ejemplo, puedes ajustarlo
-            datasets: [{
-                data: [estados.Gestante || 0, estados.Estatica || 0, estados.Ciclando || 0, 2], // '2' es un dato de ejemplo para 'Secas'
-                backgroundColor: ['#2dd4bf', '#facc15', '#fb923c', '#9ca3af'], // Verde azulado, Amarillo, Naranja, Gris
-                borderColor: '#ffffff',
-                borderWidth: 4,
-                hoverOffset: 8
-            }]
-        };
-
-        // Destruir la gráfica anterior si existe
-        if (miGrafico) {
-            miGrafico.destroy();
+    function abrirModalVaca(vaca = null) {
+        const modal = document.getElementById('modal-vaca');
+        const form = document.getElementById('form-vaca');
+        form.reset();
+        document.getElementById('modal-vaca-titulo').textContent = vaca ? 'Editar Animal' : 'Agregar Nuevo Animal';
+        document.getElementById('edad-calculada').textContent = '--';
+        if (vaca) {
+            // Lógica para rellenar el form si se edita (no implementado en este paso)
         }
+        modal.classList.remove('hidden');
+    }
 
-        // Crear la nueva gráfica de dona
-        miGrafico = new Chart(ctx, {
-            type: 'doughnut',
-            data: data,
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                cutout: '70%',
-                plugins: {
-                    legend: {
-                        display: false // Ocultamos la leyenda original
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return `${context.label}: ${context.raw} vacas`;
-                            }
-                        }
-                    }
-                }
+    function setupModalVaca() {
+        document.getElementById('btn-cerrar-modal-vaca').addEventListener('click', () => {
+            document.getElementById('modal-vaca').classList.add('hidden');
+        });
+
+        // Calculadora de edad
+        const fechaNacimientoInput = document.getElementById('fecha_nacimiento');
+        fechaNacimientoInput.addEventListener('change', () => {
+            if (!fechaNacimientoInput.value) {
+                document.getElementById('edad-calculada').textContent = '--';
+                return;
             }
-        });
-
-        // Actualizar el resumen en texto
-        const resumenContainer = document.getElementById('stats-resumen-texto');
-        resumenContainer.innerHTML = `
-            <p><strong class="font-bold text-gray-800">Total de Vacas:</strong> ${datosLote.totalVacas}</p>
-            <p><strong class="font-bold text-gray-800">Gestantes:</strong> ${estados.Gestante || 0} vacas</p>
-            <p><strong class="font-bold text-gray-800">Estáticas:</strong> ${estados.Estatica || 0} vacas</p>
-            <p><strong class="font-bold text-gray-800">Ciclando:</strong> ${estados.Ciclando || 0} vacas</p>
-            <p><strong class="font-bold text-gray-800">Raza:</strong> ${Object.keys(datosLote.razas)[0] || 'N/A'}</p>
-        `;
-    }
-     function cargarDashboardMVZ() {
-        // Por ahora, usamos datos de ejemplo.
-        // En el futuro, esto vendrá de un nuevo endpoint en server.js
-        const datosDashboard = {
-            visitas: 3,
-            detalleVisitas: "2 ranchos, 1 remota",
-            alertas: 5,
-            detalleAlertas: "4 críticos, 1 parto",
-            pendientes: [
-                { id: 1, texto: "Lote 1: Revisión 3 vacas", rancho: "(El Roble)", completado: false },
-                { id: 2, texto: "Lote B: Vacunación general", rancho: "(La Cabaña)", completado: true }
-            ],
-            eventos: [
-                { fecha: "Mañana", texto: "Parto esperado vaca #123 (El Roble)" },
-                { fecha: "Jueves", texto: "Chequeo reproductivo (La Hacienda)" }
-            ]
-        };
-
-        // Rellenar Resumen Diario
-        document.getElementById('resumen-visitas').textContent = datosDashboard.visitas;
-        document.getElementById('detalle-visitas').textContent = datosDashboard.detalleVisitas;
-        document.getElementById('resumen-alertas').textContent = datosDashboard.alertas;
-        document.getElementById('detalle-alertas').textContent = datosDashboard.detalleAlertas;
-        
-        // Rellenar Pendientes
-        const pendientesContainer = document.getElementById('lista-pendientes');
-        pendientesContainer.innerHTML = ''; // Limpiar
-        datosDashboard.pendientes.forEach((pendiente, index) => {
-            const estadoHTML = pendiente.completado
-                ? `<button class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-semibold">Completado</button>`
-                : `<button class="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-semibold">Ver Detalles</button>`;
-            
-            pendientesContainer.innerHTML += `
-                <div class="flex justify-between items-center">
-                    <div>
-                        <p class="font-semibold text-gray-800"><span class="text-blue-600 font-bold">${index + 1}</span> ${pendiente.texto}</p>
-                        <p class="text-sm text-gray-500 ml-4">${pendiente.rancho}</p>
-                    </div>
-                    ${estadoHTML}
-                </div>
-            `;
+            const birthDate = new Date(fechaNacimientoInput.value);
+            const today = new Date();
+            let years = today.getFullYear() - birthDate.getFullYear();
+            let months = today.getMonth() - birthDate.getMonth();
+            if (months < 0 || (months === 0 && today.getDate() < birthDate.getDate())) {
+                years--;
+                months = (months + 12) % 12;
+            }
+            document.getElementById('edad-calculada').textContent = `${years} años, ${months} meses`;
         });
         
-        // Rellenar Eventos
-        const eventosContainer = document.getElementById('lista-eventos');
-        eventosContainer.innerHTML = ''; // Limpiar
-        datosDashboard.eventos.forEach(evento => {
-            eventosContainer.innerHTML += `
-                <div class="flex justify-between items-center">
-                    <div>
-                        <p class="font-semibold text-gray-800"><i class="fa-solid fa-calendar-alt text-brand-green mr-2"></i>${evento.fecha}:</p>
-                        <p class="text-sm text-gray-600 ml-6">${evento.texto}</p>
-                    </div>
-                    <i class="fa-solid fa-chevron-right text-gray-400"></i>
-                </div>
-            `;
+        // Botones de Sexo
+        document.querySelectorAll('.sexo-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelector('.sexo-btn.bg-pink-500')?.classList.replace('bg-pink-500', 'bg-gray-200');
+                document.querySelector('.sexo-btn.bg-blue-500')?.classList.replace('bg-blue-500', 'bg-gray-200');
+                btn.classList.replace('bg-gray-200', btn.dataset.sexo === 'Hembra' ? 'bg-pink-500' : 'bg-blue-500');
+                document.getElementById('sexo-vaca').value = btn.dataset.sexo;
+            });
         });
-    }
-    // --- LÓGICA DEL MVZ ---
-   function initManejoReproductivoListeners() {
-        // Estado inicial de la pantalla
-        document.getElementById('modo-seleccion-container').classList.remove('hidden');
-        document.getElementById('rancho-access-container').classList.add('hidden');
-        document.getElementById('rancho-actions-container').classList.add('hidden');
-        loteActual = []; // Limpiamos el lote al entrar
-        
-        // Listeners para los botones de modo
-        document.getElementById('btn-show-rancho-registrado').onclick = () => {
-            document.getElementById('rancho-access-container').classList.remove('hidden');
-        };
-        document.getElementById('btn-iniciar-independiente').onclick = () => {
-            iniciarActividad('Rancho Independiente');
-        };
-        document.getElementById('btn-validar-rancho').onclick = handleValidarRancho; 
-    }
 
-   async function handleValidarRancho() {
-        const codigo = document.getElementById('codigo-rancho').value.trim().toUpperCase();
-        if (!codigo) { mostrarMensaje('mensaje-rancho', 'El código no puede estar vacío.'); return; }
-        try {
-            const res = await fetch(`${API_URL}/rancho/validate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ codigo }) });
-            const respuesta = await res.json();
-            if (!res.ok) throw new Error(respuesta.message);
-            currentRancho = respuesta;
-            iniciarActividad(currentRancho.nombre, currentRancho.logo_url);
-            await cargarVacasParaMVZ(); // Cargar vacas solo si es un rancho registrado
-        } catch (err) {
-            mostrarMensaje('mensaje-rancho', err.message);
-        }
-    }
-     function iniciarActividad(nombreRancho, logoUrl = 'https://i.imgur.com/s6l2h27.png') {
-    document.getElementById('modo-seleccion-container').classList.add('hidden');
-    document.getElementById('rancho-actions-container').classList.remove('hidden');
-    document.getElementById('rancho-nombre-activo').textContent = nombreRancho;
-    document.getElementById('rancho-logo').src = logoUrl;
-    
-    // ===== LÓGICA PARA MOSTRAR CAMPO DE NOMBRE EN MODO INDEPENDIENTE =====
-    const nombreIndependienteContainer = document.getElementById('rancho-independiente-input-container');
-    if (nombreRancho === 'Rancho Independiente') {
-        nombreIndependienteContainer.classList.remove('hidden');
-        document.getElementById('rancho-independiente-nombre').value = ''; // Limpiamos el campo
-    } else {
-        nombreIndependienteContainer.classList.add('hidden');
-    }
-    // =====================================================================
-
-    // Listeners para las acciones
-    document.getElementById('btn-abrir-modal-palpacion').onclick = () => abrirModalActividad('palpacion');
-    
-    // !!! HEMOS QUITADO EL LISTENER DEL BOTÓN DE FINALIZAR DE AQUÍ !!!
-}
-    
-    function abrirModalActividad(tipo) {
-    const modal = document.getElementById('modal-palpacion');
-    modal.classList.remove('hidden');
-    
-    // Poblar select de Lotes
-    const selLote = document.getElementById('actividad-lote');
-    selLote.innerHTML = '';
-    // Puedes mejorar esto para que cargue los lotes reales del rancho si existe
-    const lotesDisponibles = currentRancho?.lotes || [1, 2, 3, 4, 5];
-    lotesDisponibles.forEach(l => selLote.add(new Option(`Lote ${l}`, l)));
-    
-    // Renderizar campos dinámicos
-    renderizarCamposProcedimiento(tipo);
-
-    // Listeners del modal
-    document.getElementById('btn-cerrar-modal-palpacion').onclick = () => modal.classList.add('hidden');
-    
-    // ===== NUEVOS LISTENERS PARA LOS BOTONES DEL FOOTER =====
-    document.getElementById('btn-guardar-siguiente').onclick = (e) => {
-        e.preventDefault();
-        handleAgregarVacaAlLote(tipo); // Solo guarda y limpia para la siguiente
-    };
-
-    document.getElementById('btn-finalizar-reporte-modal').onclick = (e) => {
-        e.preventDefault();
-        // Primero, intenta agregar la vaca actual por si hay datos en el formulario
-        const areteActual = document.getElementById('actividad-arete').value.trim();
-        if (areteActual) {
-            handleAgregarVacaAlLote(tipo, false); // El `false` es para que no limpie el campo arete
-        }
-        
-        // Luego, finaliza y genera el reporte
-        handleFinalizarLote();
-        
-        // Y finalmente cierra el modal
-        modal.classList.add('hidden');
-    };
-    // ========================================================
-}
-
-    // Lógica para agregar vaca (ahora llamada desde el modal)
-   // Añadimos un segundo parámetro `limpiarForm = true`
-function handleAgregarVacaAlLote(tipoActividad, limpiarForm = true) {
-    const areteInput = document.getElementById('actividad-arete');
-    const loteNumero = document.getElementById('actividad-lote').value;
-    const arete = areteInput.value.trim();
-
-    if (!arete || !loteNumero) { 
-        mostrarMensaje('mensaje-vaca', 'Completa lote y arete.'); 
-        return; 
-    }
-
-    const form = document.getElementById('form-actividad-vaca');
-    const formData = new FormData(form);
-    const detalles = {};
-    for (const [key, value] of formData.entries()) {
-        if (!['actividad-lote', 'actividad-arete'].includes(key)) {
-            detalles[key] = value;
-        }
-    }
-    
-    loteActual.push({
-        areteVaca: arete,
-        raza: vacasIndex.get(arete)?.raza || 'N/A',
-        loteNumero: loteNumero,
-        tipo: tipoActividad,
-        tipoLabel: PROCEDIMIENTOS[tipoActividad].titulo,
-        fecha: new Date().toISOString().split('T')[0],
-        detalles: detalles
-    });
-
-    mostrarMensaje('mensaje-vaca', `Vaca ${arete} agregada. Total en lote: ${loteActual.length}`, false);
-    document.getElementById('lote-info').textContent = `${loteActual.length} vacas (Lote ${loteNumero})`;
-    
-    if (limpiarForm) {
-        // Limpiamos solo los campos de la actividad, no el lote.
-        document.getElementById('campos-dinamicos-procedimiento').querySelectorAll('input, select, textarea').forEach(el => {
-            if (el.type === 'checkbox') el.checked = false;
-            else el.value = el.options ? el.options[0].value : '';
-        });
-        areteInput.value = '';
-        areteInput.focus();
-    }
-}
-    
-    // Las demás funciones de apoyo
-    function renderizarCamposProcedimiento(tipo) { /* ... (código sin cambios) ... */ }
-    async function cargarVacasParaMVZ() { /* ... (código sin cambios) ... */ }
-    async function handleFinalizarLote() { /* ... (código casi sin cambios, solo la alerta) ... */ 
-         if (loteActual.length === 0) {
-            alert('Aún no has registrado ninguna vaca en esta actividad.');
-            return;
-         }
-        }
-    
-    function renderizarCamposProcedimiento(tipo) {
-        const contenedor = document.getElementById('campos-dinamicos-procedimiento');
-        contenedor.innerHTML = '';
-        const procedimiento = PROCEDIMIENTOS[tipo];
-        if (!procedimiento) return;
-        procedimiento.campos.forEach(campo => {
-            let campoHTML = `<div class="w-full"><label for="campo-${campo.id}" class="block text-sm font-medium text-gray-700">${campo.label}</label>`;
-            if (campo.tipo === 'select') {
-                const opciones = campo.opciones.map(op => `<option value="${op}">${op}</option>`).join('');
-                campoHTML += `<select id="campo-${campo.id}" name="${campo.id}" class="mt-1 w-full p-2 border border-gray-300 rounded-lg bg-white">${opciones}</select>`;
-            } else if (campo.tipo === 'textarea') {
-                campoHTML += `<textarea id="campo-${campo.id}" name="${campo.id}" rows="2" class="mt-1 w-full p-2 border border-gray-300 rounded-lg"></textarea>`;
-            } else if (campo.tipo === 'checkbox') {
-                 campoHTML += `<input type="checkbox" id="campo-${campo.id}" name="${campo.id}" value="Sí" class="mt-1 h-5 w-5 rounded border-gray-300">`;
+        // Autocomplete de Raza
+        const razaInput = document.getElementById('raza-input');
+        const razaAutocomplete = document.getElementById('raza-autocomplete');
+        razaInput.addEventListener('input', () => {
+            const value = razaInput.value.toLowerCase();
+            razaAutocomplete.innerHTML = '';
+            if (!value) {
+                razaAutocomplete.classList.add('hidden');
+                return;
+            }
+            const filtered = RAZAS_BOVINAS.filter(r => r.toLowerCase().includes(value));
+            if(filtered.length > 0) {
+                razaAutocomplete.classList.remove('hidden');
+                filtered.forEach(r => {
+                    const div = document.createElement('div');
+                    div.className = 'px-4 py-2 hover:bg-gray-100 cursor-pointer';
+                    div.textContent = r;
+                    div.onclick = () => {
+                        razaInput.value = r;
+                        razaAutocomplete.classList.add('hidden');
+                    };
+                    razaAutocomplete.appendChild(div);
+                });
             } else {
-                campoHTML += `<input type="text" id="campo-${campo.id}" name="${campo.id}" class="mt-1 w-full p-2 border border-gray-300 rounded-lg">`;
+                 razaAutocomplete.classList.add('hidden');
             }
-            campoHTML += `</div>`;
-            contenedor.innerHTML += campoHTML;
+        });
+
+        // Form Submission
+        document.getElementById('form-vaca').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            formData.append('id_usuario', currentUser.id);
+            formData.append('rancho_id', currentUser.ranchos[0].id);
+
+            try {
+                const res = await fetch(`${API_URL}/vacas`, { method: 'POST', body: formData });
+                const respuesta = await res.json();
+                if (!res.ok) throw new Error(respuesta.message);
+                
+                document.getElementById('modal-vaca').classList.add('hidden');
+                cargarMisVacas(); // Recargar
+            } catch (err) {
+                alert(`Error al guardar: ${err.message}`);
+            }
         });
     }
 
+    // =================================================================
+    // ===== LÓGICA DE MVZ =============================================
+    // =================================================================
+    function initManejoReproductivoListeners() {
+        const modoSeleccion = document.getElementById('modo-seleccion-container');
+        const headerFijado = document.getElementById('header-rancho-fijado');
+        const accionesRapidas = document.getElementById('acciones-rapidas-mvz');
+
+        const resetVista = () => {
+            currentRancho = null;
+            actividadActual = [];
+            modoSeleccion.classList.remove('hidden');
+            headerFijado.classList.add('hidden');
+            accionesRapidas.classList.add('hidden');
+            document.getElementById('codigo-rancho').value = '';
+        };
+
+        resetVista(); // Estado inicial
+
+        document.getElementById('btn-validar-rancho').addEventListener('click', async () => {
+            const codigo = document.getElementById('codigo-rancho').value.trim().toUpperCase();
+            if (!codigo) { mostrarMensaje('mensaje-rancho', 'El código no puede estar vacío.'); return; }
+            try {
+                const res = await fetch(`${API_URL}/rancho/validate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ codigo }) });
+                const respuesta = await res.json();
+                if (!res.ok) throw new Error(respuesta.message);
+                currentRancho = respuesta;
+                fijarRancho(currentRancho.nombre, false);
+            } catch (err) {
+                mostrarMensaje('mensaje-rancho', err.message);
+            }
+        });
+        
+        document.getElementById('btn-iniciar-independiente').addEventListener('click', () => {
+            currentRancho = null; // No hay rancho registrado
+            fijarRancho('Trabajo Independiente', true);
+        });
+
+        document.getElementById('btn-cambiar-rancho').addEventListener('click', resetVista);
+
+        document.querySelectorAll('.btn-actividad').forEach(btn => {
+            btn.addEventListener('click', () => abrirModalActividad(btn.dataset.actividad));
+        });
+    }
+
+    function fijarRancho(nombre, esIndependiente) {
+        document.getElementById('modo-seleccion-container').classList.add('hidden');
+        document.getElementById('header-rancho-fijado').classList.remove('hidden');
+        document.getElementById('acciones-rapidas-mvz').classList.remove('hidden');
+        document.getElementById('nombre-rancho-fijado').textContent = nombre;
+        
+        const inputIndependiente = document.getElementById('rancho-independiente-input-container');
+        inputIndependiente.classList.toggle('hidden', !esIndependiente);
+
+        if (currentRancho) cargarVacasParaMVZ();
+    }
+    
     async function cargarVacasParaMVZ() {
+        const datalist = document.getElementById('lista-aretes-autocompletar');
+        datalist.innerHTML = '';
         if (!currentRancho) return;
         try {
             const res = await fetch(`${API_URL}/vacas/rancho/${currentRancho.id}`);
             const vacas = await res.json();
-            const datalist = document.getElementById('lista-aretes-autocompletar');
-            datalist.innerHTML = '';
-            vacasIndex.clear();
             vacas.forEach(v => {
-                datalist.insertAdjacentHTML('beforeend', `<option value="${v.numero_arete}">`);
-                vacasIndex.set(String(v.numero_arete).trim(), { id: v.id, nombre: v.nombre, raza: v.raza || '' });
+                const option = document.createElement('option');
+                option.value = v.numero_arete;
+                datalist.appendChild(option);
             });
         } catch (err) { console.error("Error cargando vacas para MVZ:", err); }
     }
 
-   
-    
-    function renderLoteActual() {
-        const lista = document.getElementById('lote-actual-lista');
-        const tipoActividad = document.getElementById('actividad-tipo').value;
-        document.getElementById('lote-activo-procedimiento').textContent = PROCEDIMIENTOS[tipoActividad]?.titulo || '...';
-        if (loteActual.length === 0) { lista.innerHTML = '<p class="text-gray-500">Aún no has agregado vacas a este lote.</p>'; return; }
-        lista.innerHTML = loteActual.map((item, idx) => `
-            <div class="bg-gray-100 p-2 rounded-lg flex justify-between items-center text-sm">
-                <span>Arete: <strong>${item.areteVaca}</strong> (${item.raza})</span>
-                <button class="text-red-500 hover:text-red-700 font-bold text-lg" onclick="window.removerDelLote(${idx})">&times;</button>
-            </div>`).join('');
+    function abrirModalActividad(tipo) {
+        const modal = document.getElementById('modal-actividad');
+        document.getElementById('modal-actividad-titulo').textContent = PROCEDIMIENTOS[tipo].titulo;
+        document.getElementById('form-actividad-vaca').reset();
+        renderizarCamposProcedimiento(tipo);
+        modal.dataset.tipoActividad = tipo;
+        modal.classList.remove('hidden');
     }
 
-    window.removerDelLote = (index) => {
-        loteActual.splice(index, 1);
-        renderLoteActual();
-    };
-
-    async function handleFinalizarLote() {
-    if (loteActual.length === 0) {
-        mostrarMensaje('mensaje-vaca', 'No hay vacas registradas para generar un reporte.');
-        return;
-    }
-
-    // Esta lógica para obtener el nombre está perfecta.
-    let nombreRanchoParaReporte = currentRancho ? currentRancho.nombre : 'Rancho Independiente';
-    const esIndependiente = !currentRancho || currentRancho.nombre === 'Rancho Independiente';
-
-    if (esIndependiente) {
-        const nombreIngresado = document.getElementById('rancho-independiente-nombre').value.trim();
-        if (!nombreIngresado) {
-            alert('Por favor, especifica el nombre del rancho atendido antes de finalizar.');
-            return;
-        }
-        nombreRanchoParaReporte = nombreIngresado;
-    }
-
-    // ---- INICIO DE AJUSTES ----
-
-    // AJUSTE 1: Apuntar al botón correcto del modal y mejorar el feedback.
-    const btn = document.getElementById('btn-finalizar-reporte-modal');
-    btn.disabled = true; 
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Procesando...';
-
-    try {
-        // AJUSTE 2: Crear un "payload" que siempre envíe los datos correctos.
-        const payload = {
-            mvzId: currentUser.id,
-            ranchoId: currentRancho?.id || null, // Envía el ID si existe, si no, null.
-            ranchoNombre: nombreRanchoParaReporte, // Envía siempre el nombre que se usará.
-            lote: loteActual
+    function setupModalActividad() {
+        document.getElementById('btn-cerrar-modal-actividad').onclick = () => {
+            document.getElementById('modal-actividad').classList.add('hidden');
         };
 
-        const res = await fetch(`${API_URL}/lote/pdf`, { 
-            method: 'POST', 
-            headers: { 'Content-Type': 'application/json' }, 
-            body: JSON.stringify(payload) // Enviamos el nuevo payload
+        document.getElementById('btn-guardar-siguiente').onclick = () => {
+            const form = document.getElementById('form-actividad-vaca');
+            if (form.checkValidity()) {
+                agregarRegistroActividad();
+                form.reset();
+                 renderizarCamposProcedimiento(document.getElementById('modal-actividad').dataset.tipoActividad);
+                document.getElementById('actividad-arete').focus();
+            } else {
+                form.reportValidity();
+            }
+        };
+
+        document.getElementById('btn-finalizar-actividad').onclick = async () => {
+            const areteActual = document.getElementById('actividad-arete').value.trim();
+            if (areteActual) { // Si hay algo en el campo, lo agrega
+                agregarRegistroActividad();
+            }
+            if (actividadActual.length === 0) {
+                alert("No has registrado ningún animal en esta sesión.");
+                return;
+            }
+            
+            let nombreRancho = currentRancho?.nombre || 'Independiente';
+            if (!currentRancho) {
+                const nombreInput = document.getElementById('rancho-independiente-nombre').value.trim();
+                if (!nombreInput) {
+                    alert("Por favor, especifica el nombre del rancho atendido.");
+                    return;
+                }
+                nombreRancho = nombreInput;
+            }
+
+            try {
+                const payload = {
+                    mvzId: currentUser.id,
+                    ranchoId: currentRancho?.id || null,
+                    ranchoNombre: nombreRancho,
+                    actividades: actividadActual,
+                    tipoActividad: PROCEDIMIENTOS[document.getElementById('modal-actividad').dataset.tipoActividad].titulo
+                };
+                const res = await fetch(`${API_URL}/actividades`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!res.ok) throw new Error('Error al guardar en el historial.');
+
+                alert(`Actividad finalizada. ${actividadActual.length} registros guardados en tu historial.`);
+                actividadActual = [];
+                document.getElementById('modal-actividad').classList.add('hidden');
+
+            } catch(err) {
+                alert(`Error: ${err.message}`);
+            }
+        };
+    }
+    
+    function agregarRegistroActividad() {
+        const arete = document.getElementById('actividad-arete').value.trim();
+        if (!arete) return;
+
+        const detalles = {};
+        const campos = document.getElementById('campos-dinamicos-procedimiento').querySelectorAll('input, select, textarea');
+        campos.forEach(campo => {
+            if ((campo.type === 'checkbox' && campo.checked) || (campo.type !== 'checkbox' && campo.value)) {
+                detalles[campo.name] = campo.value;
+            }
         });
 
-        if (!res.ok) throw new Error('El servidor no pudo generar el PDF.');
-        
-        const blob = await res.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.style.display = 'none'; 
-        a.href = url; 
-        
-        // AJUSTE 3: Usar la variable correcta para el nombre del archivo.
-        a.download = `reporte_${nombreRanchoParaReporte.replace(/ /g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
-        
-        document.body.appendChild(a); 
-        a.click(); 
-        window.URL.revokeObjectURL(url);
-        
-        // AJUSTE 4: Limpiar el estado y navegar a la pantalla de inicio del MVZ.
-        loteActual = []; 
-        currentRancho = null;
-        navigateTo('manejo-reproductivo-mvz');
+        actividadActual.push({ areteVaca: arete, detalles: detalles });
+        mostrarMensaje('mensaje-vaca', `Animal #${arete} agregado. Total: ${actividadActual.length}`, false);
+    }
+    
+    function renderizarCamposProcedimiento(tipo) {
+        const container = document.getElementById('campos-dinamicos-procedimiento');
+        container.innerHTML = '';
+        const proc = PROCEDIMIENTOS[tipo];
+        if (!proc) return;
+        proc.campos.forEach(c => {
+            let campoHTML = `<div><label for="${c.id}" class="block text-sm font-medium text-gray-700">${c.label}</label>`;
+            const commonClasses = "mt-1 w-full p-2 border border-gray-300 rounded-lg bg-white";
+            if (c.tipo === 'select') {
+                const options = c.opciones.map(o => `<option value="${o}">${o}</option>`).join('');
+                campoHTML += `<select name="${c.id}" class="${commonClasses}">${options}</select>`;
+            } else if (c.tipo === 'textarea') {
+                campoHTML += `<textarea name="${c.id}" rows="2" class="${commonClasses}"></textarea>`;
+            } else {
+                campoHTML += `<input type="${c.tipo || 'text'}" name="${c.id}" placeholder="${c.placeholder || ''}" ${c.required ? 'required' : ''} class="${commonClasses}">`;
+            }
+            campoHTML += `</div>`;
+            container.innerHTML += campoHTML;
+        });
+    }
 
-    } catch (err) {
-        console.error("Error al finalizar lote:", err);
-        alert('Hubo un error al generar el reporte.');
-        // Si hay un error, volvemos a habilitar el botón.
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-file-pdf mr-2"></i>Finalizar y Reportar';
-    } 
-    // Ya no necesitamos el bloque "finally" porque si todo sale bien, navegamos a otra pantalla.
-}
+    async function cargarHistorialMVZ() {
+        const container = document.getElementById('lista-historial-container');
+        container.innerHTML = `<p class="text-center text-gray-500">Cargando historial...</p>`;
+        try {
+            const res = await fetch(`${API_URL}/mvz/${currentUser.id}/historial`);
+            if (!res.ok) throw new Error('No se pudo cargar el historial.');
+            const historial = await res.json();
+            
+            if (historial.length === 0) {
+                container.innerHTML = `<p class="text-center text-gray-500">Aún no tienes actividades registradas.</p>`;
+                return;
+            }
+
+            container.innerHTML = '';
+            historial.forEach(h => {
+                const card = document.createElement('div');
+                card.className = "bg-white p-3 rounded-lg shadow-md flex items-center gap-3";
+                card.innerHTML = `
+                    <input type="checkbox" data-historial-id="${h.id}" class="h-6 w-6 rounded border-gray-300 text-green-600 focus:ring-green-500 historial-checkbox">
+                    <div class="flex-grow">
+                        <p class="font-bold text-gray-800">${h.tipo_actividad} en ${h.rancho_nombre}</p>
+                        <p class="text-sm text-gray-500">${formatDate(h.fecha)} - ${h.numero_animales} animales</p>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+
+            // Listeners para checkboxes y botón de descarga
+            const checkboxes = document.querySelectorAll('.historial-checkbox');
+            const btnDescargar = document.getElementById('btn-descargar-historial-pdf');
+            const contador = document.getElementById('contador-seleccion-pdf');
+
+            checkboxes.forEach(cb => {
+                cb.addEventListener('change', () => {
+                    const seleccionados = Array.from(checkboxes).filter(i => i.checked).map(i => i.dataset.historialId);
+                    contador.textContent = seleccionados.length;
+                    btnDescargar.disabled = seleccionados.length === 0;
+                });
+            });
+
+            btnDescargar.addEventListener('click', async () => {
+                const seleccionados = Array.from(checkboxes).filter(i => i.checked).map(i => i.dataset.historialId);
+                if (seleccionados.length === 0) return;
+                
+                btnDescargar.disabled = true;
+                btnDescargar.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i> Generando...`;
+
+                try {
+                    const res = await fetch(`${API_URL}/historial/pdf`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ historialIds: seleccionados })
+                    });
+                    if (!res.ok) throw new Error('Error al generar el PDF.');
+                    
+                    const blob = await res.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none'; a.href = url;
+                    a.download = `reporte_actividades_${new Date().toISOString().split('T')[0]}.pdf`;
+                    document.body.appendChild(a); a.click();
+                    window.URL.revokeObjectURL(url);
+
+                } catch (err) {
+                    alert(err.message);
+                } finally {
+                     btnDescargar.disabled = false;
+                     btnDescargar.innerHTML = `<i class="fa-solid fa-download mr-2"></i> Descargar PDF (${contador.textContent})`;
+                }
+            });
+
+        } catch (error) {
+            container.innerHTML = `<p class="text-center text-red-500">${error.message}</p>`;
+        }
+    }
 
     // =================================================================
-    // ===== 8. INICIALIZACIÓN DE LA APLICACIÓN ========================
+    // ===== HELPERS E INICIALIZACIÓN ==================================
     // =================================================================
+    const mostrarMensaje = (elId, texto, esError = true) => {
+        const el = document.getElementById(elId);
+        if (!el) return;
+        el.textContent = texto;
+        el.className = `text-center text-sm h-4 ${esError ? 'text-red-400' : 'text-green-400'}`;
+        setTimeout(() => { if (el) el.textContent = ''; }, 4000);
+    };
+
     function initApp() {
         setupNavigation();
+        setupModalVaca();
+        setupModalActividad();
+        
         const savedUser = sessionStorage.getItem('currentUser');
         if (savedUser) {
             currentUser = JSON.parse(savedUser);

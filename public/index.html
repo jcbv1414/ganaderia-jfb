@@ -1,212 +1,279 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>JFB Ganadería Inteligente</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" />
     <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-    tailwind.config = {
-        theme: {
-            extend: {
-                colors: {
-                    'brand-green': '#166534', 'brand-green-light': '#22c55e', 'brand-bg': '#f4f6f9',
-                }
-            }
-        }
-    }
-    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
         html, body { height: 100%; margin: 0; font-family: 'Poppins', sans-serif; background-color: #f4f6f9; color: #333; -webkit-tap-highlight-color: transparent; }
         #app-content { padding-bottom: 100px; }
-        .auth-container { background: linear-gradient(135deg, #0f2027, #203a43, #2c5364); color: white; min-height: 100vh; }
-        .auth-container input, .auth-container select { background-color: rgba(255,255,255,.05) !important; border: 1px solid rgba(255,255,255,.2) !important; color:white !important; border-radius:10px !important; padding: 0.9rem; font-size: 1rem; width:100%; }
-        .auth-container input::placeholder { color:#a7a7a7 !important; }
-        .auth-container h1 { background:linear-gradient(90deg,#4facfe,#00f2fe); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
-        .auth-container .btn-primary { display:inline-block; padding:12px 30px; font-size:1em; text-decoration:none; color:#fff; border:2px solid #00f2fe; border-radius:50px; background:transparent; width: 100%; }
+
+        /* Estilos de la nueva pantalla de Login */
+        .login-screen {
+            background: linear-gradient(-45deg, #0f172a, #1e293b, #334155);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+        }
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .login-btn {
+            background: linear-gradient(90deg, #22d3ee, #0ea5e9);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(34, 211, 238, 0.3);
+        }
+        .login-btn.loading::after {
+            content: '';
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 20px; height: 20px;
+            margin-top: -10px; margin-left: -10px;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Navegación y otros */
         .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 80px; background: #ffffff; box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.08); display: flex; justify-content: space-around; align-items: center; z-index: 1000; }
         .nav-button { display: flex; flex-direction: column; align-items: center; justify-content: center; background: none; border: none; color: #888; font-size: 0.7rem; font-weight: 500; transition: color 0.2s ease-in-out; padding: 8px; height: 100%; flex-grow: 1; }
         .nav-button i { font-size: 1.6rem; margin-bottom: 4px; }
         .nav-button.active { color: #166534; }
-        .fab { position: fixed; bottom: 100px; right: 20px; width: 60px; height: 60px; background-color: #166534; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); z-index: 999; cursor: pointer; }
-        .progress-ring { position: relative; width: 60px; height: 60px; border-radius: 50%; display: grid; place-items: center; background: conic-gradient(var(--color, #22c55e) calc(var(--value) * 1%), #e0e0e0 0); }
-        .progress-ring::before { content: ""; position: absolute; width: 48px; height: 48px; background: white; border-radius: 50%; }
-        .progress-ring-percent { position: relative; font-size: 0.9rem; font-weight: 600; color: #166534; }
     </style>
 </head>
 <body>
 
-    <main id="app-content" class="relative z-10"></main>
+    <main id="app-content"></main>
 
     <div id="nav-container" class="hidden">
         <nav id="nav-propietario" class="bottom-nav">
              <button class="nav-button active" data-vista="inicio-propietario"><i class="fa-solid fa-house"></i><span>Inicio</span></button>
-             <button class="nav-button" data-vista="mis-vacas"><i class="fa-solid fa-cow"></i><span>Mis Vacas</span></button>
+             <button class="nav-button" data-vista="mis-vacas"><i class="fa-solid fa-cow"></i><span>Ganado</span></button>
              <button class="nav-button" data-vista="mi-mvz"><i class="fa-solid fa-user-doctor"></i><span>MVZ</span></button>
              <button class="nav-button" data-vista="estadisticas"><i class="fa-solid fa-chart-pie"></i><span>Estadísticas</span></button>
              <button class="nav-button" data-vista="ajustes"><i class="fa-solid fa-gear"></i><span>Ajustes</span></button>
         </nav>
         <nav id="nav-mvz" class="bottom-nav hidden">
             <button class="nav-button active" data-vista="inicio-mvz"><i class="fa-solid fa-house-user"></i><span>Inicio</span></button>
-            <button class="nav-button" data-vista="manejo-reproductivo-mvz"><i class="fa-solid fa-clipboard-list"></i><span>Manejo Reprod.</span></button>
-            <button class="nav-button" data-vista="mis-ranchos-mvz"><i class="fa-solid fa-house-medical"></i><span>Mis Ranchos</span></button>
-            <button class="nav-button" data-vista="estadisticas-mvz"><i class="fa-solid fa-chart-pie"></i><span>Estadísticas</span></button>
+            <button class="nav-button" data-vista="manejo-reproductivo-mvz"><i class="fa-solid fa-clipboard-list"></i><span>Actividades</span></button>
+            <button class="nav-button" data-vista="historial-mvz"><i class="fa-solid fa-clock-rotate-left"></i><span>Historial</span></button>
             <button class="nav-button" data-vista="ajustes-mvz"><i class="fa-solid fa-gear"></i><span>Ajustes</span></button>
         </nav>
-        <div id="fab-container">
-             <button class="fab">+</button>
-        </div>
     </div>
     
+    <!-- TEMPLATE: LOGIN -->
     <template id="template-login">
-        <div class="auth-container flex items-center justify-center p-4">
-            <div id="vista-login" class="w-full max-w-md">
-                <div class="text-center mb-8"><img src="/assets/logo.png" alt="Logo JFB" class="w-24 h-24 mx-auto mb-4"><h1 class="text-3xl font-bold">Bienvenido</h1><p class="text-gray-400">Inicia sesión para gestionar tu ganado</p></div>
-                <form id="form-login" novalidate>
-                    <div class="mb-4"><input type="email" id="login-email" placeholder="Correo Electrónico" required></div>
-                    <div class="mb-4"><input type="password" id="login-password" placeholder="Contraseña" required></div>
-                    <label class="flex items-center text-sm text-gray-400 mb-6"><input type="checkbox" id="remember-me" class="mr-2">Recuérdame</label>
-                    <button type="submit" class="btn-primary">Ingresar</button>
-                    <div id="login-mensaje" class="text-center mt-2 text-sm h-4"></div>
+        <div class="login-screen min-h-screen flex flex-col items-center justify-center p-4 text-white">
+            <div class="w-full max-w-sm">
+                <div class="text-center mb-10">
+                    <img src="/assets/logo.png" alt="Logo JFB" class="w-40 h-40 mx-auto mb-4"/>
+                    <h1 class="text-4xl font-bold text-cyan-300">Bienvenido</h1>
+                    <p class="text-gray-400 mt-2">Inicia sesión para gestionar tu ganado</p>
+                </div>
+                <form id="form-login" novalidate class="space-y-6">
+                    <div>
+                        <input type="email" id="login-email" placeholder="Correo Electrónico" required class="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-400">
+                    </div>
+                    <div>
+                        <input type="password" id="login-password" placeholder="Contraseña" required class="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-cyan-400">
+                    </div>
+                    <div class="flex items-center justify-between text-sm">
+                        <label class="flex items-center text-gray-400">
+                            <input type="checkbox" id="remember-me" class="w-4 h-4 rounded bg-slate-600 border-slate-500 text-cyan-400 focus:ring-cyan-500">
+                            <span class="ml-2">Recuérdame</span>
+                        </label>
+                        <a href="#" class="font-medium text-cyan-400 hover:text-cyan-300">¿Olvidaste contraseña?</a>
+                    </div>
+                     <div id="login-mensaje" class="text-center text-sm h-4"></div>
+                    <div>
+                         <button type="submit" class="login-btn w-full text-white font-bold py-3 px-4 rounded-lg">Ingresar</button>
+                    </div>
                 </form>
-                <p class="text-center text-sm text-gray-400 mt-6">¿Aún no tienes cuenta? <a href="#" id="link-a-registro" class="text-cyan-400 hover:underline">Regístrate aquí</a></p>
+                <p class="text-center text-sm text-gray-400 mt-8">
+                    ¿Aún no tienes cuenta? <a href="#" id="link-a-registro" class="font-medium text-cyan-400 hover:underline">Regístrate aquí</a>
+                </p>
             </div>
         </div>
     </template>
     
-    <template id="template-registro">
-        <div class="auth-container flex items-center justify-center p-4">
-            <div id="vista-registro" class="w-full max-w-md">
-                 <div class="text-center mb-8"><h1 class="text-3xl font-bold">Crear Cuenta</h1><p class="text-gray-400">Completa tus datos para empezar</p></div>
-                <form id="form-registro" novalidate>
-                    <div class="mb-4"><input type="text" name="nombre" placeholder="Nombre Completo" required></div>
-                    <div class="mb-4"><input type="email" name="email" placeholder="Correo Electrónico" required></div>
-                    <div class="mb-4"><input type="password" name="password" placeholder="Contraseña" required></div>
-                    <div class="mb-4">
-                        <select name="rol" id="registro-rol"><option value="mvz">Soy Veterinario (MVZ)</option><option value="propietario" selected>Soy Propietario</option></select>
-                    </div>
-                    <div id="campo-rancho" class="mb-4"><input type="text" name="rancho_nombre" placeholder="Nombre de tu Rancho"></div>
-                    <button type="submit" class="btn-primary">Registrarme</button>
-                    <div id="registro-mensaje" class="text-center mt-2 text-sm h-4"></div>
-                </form>
-                <p class="text-center text-sm text-gray-400 mt-6">¿Ya tienes una cuenta? <a href="#" id="link-a-login" class="text-cyan-400 hover:underline">Inicia sesión</a></p>
-            </div>
-        </div>
-    </template>
-
+    <!-- TEMPLATES PROPIETARIO -->
     <template id="template-inicio-propietario">
         <div class="p-5">
             <header class="flex justify-between items-center mb-6">
-                <div><h1 class="text-2xl font-bold text-brand-green">¡Bienvenido, <span id="dash-nombre-propietario"></span>!</h1><p class="text-sm text-gray-500" id="dash-fecha-actual"></p></div>
+                <div><h1 class="text-2xl font-bold text-green-800">¡Bienvenido, <span id="dash-nombre-propietario"></span>!</h1><p class="text-sm text-gray-500" id="dash-fecha-actual"></p></div>
                 <div class="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center"><i class="fa-solid fa-user text-2xl text-gray-500"></i></div>
             </header>
             <section class="mb-8">
                 <h2 class="text-lg font-semibold mb-3">Resumen del Rancho</h2>
                 <div class="grid grid-cols-3 gap-3">
-                    <div class="bg-white p-4 rounded-xl shadow-md text-center"><p class="text-3xl font-bold text-brand-green" id="resumen-total-vacas">--</p><h3 class="text-xs text-gray-500 mt-1">Vacas en Rancho</h3></div>
-                    <div class="bg-white p-4 rounded-xl shadow-md text-center"><p class="text-3xl font-bold text-brand-green" id="resumen-vacas-gestantes">--</p><h3 class="text-xs text-gray-500 mt-1">Vacas Gestantes</h3></div>
-                    <div class="bg-white p-4 rounded-xl shadow-md text-center"><p class="text-3xl font-bold text-red-500" id="resumen-alertas">--</p><h3 class="text-xs text-gray-500 mt-1">Alertas de Salud</h3></div>
+                    <div class="bg-white p-4 rounded-xl shadow-md text-center"><p class="text-3xl font-bold text-green-800" id="resumen-total-vacas">--</p><h3 class="text-xs text-gray-500 mt-1">Total Animales</h3></div>
+                    <div class="bg-white p-4 rounded-xl shadow-md text-center"><p class="text-3xl font-bold text-green-800" id="resumen-vacas-gestantes">--</p><h3 class="text-xs text-gray-500 mt-1">Gestantes</h3></div>
+                    <div class="bg-white p-4 rounded-xl shadow-md text-center"><p class="text-3xl font-bold text-red-500" id="resumen-alertas">--</p><h3 class="text-xs text-gray-500 mt-1">Alertas</h3></div>
                 </div>
             </section>
-            <section class="mb-8">
-                <div class="flex justify-between items-center mb-3"><h2 class="text-lg font-semibold">Estado de Lotes</h2><button class="text-sm font-medium text-brand-green">Ver Todos los Lotes</button></div>
-                <div id="lotes-container" class="grid grid-cols-1 sm:grid-cols-2 gap-4"><p class="text-gray-500">Cargando lotes...</p></div>
-            </section>
-            <section>
-                <h2 class="text-lg font-semibold mb-3">Actividad y Eventos</h2>
-                <div class="bg-white p-4 rounded-xl shadow-md">
-                    <div><h3 class="font-semibold text-gray-800 mb-2"><i class="fa-solid fa-check-circle text-green-500 mr-2"></i>Últimas Noticias</h3><p class="text-sm text-gray-600 ml-6 pb-3 border-b border-gray-200">MVZ Dr. Hernández registró 2 tratamientos en Lote C.</p></div>
-                    <div class="mt-3"><h3 class="font-semibold text-gray-800 mb-2"><i class="fa-solid fa-calendar-days text-brand-green mr-2"></i>Próximos Eventos</h3><p class="text-sm text-gray-600 ml-6">Próxima visita del MVZ: Jueves, 27 Octubre.</p><p class="text-sm text-gray-600 ml-6 mt-1">Vacunación general de Lote 1 programada.</p></div>
-                </div>
-            </section>
+             <!-- ... (Otras secciones del dashboard) ... -->
         </div>
     </template>
-    
-    <template id="template-estadisticas">
+
+    <template id="template-mis-vacas">
         <div class="p-5">
-            <header class="flex items-center mb-4"><button onclick="navigateTo('inicio-propietario')" class="text-2xl mr-4"><i class="fa-solid fa-arrow-left"></i></button><h1 class="text-xl font-bold text-gray-800">Estadísticas de Lotes</h1></header>
-            <div id="tabs-lotes-container" class="flex items-center border-b border-gray-200 mb-4"></div>
-            <div id="contenido-estadisticas" class="bg-white p-4 rounded-xl shadow-md">
-                <div class="mb-4"><h2 id="stats-titulo-lote" class="text-lg font-bold text-gray-900"></h2><p id="stats-fecha-actualizacion" class="text-sm text-gray-500"></p></div>
-                <div class="relative h-64 w-full mx-auto mb-4"><canvas id="grafico-reproductivo"></canvas></div>
-                <div id="stats-resumen-texto" class="space-y-1 text-center"></div>
+            <header class="flex justify-between items-center mb-6">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">Mi Ganado</h1>
+                    <p class="text-gray-600">Conoce y gestiona tus ejemplares</p>
+                </div>
+                <button id="btn-abrir-modal-vaca" class="bg-green-700 text-white px-4 py-2 rounded-lg shadow-lg hover:bg-green-800 flex items-center">
+                    <i class="fa-solid fa-plus mr-2"></i> Agregar
+                </button>
+            </header>
+            <div id="lista-vacas-container" class="space-y-4">
+                <!-- Las vacas se cargarán aquí -->
             </div>
         </div>
     </template>
-    
-    <template id="template-mis-vacas"><h1 class="text-center p-8 text-2xl">Vista de Mis Vacas (en construcción)</h1></template>
 
-    <template id="template-inicio-mvz">
-        <div class="p-5">
-            <header class="flex justify-between items-center mb-6">
-                <div><h1 class="text-2xl font-bold text-gray-800">¡Hola, <span id="dash-nombre-mvz"></span>!</h1><p class="text-sm text-gray-500" id="dash-fecha-actual-mvz"></p></div>
-                <div class="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center"><i class="fa-solid fa-user-doctor text-2xl text-gray-500"></i></div>
-            </header>
-            <section class="mb-8">
-                <h2 class="text-lg font-semibold mb-3">Resumen Diario</h2>
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="bg-white p-4 rounded-xl shadow-md text-center"><p class="text-4xl font-bold text-brand-green" id="resumen-visitas">--</p><h3 class="text-sm text-gray-600 mt-1" id="detalle-visitas"></h3></div>
-                    <div class="bg-white p-4 rounded-xl shadow-md text-center"><p class="text-4xl font-bold text-red-500" id="resumen-alertas">--</p><h3 class="text-sm text-gray-600 mt-1" id="detalle-alertas"></h3></div>
-                </div>
-            </section>
-            <section class="mb-8">
-                <h2 class="text-lg font-semibold mb-3">Pendientes Hoy</h2><div id="lista-pendientes" class="bg-white p-4 rounded-xl shadow-md space-y-4"></div>
-            </section>
-            <section>
-                <h2 class="text-lg font-semibold mb-3">Próximos Eventos</h2><div id="lista-eventos" class="bg-white p-4 rounded-xl shadow-md space-y-3"></div>
-            </section>
-        </div>
-    </template>
+    <template id="template-mi-mvz"><h1 class="text-center p-8 text-2xl">Gestión de MVZ (en construcción)</h1></template>
+    <template id="template-estadisticas"><h1 class="text-center p-8 text-2xl">Estadísticas (en construcción)</h1></template>
+    <template id="template-ajustes"><h1 class="text-center p-8 text-2xl">Ajustes (en construcción)</h1></template>
+    
+    <!-- TEMPLATES MVZ -->
+    <template id="template-inicio-mvz"><h1 class="text-center p-8 text-2xl">Inicio MVZ (en construcción)</h1></template>
 
     <template id="template-manejo-reproductivo-mvz">
         <div class="p-5">
-            <div id="modo-seleccion-container">
-                <header class="mb-6 text-center"><h1 class="text-2xl font-bold text-gray-800">Manejo Reproductivo</h1><p class="text-sm text-gray-500">¿Cómo quieres trabajar hoy?</p></header>
-                <div class="space-y-4"><button id="btn-show-rancho-registrado" class="w-full bg-brand-green text-white p-4 rounded-lg font-bold flex items-center justify-center text-lg"><i class="fa-solid fa-key mr-3"></i>Rancho Registrado</button><button id="btn-iniciar-independiente" class="w-full bg-gray-600 text-white p-4 rounded-lg font-bold flex items-center justify-center text-lg"><i class="fa-solid fa-user-ninja mr-3"></i>Modo Independiente</button></div>
-                <div id="rancho-access-container" class="hidden mt-4 bg-white p-4 rounded-xl shadow-md">
-                     <label for="codigo-rancho" class="block text-sm font-medium text-gray-700 mb-1">Código del Rancho</label>
-                    <div class="flex items-center space-x-2"><input type="text" id="codigo-rancho" placeholder="Ej: A1B2C3" class="w-full p-2 border border-gray-300 rounded-lg"><button id="btn-validar-rancho" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold">Acceder</button></div>
-                    <div id="mensaje-rancho" class="text-sm mt-2 h-4"></div>
-                </div>
-            </div>
-            <div id="rancho-actions-container" class="hidden">
-    <header class="mb-6">
-        <div class="flex items-center space-x-3 mb-2">
-            <img id="rancho-logo" src="https://i.imgur.com/s6l2h27.png" class="w-12 h-12 rounded-lg object-cover bg-gray-200">
-            <div>
-                <h1 class="text-2xl font-bold text-gray-800" id="rancho-nombre-activo"></h1>
-                <p class="text-sm text-gray-500">Lote actual: <span id="lote-info" class="font-semibold">Ninguno</span></p>
+             <div id="rancho-actions-container">
+                <header class="mb-6">
+                    <div id="header-rancho-fijado" class="hidden flex justify-between items-center bg-white p-3 rounded-lg shadow">
+                         <div>
+                            <p class="text-xs text-gray-500">Trabajando en:</p>
+                            <h2 id="nombre-rancho-fijado" class="font-bold text-lg text-green-800"></h2>
+                         </div>
+                         <button id="btn-cambiar-rancho" class="text-sm text-red-600 font-semibold">Cambiar</button>
+                    </div>
+                    <div id="modo-seleccion-container">
+                        <h1 class="text-2xl font-bold text-gray-800 mb-2">Seleccionar Rancho</h1>
+                        <div class="space-y-2">
+                             <input type="text" id="codigo-rancho" placeholder="Ingresar código de rancho" class="w-full p-3 border border-gray-300 rounded-lg">
+                             <button id="btn-validar-rancho" class="w-full bg-blue-600 text-white p-3 rounded-lg font-bold">Acceder a Rancho</button>
+                             <div class="text-center my-2"><span class="text-gray-500">o</span></div>
+                             <button id="btn-iniciar-independiente" class="w-full bg-gray-600 text-white p-3 rounded-lg font-bold">Trabajo Independiente</button>
+                        </div>
+                        <div id="mensaje-rancho" class="text-sm mt-2 h-4 text-center"></div>
+                    </div>
+                </header>
+                <main id="acciones-rapidas-mvz" class="hidden">
+                     <div id="rancho-independiente-input-container" class="hidden mb-4">
+                        <label for="rancho-independiente-nombre" class="block text-sm font-bold text-gray-700 mb-1">Nombre del Rancho Atendido:</label>
+                        <input type="text" id="rancho-independiente-nombre" placeholder="Ej: Rancho 'El Amanecer'" class="w-full p-3 border border-gray-300 rounded-lg">
+                    </div>
+                    <h3 class="font-semibold text-gray-600 mb-3">Acciones Rápidas</h3>
+                    <div class="space-y-3">
+                        <button data-actividad="palpacion" class="btn-actividad w-full text-left bg-teal-500 text-white p-4 rounded-lg font-bold flex items-center"><i class="fa-solid fa-hand-paper mr-3"></i>Palpación / Chequeo</button>
+                        <button data-actividad="inseminacion" class="btn-actividad w-full text-left bg-blue-500 text-white p-4 rounded-lg font-bold flex items-center"><i class="fa-solid fa-syringe mr-3"></i>Inseminación Artificial</button>
+                        <button data-actividad="transferencia" class="btn-actividad w-full text-left bg-green-500 text-white p-4 rounded-lg font-bold flex items-center"><i class="fa-solid fa-dna mr-3"></i>Transferencia de Embrión</button>
+                        <button data-actividad="sincronizacion" class="btn-actividad w-full text-left bg-yellow-500 text-white p-4 rounded-lg font-bold flex items-center"><i class="fa-solid fa-arrows-spin mr-3"></i>Sincronización</button>
+                        <button data-actividad="medicamento" class="btn-actividad w-full text-left bg-purple-500 text-white p-4 rounded-lg font-bold flex items-center"><i class="fa-solid fa-pills mr-3"></i>Aplicación de Medicamento</button>
+                    </div>
+                </main>
             </div>
         </div>
-    </header>
+    </template>
 
-    <div id="rancho-independiente-input-container" class="hidden mb-6">
-        <label for="rancho-independiente-nombre" class="block text-sm font-bold text-gray-700 mb-2">Nombre del Rancho Atendido:</label>
-        <input type="text" id="rancho-independiente-nombre" placeholder="Ej: Rancho 'El Amanecer'" class="w-full p-3 border border-gray-300 rounded-lg">
-    </div>
-    <div class="space-y-3">
-        <h3 class="font-semibold text-gray-600">Acciones Rápidas</h3>
-        <button id="btn-abrir-modal-palpacion" class="w-full text-left bg-blue-600 text-white p-4 rounded-lg font-bold flex items-center"><i class="fa-solid fa-syringe mr-3"></i>Palpación / Chequeo Reproductivo</button>
-        <button class="w-full text-left bg-gray-400 text-white p-4 rounded-lg font-bold flex items-center cursor-not-allowed"><i class="fa-solid fa-vial mr-3"></i>Inseminación Artificial (Próximamente)</button>
-        
+    <template id="template-historial-mvz">
+        <div class="p-5">
+            <header class="flex justify-between items-center mb-6">
+                <h1 class="text-2xl font-bold text-gray-800">Historial de Actividades</h1>
+                <button id="btn-descargar-historial-pdf" disabled class="bg-green-700 text-white px-4 py-2 rounded-lg shadow-lg disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center">
+                    <i class="fa-solid fa-download mr-2"></i> Descargar PDF (<span id="contador-seleccion-pdf">0</span>)
+                </button>
+            </header>
+            <div id="lista-historial-container" class="space-y-3">
+                <!-- El historial se cargará aquí -->
+            </div>
         </div>
-</div>
     </template>
     
-    <template id="template-mis-ranchos-mvz"><h1 class="text-center p-8 text-2xl">Mis Ranchos (en construcción)</h1></template>
-    <template id="template-estadisticas-mvz"><h1 class="text-center p-8 text-2xl">Estadísticas MVZ (en construcción)</h1></template>
     <template id="template-ajustes-mvz"><h1 class="text-center p-8 text-2xl">Ajustes (en construcción)</h1></template>
     
-    <div id="modal-palpacion" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md transform transition-all">
-            <header class="p-4 border-b border-gray-200 flex justify-between items-center"><h2 class="text-lg font-bold">Registro de Palpación</h2><button id="btn-cerrar-modal-palpacion" class="text-2xl text-gray-500">&times;</button></header>
+    <!-- MODAL: AGREGAR/EDITAR VACA (Propietario) -->
+    <div id="modal-vaca" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <header class="p-4 border-b flex justify-between items-center sticky top-0 bg-white">
+                <h2 id="modal-vaca-titulo" class="text-xl font-bold">Agregar Nuevo Animal</h2>
+                <button id="btn-cerrar-modal-vaca" class="text-2xl text-gray-500">&times;</button>
+            </header>
             <main class="p-6">
+                <form id="form-vaca" class="space-y-4">
+                    <input type="hidden" id="vaca-id" name="id">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Sexo</label>
+                        <div class="flex gap-2 mt-1">
+                            <button type="button" data-sexo="Hembra" class="sexo-btn w-full py-2 rounded-md bg-pink-500 text-white border-2 border-pink-500">Hembra</button>
+                            <button type="button" data-sexo="Macho" class="sexo-btn w-full py-2 rounded-md bg-gray-200 border-2 border-transparent">Macho</button>
+                        </div>
+                        <input type="hidden" id="sexo-vaca" name="sexo" value="Hembra">
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div><label class="block text-sm font-medium">Nombre / ID</label><input type="text" name="nombre" class="mt-1 w-full p-2 border rounded" required></div>
+                        <div><label class="block text-sm font-medium">No. SINIIGA</label><input type="text" name="numero_siniiga" class="mt-1 w-full p-2 border rounded"></div>
+                        <div><label class="block text-sm font-medium">No. de Arete</label><input type="text" name="numero_arete" class="mt-1 w-full p-2 border rounded"></div>
+                        <div class="relative">
+                            <label class="block text-sm font-medium">Raza</label>
+                            <input type="text" id="raza-input" name="raza" class="mt-1 w-full p-2 border rounded" autocomplete="off">
+                            <div id="raza-autocomplete" class="hidden absolute z-10 w-full bg-white border mt-1 rounded-md shadow-lg max-h-40 overflow-y-auto"></div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium">Fecha de Nacimiento</label>
+                            <input type="date" id="fecha_nacimiento" name="fecha_nacimiento" class="mt-1 w-full p-2 border rounded">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium">Edad</label>
+                            <p id="edad-calculada" class="mt-1 w-full p-2 bg-gray-100 rounded">--</p>
+                        </div>
+                        <div><label class="block text-sm font-medium">Padre (Semental)</label><input type="text" name="padre" class="mt-1 w-full p-2 border rounded"></div>
+                        <div><label class="block text-sm font-medium">Madre</label><input type="text" name="madre" class="mt-1 w-full p-2 border rounded"></div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium">Método de Concepción</label>
+                        <select name="metodo_concepcion" class="mt-1 w-full p-2 border rounded bg-white">
+                            <option value="Natural">Natural</option>
+                            <option value="Inseminación Artificial (IA)">Inseminación Artificial (IA)</option>
+                            <option value="Transferencia de Embrión (TE)">Transferencia de Embrión (TE)</option>
+                            <option value="FIV">Fecundación In Vitro (FIV)</option>
+                        </select>
+                    </div>
+                </form>
+            </main>
+            <footer class="p-4 bg-gray-50 sticky bottom-0">
+                <button type="submit" form="form-vaca" class="w-full bg-green-700 text-white py-3 rounded-lg font-bold">Guardar Animal</button>
+            </footer>
+        </div>
+    </div>
+
+    <!-- MODAL: ACTIVIDAD (MVZ) -->
+    <div id="modal-actividad" class="fixed inset-0 bg-black bg-opacity-60 flex items-end justify-center p-0 sm:items-center sm:p-4 z-50 hidden">
+        <div class="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-md transform transition-all">
+            <header class="p-4 border-b border-gray-200 flex justify-between items-center">
+                <h2 id="modal-actividad-titulo" class="text-lg font-bold">Registro de Actividad</h2>
+                <button id="btn-cerrar-modal-actividad" class="text-2xl text-gray-500">&times;</button>
+            </header>
+            <main class="p-6 max-h-[50vh] overflow-y-auto">
                 <form id="form-actividad-vaca">
-                    <div class="grid grid-cols-2 gap-4 mb-4">
-                        <div><label for="actividad-lote" class="block text-sm font-medium text-gray-700 mb-1">Lote</label><select id="actividad-lote" class="w-full p-2 border border-gray-300 rounded-lg bg-white"></select></div>
-                        <div><label for="actividad-arete" class="block text-sm font-medium text-gray-700 mb-1">Arete</label><input type="text" id="actividad-arete" class="w-full p-2 border border-gray-300 rounded-lg" list="lista-aretes-autocompletar" required></div>
+                    <div class="mb-4">
+                        <label for="actividad-arete" class="block text-sm font-medium text-gray-700 mb-1">No. de Arete / ID</label>
+                        <input type="text" id="actividad-arete" class="w-full p-2 border border-gray-300 rounded-lg" list="lista-aretes-autocompletar" required>
                         <datalist id="lista-aretes-autocompletar"></datalist>
                     </div>
                     <div id="campos-dinamicos-procedimiento" class="space-y-3 border-t border-gray-200 pt-4"></div>
@@ -214,13 +281,9 @@
                 </form>
             </main>
             <footer class="p-4 bg-gray-50 rounded-b-2xl grid grid-cols-2 gap-3">
-    <button id="btn-guardar-siguiente" class="w-full bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold flex items-center justify-center">
-        <i class="fa-solid fa-floppy-disk mr-2"></i>Guardar y Siguiente
-    </button>
-    <button id="btn-finalizar-reporte-modal" class="w-full bg-brand-green text-white px-4 py-3 rounded-lg font-semibold flex items-center justify-center">
-        <i class="fa-solid fa-file-pdf mr-2"></i>Finalizar y Reportar
-    </button>
-    </footer>
+                <button id="btn-guardar-siguiente" class="w-full bg-blue-600 text-white px-4 py-3 rounded-lg font-semibold">Siguiente Vaca</button>
+                <button id="btn-finalizar-actividad" class="w-full bg-green-700 text-white px-4 py-3 rounded-lg font-semibold">Finalizar</button>
+            </footer>
         </div>
     </div>
 
