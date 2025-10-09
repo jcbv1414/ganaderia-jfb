@@ -295,60 +295,60 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-        function abrirModalVaca() {
-        const modal = document.getElementById('modal-agregar-vaca');
-        modal.classList.remove('hidden');
-        const form = document.getElementById('form-agregar-vaca');
-        form.reset();
+        // REEMPLAZA TU FUNCIÓN 'abrirModalVaca' CON ESTA
+function abrirModalVaca() {
+    const modal = document.getElementById('modal-agregar-vaca');
+    modal.classList.remove('hidden');
+    const form = document.getElementById('form-agregar-vaca');
+    form.reset();
+    
+    // Limpiar el nombre del archivo al abrir
+    document.getElementById('file-name-display').textContent = '';
 
-        // Limpiar el nombre del archivo al abrir
-        document.getElementById('file-name-display').textContent = '';
-        
-        // Autocompletado de razas
-        const datalistRazas = document.getElementById('lista-razas');
-        datalistRazas.innerHTML = RAZAS_BOVINAS.map(r => `<option value="${r}"></option>`).join('');
+    const datalistRazas = document.getElementById('lista-razas');
+    datalistRazas.innerHTML = RAZAS_BOVINAS.map(r => `<option value="${r}"></option>`).join('');
 
-        // Lógica de cálculo de edad
-        const nacimientoInput = document.getElementById('vaca-nacimiento');
-        const edadInput = document.getElementById('vaca-edad');
-        nacimientoInput.onchange = () => {
-            if (!nacimientoInput.value) {
-                edadInput.value = '';
-                return;
-            }
-            const birthDate = new Date(nacimientoInput.value);
-            const today = new Date();
-            let years = today.getFullYear() - birthDate.getFullYear();
-            let months = today.getMonth() - birthDate.getMonth();
-            if (months < 0 || (months === 0 && today.getDate() < birthDate.getDate())) {
-                years--;
-                months += 12;
-            }
-            edadInput.value = `${years} años, ${months} meses`;
-        };
+    const nacimientoInput = document.getElementById('vaca-nacimiento');
+    const edadInput = document.getElementById('vaca-edad');
+    nacimientoInput.onchange = () => {
+        if (!nacimientoInput.value) {
+            edadInput.value = '';
+            return;
+        }
+        const birthDate = new Date(nacimientoInput.value);
+        const today = new Date();
+        let years = today.getFullYear() - birthDate.getFullYear();
+        let months = today.getMonth() - birthDate.getMonth();
+        if (months < 0 || (months === 0 && today.getDate() < birthDate.getDate())) {
+            years--;
+            months = (months + 12) % 12;
+        }
+        edadInput.value = `${years} años, ${months} meses`;
+    };
 
-        // Selector de sexo
-        const sexoSelector = document.getElementById('sexo-selector');
-        const sexoInput = document.getElementById('vaca-sexo');
-        sexoSelector.querySelectorAll('button').forEach(btn => {
-            btn.onclick = () => {
-                sexoSelector.querySelector('.bg-brand-green')?.classList.remove('bg-brand-green', 'text-white');
-                btn.classList.add('bg-brand-green', 'text-white');
-                sexoInput.value = btn.dataset.value;
-            }
-        });
+    const sexoSelector = document.getElementById('sexo-selector');
+    const sexoInput = document.getElementById('vaca-sexo');
+    sexoSelector.querySelectorAll('button').forEach(btn => {
+        btn.onclick = () => {
+            sexoSelector.querySelector('.bg-brand-green')?.classList.remove('bg-brand-green', 'text-white');
+            btn.classList.add('bg-brand-green', 'text-white');
+            sexoInput.value = btn.dataset.value;
+        }
+    });
+    
+    // ----- CÓDIGO MOVIDO AQUÍ (LUGAR CORRECTO) -----
+    const fotoInput = document.getElementById('vaca-foto');
+    fotoInput.onchange = () => {
+        if (fotoInput.files.length > 0) {
+            document.getElementById('file-name-display').textContent = fotoInput.files[0].name;
+        }
+    };
+    // ----- FIN DEL CÓDIGO MOVIDO -----
 
-        document.getElementById('btn-cerrar-modal-vaca').onclick = () => modal.classList.add('hidden');
-        form.onsubmit = handleGuardarVaca;
-    }
-    // Listener para mostrar el nombre del archivo
-        const fotoInput = document.getElementById('vaca-foto');
-        fotoInput.onchange = () => {
-            const fileName = fotoInput.files[0]?.name || '';
-            document.getElementById('file-name-display').textContent = fileName;
-        };
-
-        document.getElementById('btn-cerrar-modal-vaca').onclick = () => modal.classList.add('hidden');
+    document.getElementById('btn-cerrar-modal-vaca').onclick = () => modal.classList.add('hidden');
+    form.onsubmit = handleGuardarVaca;
+}
+    document.getElementById('btn-cerrar-modal-vaca').onclick = () => modal.classList.add('hidden');
         form.onsubmit = handleGuardarVaca;
     
 
