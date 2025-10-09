@@ -507,19 +507,55 @@ document.addEventListener('DOMContentLoaded', () => {
         const iconos = ['fa-syringe', 'fa-vial', 'fa-egg', 'fa-pills'];
 
 
-    function initActividadesMvzListeners() {
-        document.getElementById('modo-seleccion-container').classList.remove('hidden');
-        document.getElementById('rancho-actions-container').classList.add('hidden');
-        loteActividadActual = [];
-        
-        document.getElementById('btn-show-rancho-registrado').onclick = () => document.getElementById('rancho-access-container').classList.toggle('hidden');
-        document.getElementById('btn-iniciar-independiente').onclick = () => {
-            currentRancho = { id: null, nombre: 'Rancho Independiente' };
-            iniciarActividadUI();
-        };
-        document.getElementById('btn-validar-rancho').onclick = handleValidarRancho;
-    }
+    // REEMPLAZA LAS FUNCIONES ANTIGUAS CON ESTAS DOS
 
+function initActividadesMvzListeners() {
+    // Esta función SÓLO prepara la pantalla inicial de selección.
+    document.getElementById('modo-seleccion-container').classList.remove('hidden');
+    document.getElementById('rancho-actions-container').classList.add('hidden');
+    loteActividadActual = [];
+    
+    document.getElementById('btn-show-rancho-registrado').onclick = () => document.getElementById('rancho-access-container').classList.toggle('hidden');
+    
+    document.getElementById('btn-iniciar-independiente').onclick = () => {
+        currentRancho = { id: null, nombre: 'Rancho Independiente' };
+        iniciarActividadUI(); // Llama a la siguiente función para construir la vista de actividades
+    };
+
+    document.getElementById('btn-validar-rancho').onclick = handleValidarRancho;
+}
+
+function iniciarActividadUI() {
+    // Esta función se ejecuta DESPUÉS de elegir un modo.
+    // Ahora SÍ puede encontrar los elementos porque ya son visibles.
+    document.getElementById('modo-seleccion-container').classList.add('hidden');
+    document.getElementById('rancho-actions-container').classList.remove('hidden');
+
+    const esIndependiente = !currentRancho.id;
+    document.getElementById('rancho-independiente-input-container').classList.toggle('hidden', !esIndependiente);
+    document.getElementById('rancho-nombre-activo').textContent = esIndependiente ? 'Trabajo Independiente' : currentRancho.nombre;
+    document.getElementById('rancho-logo').src = currentRancho.logo_url || 'logo.png';
+    
+    // Aquí es el lugar CORRECTO para crear los botones
+    const accionesContainer = document.getElementById('acciones-rapidas-container');
+    accionesContainer.innerHTML = ''; // Limpiar
+    const colores = ['bg-teal-600', 'bg-sky-600', 'bg-lime-600', 'bg-amber-600'];
+    const iconos = ['fa-syringe', 'fa-vial', 'fa-egg', 'fa-pills'];
+
+    Object.keys(PROCEDIMIENTOS).forEach((key, index) => {
+        const proc = PROCEDIMIENTOS[key];
+        const color = colores[index % colores.length];
+        const icono = iconos[index % iconos.length];
+        const button = document.createElement('button');
+        button.className = `flex-shrink-0 w-4/5 mr-4 text-left ${color} text-white p-4 rounded-lg font-bold flex items-center shadow-lg`;
+        button.dataset.actividad = key;
+        button.innerHTML = `<i class="fa-solid ${icono} w-6 text-center mr-3"></i>${proc.titulo}`;
+        button.onclick = () => abrirModalActividad(key);
+        accionesContainer.appendChild(button);
+    });
+    
+    document.getElementById('btn-generar-pdf-historial').onclick = () => alert("Función para PDF de historial en desarrollo.");
+}
     async function handleValidarRancho() {
         const codigo = document.getElementById('codigo-rancho').value.trim().toUpperCase();
         if (!codigo) { mostrarMensaje('mensaje-rancho', 'El código no puede estar vacío.'); return; }
