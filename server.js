@@ -101,30 +101,39 @@ app.get('/api/vacas/rancho/:ranchoId', async (req, res) => {
     }
 });
 
-app.post('/api/vacas', async (req, res) => {
-    // Acepta JSON, no FormData
+// ¡ENDPOINT CORREGIDO PARA ACEPTAR FOTOS!
+app.post('/api/vacas', upload.single('fotoVaca'), async (req, res) => {
     const { nombre, siniiga, pierna, sexo, raza, nacimiento, padre, madre, origen, propietarioId, ranchoId } = req.body;
+    const fotoFile = req.file;
+
     if (!nombre || !siniiga || !propietarioId || !ranchoId) {
         return res.status(400).json({ message: 'Faltan datos importantes.' });
     }
+
     try {
+        let fotoPublicUrl = null;
+        if (fotoFile) {
+            const fileName = `vacas/${ranchoId}-${siniiga}-${Date.now()}`;
+            const { error: uploadError } = await supabase.storage
+                .from('fotos-ganado') // Asegúrate de que este bucket exista y sea público
+                .upload(fileName, fotoFile.buffer, { contentType: fotoFile.mimetype });
+
+            if (uploadError) throw uploadError;
+            
+            const { data: urlData } = supabase.storage.from('fotos-ganado').getPublicUrl(fileName);
+            fotoPublicUrl = urlData.publicUrl;
+        }
+
         const { data, error } = await supabase.from('vacas').insert({
-            nombre,
-            numero_siniiga: siniiga,
-            numero_pierna: pierna,
-            sexo,
-            raza,
-            fecha_nacimiento: nacimiento,
-            padre,
-            madre,
-            origen,
-            id_usuario: propietarioId,
-            rancho_id: ranchoId,
-            estado: 'Activa' // Estado por defecto
+            nombre, numero_siniiga: siniiga, numero_pierna: pierna, sexo, raza,
+            fecha_nacimiento: nacimiento, padre, madre, origen,
+            id_usuario: propietarioId, rancho_id: ranchoId, estado: 'Activa',
+            foto_url: fotoPublicUrl // Guardamos el enlace de la foto
         }).select().single();
 
         if (error) throw error;
         res.status(201).json({ success: true, message: 'Vaca registrada', vaca: data });
+
     } catch (err) {
         console.error('Error al agregar vaca:', err);
         res.status(500).json({ message: 'Error en el servidor al registrar la vaca.' });
@@ -142,36 +151,91 @@ app.delete('/api/vacas/:vacaId', async (req, res) => {
     }
 });
 
+// ================== ENDPOINT DE ACTIVIDADES Y PDF (NUEVO Y MEJORADO) ==================
 app.post('/api/actividades', async (req, res) => {
-    const { mvzId, ranchoId, ranchoNombre, actividades, tipoActividad } = req.body;
-    try {
-        const { data: historial, error: historialError } = await supabase.from('mvz_historial').insert({
-            mvz_id: mvzId, rancho_id: ranchoId, rancho_nombre: ranchoNombre,
-            tipo_actividad: tipoActividad, numero_animales: actividades.length
-        }).select().single();
-        if (historialError) throw historialError;
+    const { mvzId, ranchoId, loteActividad } = req.body;
 
-        const registros = actividades.map(act => ({
-            historial_id: historial.id, numero_arete: act.areteVaca, detalles: act.detalles
-        }));
-        await supabase.from('mvz_registros').insert(registros);
-        
-        // ¡IMPORTANTE! Si es un rancho real, actualizamos el estado de las vacas
-        if(ranchoId && actividades.length > 0) {
-            for (const act of actividades) {
-                await supabase.from('vacas')
-                    .update({ 
-                        ultimo_estado: act.detalles, 
-                        fecha_ultimo_estado: new Date().toISOString() 
-                    })
-                    .eq('rancho_id', ranchoId)
-                    .eq('numero_arete', act.areteVaca);
-            }
-        }
-        res.status(201).json({ success: true, message: 'Actividad guardada en el historial.' });
-    } catch (err) {
-        res.status(500).json({ message: 'Error al guardar la actividad.', details: err.message });
+    if (!mvzId || !Array.isArray(loteActividad) || loteActividad.length === 0) {
+        return res.status(400).json({ message: 'Faltan datos para procesar la actividad.' });
     }
+
+    try {
+        // Busca los IDs de las vacas si el rancho está registrado
+        let mapaAreteAId = new Map();
+        if (ranchoId) {
+            const aretesDelLote = loteActividad.map(item => item.areteVaca);
+            const { data: vacas } = await supabase.from('vacas').select('id, numero_siniiga').in('numero_siniiga', aretesDelLote);
+            mapaAreteAId = new Map(vacas.map(v => [String(v.numero_siniiga), v.id]));
+        }
+
+        const actividadesParaInsertar = loteActividad.map(item => ({
+            tipo_actividad: item.tipoLabel,
+            descripcion: item.detalles,
+            fecha_actividad: item.fecha,
+            id_vaca: mapaAreteAId.get(String(item.areteVaca)) || null, // Nulo si es independiente sin vaca registrada
+            id_usuario: mvzId,
+            // Guardamos info extra para el reporte
+            extra_data: {
+                arete: item.areteVaca,
+                raza: item.raza,
+                lote: item.loteNumero
+            }
+        }));
+
+        const { data, error } = await supabase.from('actividades').insert(actividadesParaInsertar).select();
+        if (error) throw error;
+        
+        res.status(201).json({ success: true, message: 'Actividad guardada.', actividades: data });
+    } catch (err) {
+        console.error("Error al guardar actividad:", err);
+        res.status(500).json({ message: 'Error al guardar la actividad.' });
+    }
+});
+
+// ¡ENDPOINT DE PDF ACTIVADO!
+app.post('/api/actividades/pdf', async (req, res) => {
+    const { actividades, ranchoNombre, mvzNombre } = req.body;
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="reporte_actividad.pdf"`);
+    
+    const doc = new PDFDocument({ size: 'LETTER', margin: 40 });
+    doc.pipe(res);
+    
+    // Encabezado
+    doc.fontSize(16).font('Helvetica-Bold').text('JFB Ganadería Inteligente', { align: 'right' });
+    doc.fontSize(10).font('Helvetica').text(`Rancho: ${ranchoNombre}`, { align: 'right' }).text(`Médico Veterinario: ${mvzNombre}`, { align: 'right' });
+    doc.moveDown(1.5);
+    const tituloActividad = (actividades[0]?.tipo_actividad || 'Actividades').toUpperCase();
+    doc.fillColor('white').font('Helvetica-Bold').fontSize(12).text(`REPORTE DE ${tituloActividad}`, { align: 'center' });
+    doc.fillColor('black').moveDown(2);
+
+    // Tabla de Contenido
+    const tableTop = doc.y;
+    doc.font('Helvetica-Bold');
+    doc.text('Arete/Pierna', 40, tableTop);
+    doc.text('Lote', 150, tableTop, { width: 40, align: 'center' });
+    doc.text('Fecha', 200, tableTop);
+    doc.text('Detalles', 310, tableTop, { width: 260 });
+    doc.moveTo(40, doc.y).lineTo(doc.page.width - 40, doc.y).stroke();
+    doc.moveDown(0.5);
+
+    // Filas
+    doc.font('Helvetica');
+    actividades.forEach(item => {
+        const detalles = item.descripcion || item.extra_data.detalles; // Compatibilidad
+        const detallesFiltrados = Object.entries(detalles || {}).filter(([, value]) => value && value !== 'No').map(([key, value]) => `${prettyLabel(key)}: ${value}`).join('; ');
+        const y = doc.y;
+        doc.text(item.extra_data.arete, 40, y);
+        doc.text(item.extra_data.lote, 150, y, { width: 40, align: 'center' });
+        doc.text(formatDate(item.fecha_actividad), 200, y);
+        doc.text(detallesFiltrados || 'Sin detalles', 310, y, { width: 260 });
+        doc.moveDown(1);
+        doc.moveTo(40, doc.y).lineTo(doc.page.width - 40, doc.y).strokeColor('#cccccc').stroke();
+        doc.moveDown(0.5);
+    });
+
+    doc.end();
 });
 
 app.get('/api/mvz/:mvzId/historial', async (req, res) => {

@@ -330,22 +330,24 @@ document.addEventListener('DOMContentLoaded', () => {
         form.onsubmit = handleGuardarVaca;
     }
 
+    // Lógica del Propietario (handleGuardarVaca corregido)
     async function handleGuardarVaca(e) {
         e.preventDefault();
-        const formData = new FormData(e.target);
-        
-        // Convertir a objeto simple
-        const vacaData = Object.fromEntries(formData.entries());
-        vacaData.propietarioId = currentUser.id;
-        vacaData.ranchoId = currentUser.ranchos?.[0]?.id;
+        const form = e.target;
+        const formData = new FormData(form);
 
-        if (!vacaData.sexo || !vacaData.nombre || !vacaData.siniiga || !vacaData.ranchoId) {
-            mostrarMensaje('vaca-mensaje', 'Sexo, nombre, SINIIGA y rancho son obligatorios.');
+        // Añadimos los datos que no están en el formulario directamente
+        formData.append('propietarioId', currentUser.id);
+        formData.append('ranchoId', currentUser.ranchos?.[0]?.id);
+
+        if (!formData.get('nombre') || !formData.get('siniiga')) {
+            mostrarMensaje('vaca-mensaje', 'Nombre y SINIIGA son obligatorios.');
             return;
         }
 
         try {
-            const res = await fetch('/api/vacas', { method: 'POST', body: JSON.stringify(vacaData), headers: { 'Content-Type': 'application/json' } });
+            // ¡IMPORTANTE! No se pone 'Content-Type', el navegador lo hace solo con FormData
+            const res = await fetch('/api/vacas', { method: 'POST', body: formData });
             const respuesta = await res.json();
             if (!res.ok) throw new Error(respuesta.message);
             
@@ -498,6 +500,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const eventosContainer = document.getElementById('lista-eventos');
         eventosContainer.innerHTML = datosDashboard.eventos.map(e => `<div class="flex justify-between items-center"><p><i class="fa-solid fa-calendar-alt text-brand-green mr-2"></i><strong>${e.fecha}:</strong> ${e.texto}</p><i class="fa-solid fa-chevron-right text-gray-400"></i></div>`).join('');
     }
+     
+    const accionesContainer = document.getElementById('acciones-rapidas-container');
+        accionesContainer.innerHTML = ''; // Limpiar
+        const colores = ['bg-teal-600', 'bg-sky-600', 'bg-lime-600', 'bg-amber-600'];
+        const iconos = ['fa-syringe', 'fa-vial', 'fa-egg', 'fa-pills'];
+
 
     function initActividadesMvzListeners() {
         document.getElementById('modo-seleccion-container').classList.remove('hidden');
@@ -528,18 +536,33 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function iniciarActividadUI() {
-        document.getElementById('modo-seleccion-container').classList.add('hidden');
-        document.getElementById('rancho-actions-container').classList.remove('hidden');
+    document.getElementById('modo-seleccion-container').classList.add('hidden');
+    document.getElementById('rancho-actions-container').classList.remove('hidden');
 
-        const esIndependiente = !currentRancho.id;
-        document.getElementById('rancho-independiente-input-container').classList.toggle('hidden', !esIndependiente);
-        document.getElementById('rancho-nombre-activo').textContent = esIndependiente ? 'Trabajo Independiente' : currentRancho.nombre;
-        document.getElementById('rancho-logo').src = currentRancho.logo_url || 'logo.png';
-        
-        // Listeners para botones de acciones
-        document.querySelectorAll('#rancho-actions-container button[data-actividad]').forEach(btn => {
-            btn.onclick = () => abrirModalActividad(btn.dataset.actividad);
-        });
+    const esIndependiente = !currentRancho.id;
+    document.getElementById('rancho-independiente-input-container').classList.toggle('hidden', !esIndependiente);
+    document.getElementById('rancho-nombre-activo').textContent = esIndependiente ? 'Trabajo Independiente' : currentRancho.nombre;
+    document.getElementById('rancho-logo').src = currentRancho.logo_url || 'logo.png';
+    
+    // --- INICIO DE LA CORRECCIÓN ---
+    // Se eliminó el forEach que causaba el error y se dejó solo el código que sí se necesita.
+    const accionesContainer = document.getElementById('acciones-rapidas-container');
+    accionesContainer.innerHTML = ''; // Limpiar por si acaso
+    const colores = ['bg-teal-600', 'bg-sky-600', 'bg-lime-600', 'bg-amber-600'];
+    const iconos = ['fa-syringe', 'fa-vial', 'fa-egg', 'fa-pills'];
+
+    Object.keys(PROCEDIMIENTOS).forEach((key, index) => {
+        const proc = PROCEDIMIENTOS[key];
+        const color = colores[index % colores.length];
+        const icono = iconos[index % iconos.length];
+        const button = document.createElement('button');
+        // Se corrigió la clase para que los botones tengan margen y no se peguen
+        button.className = `flex-shrink-0 w-4/5 mr-4 text-left ${color} text-white p-4 rounded-lg font-bold flex items-center`;
+        button.dataset.actividad = key;
+        button.innerHTML = `<i class="fa-solid ${icono} w-6 text-center mr-3"></i>${proc.titulo}`;
+        button.onclick = () => abrirModalActividad(key);
+        accionesContainer.appendChild(button);
+    });
         document.getElementById('btn-generar-pdf-historial').onclick = () => alert("Función para generar PDF de historial en desarrollo.");
     }
 
@@ -560,6 +583,63 @@ document.addEventListener('DOMContentLoaded', () => {
             handleFinalizarActividad();
             modal.classList.add('hidden');
         };
+    }
+    // ¡NUEVA FUNCIÓN PARA FINALIZAR Y GENERAR PDF!
+    async function handleFinalizarYReportar() {
+        if (loteActividadActual.length === 0) return;
+
+        const btn = document.getElementById('btn-finalizar-actividad-modal');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Procesando...';
+
+        try {
+            // 1. Guardar la actividad en la base de datos
+            const payload = {
+                mvzId: currentUser.id,
+                ranchoId: currentRancho?.id || null,
+                loteActividad: loteActividadActual
+            };
+            const resSave = await fetch('/api/actividades', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+            });
+            if (!resSave.ok) throw new Error('No se pudo guardar la actividad.');
+            const saveResult = await resSave.json();
+
+            // 2. Generar y descargar el PDF
+            let ranchoNombreParaReporte = currentRancho?.id ? currentRancho.nombre : document.getElementById('rancho-independiente-nombre').value.trim();
+            if (!ranchoNombreParaReporte) ranchoNombreParaReporte = 'Independiente';
+
+            const pdfPayload = {
+                actividades: saveResult.actividades,
+                ranchoNombre: ranchoNombreParaReporte,
+                mvzNombre: currentUser.nombre
+            };
+            const resPdf = await fetch('/api/actividades/pdf', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(pdfPayload)
+            });
+            if (!resPdf.ok) throw new Error('El servidor no pudo generar el PDF.');
+            
+            const blob = await resPdf.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `reporte_${ranchoNombreParaReporte.replace(/ /g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+            
+            // 3. Limpiar estado
+            loteActividadActual = [];
+            document.getElementById('lote-info').textContent = `0 vacas`;
+            
+        } catch (err) {
+            console.error("Error al finalizar y reportar:", err);
+            alert('Hubo un error al generar el reporte.');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-file-pdf mr-2"></i>Finalizar y Reportar';
+        }
     }
     
     function renderizarCamposProcedimiento(tipo) {
