@@ -540,7 +540,7 @@ function iniciarActividadUI() {
     const colores = ['bg-teal-600', 'bg-sky-600', 'bg-lime-600', 'bg-amber-600'];
     const iconos = ['fa-syringe', 'fa-vial', 'fa-egg', 'fa-pills'];
 
-        Object.keys(PROCEDIMIENTOS).forEach((key, index) => {
+    Object.keys(PROCEDIMIENTOS).forEach((key, index) => {
         const proc = PROCEDIMIENTOS[key];
         const color = colores[index % colores.length];
         const icono = iconos[index % iconos.length];
@@ -550,11 +550,7 @@ function iniciarActividadUI() {
         button.innerHTML = `<i class="fa-solid ${icono} w-6 text-center mr-3"></i>${proc.titulo}`;
         button.onclick = () => abrirModalActividad(key);
         accionesContainer.appendChild(button);
-        // ¡NUEVO! Carga el historial al iniciar y activa el botón de PDF
-    renderizarHistorialMVZ();
-    document.getElementById('btn-generar-pdf-historial').onclick = handleGenerarPdfDeHistorial;
-    });
-    
+    });    
     // ¡NUEVO! Carga el historial al iniciar y activa el botón de PDF
     renderizarHistorialMVZ();
     document.getElementById('btn-generar-pdf-historial').onclick = handleGenerarPdfDeHistorial;
