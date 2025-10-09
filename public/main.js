@@ -295,26 +295,24 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-        // REEMPLAZA TU FUNCIÓN 'abrirModalVaca' CON ESTA
+// REEMPLAZA TU FUNCIÓN 'abrirModalVaca' CON ESTA VERSIÓN FINAL
 function abrirModalVaca() {
     const modal = document.getElementById('modal-agregar-vaca');
-    modal.classList.remove('hidden');
     const form = document.getElementById('form-agregar-vaca');
-    form.reset();
     
-    // Limpiar el nombre del archivo al abrir
+    modal.classList.remove('hidden');
+    form.reset();
     document.getElementById('file-name-display').textContent = '';
 
+    // Configura la lista de razas
     const datalistRazas = document.getElementById('lista-razas');
     datalistRazas.innerHTML = RAZAS_BOVINAS.map(r => `<option value="${r}"></option>`).join('');
 
+    // Configura el cálculo de edad
     const nacimientoInput = document.getElementById('vaca-nacimiento');
     const edadInput = document.getElementById('vaca-edad');
     nacimientoInput.onchange = () => {
-        if (!nacimientoInput.value) {
-            edadInput.value = '';
-            return;
-        }
+        if (!nacimientoInput.value) { edadInput.value = ''; return; }
         const birthDate = new Date(nacimientoInput.value);
         const today = new Date();
         let years = today.getFullYear() - birthDate.getFullYear();
@@ -326,6 +324,7 @@ function abrirModalVaca() {
         edadInput.value = `${years} años, ${months} meses`;
     };
 
+    // Configura el selector de sexo
     const sexoSelector = document.getElementById('sexo-selector');
     const sexoInput = document.getElementById('vaca-sexo');
     sexoSelector.querySelectorAll('button').forEach(btn => {
@@ -336,15 +335,16 @@ function abrirModalVaca() {
         }
     });
     
-    // ----- CÓDIGO MOVIDO AQUÍ (LUGAR CORRECTO) -----
+    // Configura el input de la foto
     const fotoInput = document.getElementById('vaca-foto');
     fotoInput.onchange = () => {
         if (fotoInput.files.length > 0) {
             document.getElementById('file-name-display').textContent = fotoInput.files[0].name;
         }
     };
-    // ----- FIN DEL CÓDIGO MOVIDO -----
-
+    
+    // ----- LÍNEAS MOVIDAS AQUÍ (LUGAR CORRECTO) -----
+    // Asigna los eventos de cerrar y enviar DESPUÉS de que el modal es visible.
     document.getElementById('btn-cerrar-modal-vaca').onclick = () => modal.classList.add('hidden');
     form.onsubmit = handleGuardarVaca;
 }
