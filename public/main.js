@@ -652,6 +652,13 @@ function abrirModalVaca() {
         if (!historialContainer) return;
         historialContainer.innerHTML = '<p class="text-gray-500 text-center">Cargando historial...</p>';
 
+        // después de haber insertado el HTML del historial
+const btnPdf = document.getElementById('btn-generar-pdf-historial');
+if (btnPdf) {
+  btnPdf.removeEventListener('click', handleGenerarPdfDeHistorial); // por si acaso
+  btnPdf.addEventListener('click', handleGenerarPdfDeHistorial);
+}
+
         try {
             const res = await fetch(`/api/actividades/mvz/${currentUser?.id || ''}`);
             if (!res.ok) throw new Error('No se pudo cargar el historial.');
