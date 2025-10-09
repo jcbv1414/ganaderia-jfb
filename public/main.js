@@ -567,23 +567,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function abrirModalActividad(tipo) {
-        const modal = document.getElementById('modal-actividad');
-        modal.classList.remove('hidden');
-        
-        document.getElementById('modal-actividad-titulo').textContent = PROCEDIMIENTOS[tipo].titulo;
-        
-        const selLote = document.getElementById('actividad-lote');
-        selLote.innerHTML = [1, 2, 3, 4, 5].map(l => `<option value="${l}">Lote ${l}</option>`).join(''); // Lotes de ejemplo
-        
-        renderizarCamposProcedimiento(tipo);
-        document.getElementById('btn-cerrar-modal-actividad').onclick = () => modal.classList.add('hidden');
-        document.getElementById('btn-guardar-siguiente').onclick = () => handleAgregarVacaAlLote(tipo, true);
-        document.getElementById('btn-finalizar-actividad-modal').onclick = () => {
-            handleAgregarVacaAlLote(tipo, false); // Intenta guardar la vaca actual antes de cerrar
-            handleFinalizarActividad();
-            modal.classList.add('hidden');
-        };
-    }
+    const modal = document.getElementById('modal-actividad');
+    const form = document.getElementById('form-actividad-vaca');
+    form.reset(); // LIMPIAR EL FORMULARIO
+    
+    modal.classList.remove('hidden');
+    document.getElementById('modal-actividad-titulo').textContent = PROCEDIMientos[tipo].titulo;
+    
+    const selLote = document.getElementById('actividad-lote');
+    selLote.innerHTML = [1, 2, 3, 4, 5].map(l => `<option value="${l}">Lote ${l}</option>`).join('');
+    
+    renderizarCamposProcedimiento(tipo);
+    document.getElementById('btn-cerrar-modal-actividad').onclick = () => modal.classList.add('hidden');
+    document.getElementById('btn-guardar-siguiente').onclick = () => handleAgregarVacaAlLote(tipo, true);
+    
+    // ----- LÍNEA CORREGIDA -----
+    // Ahora llama a la función asíncrona correcta 'handleFinalizarYReportar'
+    document.getElementById('btn-finalizar-actividad-modal').onclick = async () => {
+        handleAgregarVacaAlLote(tipo, false);
+        await handleFinalizarYReportar(); // <-- LLAMADA CORRECTA
+        modal.classList.add('hidden');
+    };
+}
     // ¡NUEVA FUNCIÓN PARA FINALIZAR Y GENERAR PDF!
     async function handleFinalizarYReportar() {
         if (loteActividadActual.length === 0) return;
@@ -719,30 +724,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function handleFinalizarActividad() {
-        if (loteActividadActual.length === 0) return;
-        
-        // Aquí podrías guardar la actividad en un historial local o enviarla al servidor
-        // Por ahora, solo limpiamos el estado para la próxima actividad
-        console.log("Actividad finalizada con:", loteActividadActual);
-        
-        // Lógica para añadir al historial visual (simplificado)
-        const historialContainer = document.getElementById('historial-actividades-mvz');
-        if (historialContainer.querySelector('p')) historialContainer.innerHTML = '';
-        const ranchoNombre = currentRancho.id ? currentRancho.nombre : document.getElementById('rancho-independiente-nombre').value.trim();
-        const itemHistorial = `
-            <div class="bg-gray-100 p-2 rounded-lg text-sm">
-                <p><strong>${loteActividadActual[0].tipoLabel}</strong> en <em>${ranchoNombre}</em></p>
-                <p class="text-xs text-gray-500">${loteActividadActual.length} animales registrados - ${new Date().toLocaleTimeString()}</p>
-            </div>`;
-        historialContainer.innerHTML += itemHistorial;
-
-        // Limpiar para la siguiente
-        loteActividadActual = [];
-        document.getElementById('lote-info').textContent = `0 vacas`;
-    }
-
-    // INICIALIZACIÓN DE LA APLICACIÓN
+        // INICIALIZACIÓN DE LA APLICACIÓN
     function initApp() {
         setupNavigation();
         const savedUser = sessionStorage.getItem('currentUser');
