@@ -8,6 +8,7 @@ const PDFDocument = require('pdfkit');
 const bcrypt = require('bcryptjs');
 const { createClient } = require('@supabase/supabase-js');
 const multer = require('multer');
+const crypto = require('crypto');
 
 // ================== CONFIGURACIÓN Y ARRANQUE ==================
 const app = express();
@@ -201,6 +202,8 @@ app.post('/api/actividades', async (req, res) => {
     const { mvzId, ranchoId = null, loteActividad } = req.body || {};
     if (!mvzId || !Array.isArray(loteActividad) || loteActividad.length === 0) return res.status(400).json({ message: 'Faltan datos para procesar la actividad.' });
 
+    const sesionId = crypto.randomUUID();
+
     // Mapear arete a id de vaca si rancho registrado
     let mapaAreteAId = new Map();
     if (ranchoId) {
@@ -217,7 +220,10 @@ app.post('/api/actividades', async (req, res) => {
       fecha_actividad: item.fecha || new Date().toISOString(),
       id_vaca: mapaAreteAId.get(String(item.areteVaca)) || null,
       id_usuario: mvzId,
-      extra_data: { arete: item.areteVaca, raza: item.raza, lote: item.loteNumero, rancho_id: ranchoId }
+      extra_data: { arete: item.areteVaca, raza: item.raza, lote: item.loteNumero, rancho_id: ranchoId },
+   
+      sesion_id: sesionId
+
     }));
 
     const { data, error } = await supabase.from('actividades').insert(actividadesParaInsertar).select();
@@ -245,52 +251,107 @@ app.get('/api/actividades/mvz/:mvzId', async (req, res) => {
 });
 
 // Generar PDF desde sesiones/actividades (recibe array de sesion_ids o array de actividades)
+// En server.js, reemplaza el endpoint de PDF con este:
+
 app.post('/api/historial/pdf', async (req, res) => {
-  try {
-    // Soportamos dos formatos: { sesion_ids: [...] } o { actividades: [...], mvzNombre }
-    const { sesion_ids, actividades: actividadesBody, mvzNombre } = req.body || {};
+  try {
+    const { sesion_ids, mvzNombre } = req.body || {};
 
-    let actividades = [];
-    if (Array.isArray(actividadesBody) && actividadesBody.length) {
-      actividades = actividadesBody;
-    } else if (Array.isArray(sesion_ids) && sesion_ids.length) {
-      // Buscamos actividades por sesion (campo sesion_id) - depende del esquema
-     // LÍNEA CORREGIDA
-const { data, error } = await supabase.from('actividades').select('*').in('id_usuario', sesion_ids).order('fecha_actividad', { ascending: false });
-      if (error) throw error;
-      actividades = data || [];
-    } else {
-      return res.status(400).json({ message: 'Parámetros inválidos. Envía sesion_ids o actividades.' });
-    }
+    if (!Array.isArray(sesion_ids) || sesion_ids.length === 0) {
+      return res.status(400).json({ message: 'Parámetros inválidos. Debes enviar los IDs de las sesiones.' });
+    }
 
-    if (!actividades.length) return res.status(404).json({ message: 'No se encontraron actividades.' });
+    // Obtenemos las actividades de la base de datos (esta es tu nueva lógica)
+    const { data: actividades, error } = await supabase
+      .from('actividades')
+      .select('*')
+      .in('sesion_id', sesion_ids) // Usamos 'id_usuario' como lo corregimos
+      .order('fecha_actividad', { ascending: false });
 
-    // Generar PDF
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="reporte_actividades_${Date.now()}.pdf"`);
+    if (error) throw error;
+    if (!actividades || actividades.length === 0) {
+      return res.status(404).json({ message: 'No se encontraron actividades para el reporte.' });
+    }
+    
+    // === A PARTIR DE AQUÍ, USAMOS TU LÓGICA DE DISEÑO ANTIGUA ===
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="reporte_historial_${Date.now()}.pdf"`);
+    const doc = new PDFDocument({ size: 'LETTER', margin: 40 });
+    doc.pipe(res);
 
-    const doc = new PDFDocument({ size: 'LETTER', margin: 40 });
-    doc.pipe(res);
+    // 1. Encabezado del documento
+    // NOTA: Aquí asumimos que el logo está en public/assets/logo.png
+    // Si tu servidor es Node, necesitas el módulo 'fs' y 'path': const fs = require('fs'); const path = require('path');
+    const logoPath = path.join(__dirname, 'public', 'assets', 'logo.png');
+    try {
+        if (fs.existsSync(logoPath)) {
+            doc.image(logoPath, 40, 30, { width: 90 });
+        }
+    } catch(e) { console.warn("No se pudo cargar el logo para el PDF."); }
+    
+    doc.fontSize(16).font('Helvetica-Bold').text('JFB Ganadería Inteligente', { align: 'right' });
+    doc.fontSize(10).font('Helvetica')
+      .text(`Médico Veterinario: ${mvzNombre || '-'}`, { align: 'right' });
+    doc.moveDown(2);
+    
+    // 2. Barra de título
+    const yBarra = doc.y;
+    const tituloActividad = (actividades[0]?.tipo_actividad || 'Actividades').toUpperCase();
+    doc.rect(40, yBarra, doc.page.width - 80, 20).fill('#001F3D');
+    doc.fillColor('white').font('Helvetica-Bold').fontSize(12)
+      .text(`REPORTE DE ${tituloActividad}`, 40, yBarra + 4, { align: 'center' });
+    doc.fillColor('black').moveDown(2);
 
-    // Cabecera
-    doc.fontSize(16).text('JFB Ganadería Inteligente', { align: 'center' });
-    if (mvzNombre) doc.fontSize(10).text(`Médico Veterinario: ${mvzNombre}`, { align: 'center' });
-    doc.moveDown(1);
+    // 3. Encabezados de la tabla
+    const tableTop = doc.y;
+    doc.font('Helvetica-Bold');
+    doc.text('Arete', 40, tableTop, { width: 70 });
+    doc.text('Raza', 110, tableTop, { width: 80 });
+    doc.text('Lote', 190, tableTop, { width: 40, align: 'center' });
+    doc.text('Fecha', 230, tableTop, { width: 80 });
+    doc.text('Detalles', 310, tableTop, { width: 260 });
+    doc.moveTo(40, doc.y).lineTo(doc.page.width - 40, doc.y).stroke();
+    doc.moveDown(0.5);
 
-    // Tabla de actividades simples
-    actividades.forEach((item, idx) => {
-      doc.font('Helvetica-Bold').fontSize(11).text(`${idx + 1}. ${item.tipo_actividad || 'Actividad'}`);
-      doc.font('Helvetica').fontSize(10).text(`Fecha: ${formatDate(item.fecha_actividad || item.created_at)}`);
-      const detalles = (item.descripcion && typeof item.descripcion === 'object') ? Object.entries(item.descripcion).map(([k,v]) => `${prettyLabel(k)}: ${v}`).join('; ') : (item.descripcion || 'Sin detalles');
-      doc.text(`Detalles: ${detalles}`);
-      const extra = item.extra_data ? `Arete: ${item.extra_data.arete || '-'} | Lote: ${item.extra_data.lote || '-'} ` : '';
-      if (extra) doc.text(extra);
-      doc.moveDown(0.5);
-      if (doc.y > 720) doc.addPage();
-    });
+    // 4. Contenido de la tabla
+    doc.font('Helvetica');
+    actividades.forEach(item => {
+        // Mapeamos los datos de Supabase al formato que espera el PDF
+        const arete = item.extra_data?.arete || '-';
+        const raza = item.extra_data?.raza || '-';
+        const lote = item.extra_data?.lote || '-';
+        const fecha = item.fecha_actividad;
+        const detalles = item.descripcion || {};
 
-    doc.end();
-  } catch (err) { handleServerError(res, err); }
+        const detallesFiltrados = Object.entries(detalles)
+            .filter(([key, value]) => value && value !== 'No' && value !== '')
+            .map(([key, value]) => `${prettyLabel(key)}: ${value}`)
+            .join('; ');
+
+        const y = doc.y;
+        const rowHeight = Math.max(
+            doc.heightOfString(raza, { width: 80 }),
+            doc.heightOfString(detallesFiltrados || '-', { width: 260 })
+        ) + 5;
+
+        if (doc.y + rowHeight > doc.page.height - 50) doc.addPage();
+        
+        doc.text(arete, 40, y, { width: 70 });
+        doc.text(raza, 110, y, { width: 80 });
+        doc.text(lote, 190, y, { width: 40, align: 'center' });
+        doc.text(formatDate(fecha), 230, y, { width: 80 });
+        doc.text(detallesFiltrados || 'Sin detalles', 310, y, { width: 260 });
+        
+        doc.y += rowHeight;
+        doc.moveTo(40, doc.y).lineTo(doc.page.width - 40, doc.y).strokeColor('#cccccc').stroke();
+        doc.moveDown(0.5);
+    });
+
+    doc.end();
+
+  } catch (err) {
+    handleServerError(res, err); // Reutilizamos tu manejador de errores
+  }
 });
 
 // ================== ESTADÍSTICAS ==================

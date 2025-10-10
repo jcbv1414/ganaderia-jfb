@@ -59,7 +59,17 @@ document.addEventListener('DOMContentLoaded', () => {
             { id: "fecha_fin", label: "Fecha de fin", tipo: "date" },
             { id: "observaciones", label: "Observaciones", tipo: "textarea" }
           ]
-        }
+        },
+        medicamentos: {
+      titulo: "Aplicación de Medicamentos",
+      campos: [
+        { id: "medicamento", label: "Medicamento Aplicado", tipo: "text", placeholder: "Ej: Vitamina B12" },
+        { id: "dosis_aplicada", label: "Dosis", tipo: "text", placeholder: "Ej: 10 ml" },
+        { id: "via_administracion", label: "Vía de Administración", tipo: "select", opciones: ["Intramuscular", "Subcutánea", "Intravenosa", "Oral"] },
+        { id: "proximo_tratamiento", label: "Próximo Tratamiento (opcional)", tipo: "date" },
+        { id: "observaciones", label: "Observaciones", tipo: "textarea" }
+      ]
+    }
     };
     const RAZAS_BOVINAS = [
     'Aberdeen Angus','Ayrshire','Bazadaise','Beefmaster','Belgian Blue', 'Brahman',
