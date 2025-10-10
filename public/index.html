@@ -99,6 +99,7 @@
         </div>
     </template>
 
+    <!-- Inicio propietario -->
     <template id="template-inicio-propietario">
         <div class="p-5" style="background-color: #3A5A40; color: white;">
             <header class="flex justify-between items-center mb-6">
@@ -129,6 +130,7 @@
         </div>
     </template>
     
+    <!-- Mi ganado -->
     <template id="template-mis-vacas">
         <div class="p-5">
             <header class="flex justify-between items-center mb-4">
@@ -144,7 +146,7 @@
             <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md modal-content">
                 <header class="p-4 border-b border-gray-200 flex justify-between items-center"><h2 class="text-lg font-bold">Registrar Nuevo Animal</h2><button id="btn-cerrar-modal-vaca" class="text-2xl text-gray-500">&times;</button></header>
                 <main class="p-6 modal-main">
-                    <form id="form-agregar-vaca" class="space-y-4">
+                    <form id="form-agregar-vaca" class="space-y-4" enctype="multipart/form-data">
                         <div><label class="block text-sm font-medium text-gray-700 mb-1">Sexo</label><div class="grid grid-cols-2 gap-2" id="sexo-selector"> <button type="button" data-value="Hembra" class="p-2 border rounded-lg">Hembra</button> <button type="button" data-value="Macho" class="p-2 border rounded-lg">Macho</button></div><input type="hidden" name="sexo" id="vaca-sexo" required></div>
                         <div><label for="vaca-nombre" class="block text-sm font-medium text-gray-700 mb-1">Nombre del Animal</label><input type="text" name="nombre" id="vaca-nombre" class="w-full p-2 border border-gray-300 rounded-lg" required></div>
                         <div class="grid grid-cols-2 gap-4">
@@ -161,6 +163,14 @@
                             <div><label for="vaca-madre" class="block text-sm font-medium text-gray-700 mb-1">Madre</label><input type="text" name="madre" id="vaca-madre" class="w-full p-2 border border-gray-300 rounded-lg"></div>
                         </div>
                         <div><label for="vaca-origen" class="block text-sm font-medium text-gray-700 mb-1">Método de Origen</label><select name="origen" id="vaca-origen" class="w-full p-2 border border-gray-300 rounded-lg bg-white"><option>Natural</option><option>Inseminación Artificial (IA)</option><option>Transferencia de Embrión (TE)</option><option>FIV</option></select></div>
+
+                        <!-- INPUT FOTO: se agregó name="fotoVaca" para que el servidor la reciba -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Foto (opcional)</label>
+                            <input type="file" id="vaca-foto" name="fotoVaca" accept="image/*" class="w-full">
+                            <div id="file-name-display" class="text-sm text-gray-500 mt-1"></div>
+                        </div>
+
                         <div id="vaca-mensaje" class="text-sm h-4 text-center"></div>
                     </form>
                 </main>
@@ -169,6 +179,7 @@
         </div>
     </template>
     
+    <!-- Mi MVZ -->
     <template id="template-mi-mvz">
     <div class="p-5">
         <header class="mb-6">
@@ -197,6 +208,7 @@
     </div>
 </template>
     
+    <!-- Estadísticas propietario -->
     <template id="template-estadisticas">
         <div class="p-5">
             <header class="flex items-center mb-4"><button onclick="navigateTo('inicio-propietario')" class="text-2xl mr-4"><i class="fa-solid fa-arrow-left"></i></button><h1 class="text-xl font-bold text-gray-800">Estadísticas de Lotes</h1></header>
@@ -207,6 +219,7 @@
     </template>
     <template id="template-ajustes"><h1 class="text-center p-8 text-2xl">Ajustes (en construcción)</h1></template>
 
+    <!-- Inicio MVZ -->
     <template id="template-inicio-mvz">
          <div class="p-5">
             <header class="flex justify-between items-center mb-6">
@@ -229,6 +242,7 @@
         </div>
     </template>
     
+    <!-- Actividades MVZ -->
     <template id="template-actividades-mvz">
         <div class="p-5">
             <div id="modo-seleccion-container">
@@ -257,12 +271,13 @@
                     <label for="rancho-independiente-nombre" class="block text-sm font-bold text-gray-700 mb-2">Nombre del Rancho Atendido:</label>
                     <input type="text" id="rancho-independiente-nombre" placeholder="Ej: Rancho 'El Amanecer'" class="w-full p-3 border border-gray-300 rounded-lg">
                 </div>
-                <div class="space-y-3">
+
+                <!-- contenedor de acciones rápidas (se agregó id esperado por main.js) -->
+                <div id="acciones-rapidas-container" class="space-y-3">
                     <h3 class="font-semibold text-gray-600">Acciones Rápidas</h3>
-                    <button data-actividad="palpacion" class="w-full text-left bg-teal-600 text-white p-4 rounded-lg font-bold flex items-center"><i class="fa-solid fa-syringe w-6 text-center mr-3"></i>Palpación / Chequeo Reproductivo</button>
-                    <button data-actividad="inseminacion" class="w-full text-left bg-sky-600 text-white p-4 rounded-lg font-bold flex items-center"><i class="fa-solid fa-vial w-6 text-center mr-3"></i>Inseminación Artificial (IA)</button>
-                    <button data-actividad="transferencia" class="w-full text-left bg-lime-600 text-white p-4 rounded-lg font-bold flex items-center"><i class="fa-solid fa-egg w-6 text-center mr-3"></i>Transferencia de Embrión (TE)</button>
+                    <!-- botones se crean dinámicamente desde main.js -->
                 </div>
+
                 <div class="mt-8">
                     <h3 class="font-semibold text-gray-600 mb-3">Documentos y Reportes</h3>
                     <div id="historial-actividades-mvz" class="bg-white p-4 rounded-lg shadow-inner max-h-60 overflow-y-auto space-y-2">

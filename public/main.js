@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let vacasIndex = new Map();
     let datosEstadisticasCompletos = null;
     let miGrafico = null;
-    const API_URL = '';
+    const API_URL = ''; // opcional si quieres prefijar la API
     const appContent = document.getElementById('app-content');
     const navContainer = document.getElementById('nav-container');
 
@@ -102,10 +102,10 @@ document.addEventListener('DOMContentLoaded', () => {
             document.body.className = '';
             if (viewId === 'login') {
                 document.getElementById('form-login').addEventListener('submit', handleLogin);
-                document.getElementById('link-a-registro').addEventListener('click', () => navigateTo('registro'));
+                document.getElementById('link-a-registro').addEventListener('click', (ev) => { ev.preventDefault(); navigateTo('registro'); });
             } else {
                 document.getElementById('form-registro').addEventListener('submit', handleRegister);
-                document.getElementById('link-a-login').addEventListener('click', () => navigateTo('login'));
+                document.getElementById('link-a-login').addEventListener('click', (ev) => { ev.preventDefault(); navigateTo('login'); });
             }
         } else if (viewId === 'inicio-propietario') {
             document.getElementById('dash-nombre-propietario').textContent = currentUser?.nombre?.split(' ')[0] || '';
@@ -113,8 +113,8 @@ document.addEventListener('DOMContentLoaded', () => {
             cargarDatosDashboardPropietario();
         } else if (viewId === 'mis-vacas') {
             renderizarVistaMisVacas();
-            } else if (viewId === 'mi-mvz') { // <-- AÑADE ESTO
-    renderizarVistaMiMvz();
+        } else if (viewId === 'mi-mvz') {
+            renderizarVistaMiMvz();
         } else if (viewId === 'estadisticas') {
             renderizarVistaEstadisticas();
         } else if (viewId === 'inicio-mvz') {
@@ -157,38 +157,37 @@ document.addEventListener('DOMContentLoaded', () => {
     async function handleLogin(e) {
         e.preventDefault();
         const btn = e.target.querySelector('button[type="submit"]');
-        btn.classList.add('loading');
-        btn.disabled = true;
+        if (btn) { btn.classList.add('loading'); btn.disabled = true; }
         
         const email = document.getElementById('login-email').value;
         const password = document.getElementById('login-password').value;
         try {
             const res = await fetch(`/api/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
             const respuesta = await res.json();
-            if (!res.ok) throw new Error(respuesta.message);
+            if (!res.ok) throw new Error(respuesta.message || 'Error en login');
             currentUser = respuesta.user;
             sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
             iniciarSesion();
         } catch (err) {
-            mostrarMensaje('login-mensaje', err.message);
+            mostrarMensaje('login-mensaje', err.message || 'Error inesperado');
         } finally {
-            btn.classList.remove('loading');
-            btn.disabled = false;
+            if (btn) { btn.classList.remove('loading'); btn.disabled = false; }
         }
     }
 
-    async function handleRegister(e) { /* Sin cambios, se mantiene funcional */ 
+    async function handleRegister(e) {
         e.preventDefault();
         const form = e.target;
         const formData = new FormData(form);
         try {
+            // Enviamos FormData (multipart) para soportar distintos navegadores/inputs
             const res = await fetch(`/api/register`, { method: 'POST', body: formData });
             const respuesta = await res.json();
-            if (!res.ok) throw new Error(respuesta.message);
+            if (!res.ok) throw new Error(respuesta.message || 'Error en registro');
             mostrarMensaje('registro-mensaje', '¡Registro exitoso! Serás redirigido al login.', false);
-            setTimeout(() => navigateTo('login'), 2000);
+            setTimeout(() => navigateTo('login'), 1200);
         } catch (err) {
-            mostrarMensaje('registro-mensaje', err.message);
+            mostrarMensaje('registro-mensaje', err.message || 'Error inesperado');
         }
     }
     
@@ -244,10 +243,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 lotesContainer.innerHTML += loteCardHTML;
             });
         } catch (error) {
-            document.getElementById('lotes-container').innerHTML = '<p class="text-red-500">No se pudieron cargar los datos.</p>';
+            const el = document.getElementById('lotes-container');
+            if (el) el.innerHTML = '<p class="text-red-500">No se pudieron cargar los datos.</p>';
         }
     }
-    // AGREGA ESTA NUEVA FUNCIÓN COMPLETA EN main.js
 
 async function renderizarVistaMiMvz() {
     const ranchoId = currentUser.ranchos?.[0]?.id;
@@ -260,9 +259,10 @@ async function renderizarVistaMiMvz() {
     async function cargarMvz() {
         try {
             const res = await fetch(`/api/rancho/${ranchoId}/mvz`);
+            if (!res.ok) throw new Error('Error al cargar veterinarios');
             const mvzList = await res.json();
 
-            if (mvzList.length === 0) {
+            if (!mvzList || mvzList.length === 0) {
                 container.innerHTML = '<p class="text-gray-500 text-center">Aún no has invitado a ningún veterinario.</p>';
                 return;
             }
@@ -306,13 +306,12 @@ async function renderizarVistaMiMvz() {
                 })
             });
             const respuesta = await res.json();
-            if (!res.ok) throw new Error(respuesta.message);
-
+            if (!res.ok) throw new Error(respuesta.message || 'Error al invitar');
             mostrarMensaje('mvz-mensaje', '¡Invitación enviada con éxito!', false);
             emailInput.value = '';
             cargarMvz(); // Recargar la lista para mostrar al nuevo veterinario
         } catch (error) {
-            mostrarMensaje('mvz-mensaje', error.message, true);
+            mostrarMensaje('mvz-mensaje', error.message || 'Error inesperado', true);
         }
     });
 
@@ -331,10 +330,11 @@ async function renderizarVistaMiMvz() {
 
         try {
             const res = await fetch(`/api/vacas/rancho/${ranchoId}`);
+            if (!res.ok) throw new Error('Error al obtener vacas');
             const vacas = await res.json();
-            document.getElementById('total-vacas-header').textContent = vacas.length;
+            document.getElementById('total-vacas-header').textContent = (vacas && vacas.length) || 0;
             
-            if (vacas.length === 0) {
+            if (!vacas || vacas.length === 0) {
                 container.innerHTML = '<p class="text-center text-gray-500 mt-8">Aún no has registrado ningún animal.</p>';
                 return;
             }
@@ -353,7 +353,7 @@ async function renderizarVistaMiMvz() {
                             </div>
                             <div class="text-xs text-gray-600 mt-2">
                                 <span>Raza: <strong>${vaca.raza || 'N/A'}</strong></span> | 
-                                <span>Nacimiento: <strong>${new Date(vaca.fecha_nacimiento).toLocaleDateString('es-MX')}</strong></span>
+                                <span>Nacimiento: <strong>${vaca.fecha_nacimiento ? new Date(vaca.fecha_nacimiento).toLocaleDateString('es-MX') : 'N/A'}</strong></span>
                             </div>
                         </div>
                     </div>
@@ -436,7 +436,8 @@ function abrirModalVaca() {
     // Lógica del Propietario (handleGuardarVaca corregido)
     async function handleGuardarVaca(e) {
         e.preventDefault();
-        const formData = new FormData(e.target);
+        const form = e.target;
+        const formData = new FormData(form);
         formData.append('propietarioId', currentUser?.id || '');
         formData.append('ranchoId', currentUser?.ranchos?.[0]?.id || '');
 
@@ -447,16 +448,16 @@ function abrirModalVaca() {
         try {
             const res = await fetch('/api/vacas', { method: 'POST', body: formData });
             const respuesta = await res.json();
-            if (!res.ok) throw new Error(respuesta.message);
+            if (!res.ok) throw new Error(respuesta.message || 'Error al guardar vaca');
             
             mostrarMensaje('vaca-mensaje', 'Animal guardado con éxito', false);
             setTimeout(() => {
                 const modal = document.getElementById('modal-agregar-vaca');
                 if (modal) modal.classList.add('hidden');
                 renderizarVistaMisVacas();
-            }, 1500);
+            }, 900);
         } catch (error) {
-            mostrarMensaje('vaca-mensaje', error.message);
+            mostrarMensaje('vaca-mensaje', error.message || 'Error inesperado');
         }
     }
 
@@ -469,7 +470,7 @@ function abrirModalVaca() {
             
             renderizarVistaMisVacas(); // Recargar la lista
         } catch (error) {
-            alert(error.message);
+            alert(error.message || 'Error inesperado');
         }
     }
 
@@ -518,7 +519,7 @@ function abrirModalVaca() {
             }
 
         } catch (error) {
-            contenidoContainer.innerHTML = `<p class="text-center text-red-500">${error.message}</p>`;
+            contenidoContainer.innerHTML = `<p class="text-center text-red-500">${error.message || 'Error'}</p>`;
         }
     }
     
@@ -599,7 +600,7 @@ function abrirModalVaca() {
         const pendientesContainer = document.getElementById('lista-pendientes');
         if (pendientesContainer) pendientesContainer.innerHTML = datosDashboard.pendientes.map((p, i) => `<div class="flex justify-between items-center"><p><strong>${i+1}.</strong> ${p.texto} <em class="text-gray-500">${p.rancho}</em></p><button class="${p.completado ? 'bg-green-100 text-green-700' : 'bg-blue-600 text-white'} px-3 py-1 rounded-full text-sm font-semibold">${p.completado ? 'Completado' : 'Ver Detalles'}</button></div>`).join('');
         const eventosContainer = document.getElementById('lista-eventos');
-        if (eventosContainer) eventosContainer.innerHTML = datosDashboard.eventos.map(e => `<div class="flex justify-between items-center"><p><i class="fa-solid fa-calendar-alt text-brand-green mr-2"></i><strong>${e.fecha}:</strong> ${e.texto}</p><i class="fa-solid fa-chevron-right text-gray-400"></i></div>`).join('');
+        if (eventosContainer) eventosContainer.innerHTML = datosDashboard.eventos.map(e => `<div class="flex justify-between items-center"><p><i class="fa-solid fa-calendar-alt text-brand-green mr-2"></i><strong>${e.fecha}:</strong> ${e.texto}</p><i class="fa-solid fa-chevron-right text-gray-400"></i></div>`).join(''); 
     }
      
     const accionesContainerTop = document.getElementById('acciones-rapidas-container');
@@ -633,12 +634,12 @@ function abrirModalVaca() {
         try {
             const res = await fetch(`/api/rancho/validate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ codigo }) });
             const respuesta = await res.json();
-            if (!res.ok) throw new Error(respuesta.message);
+            if (!res.ok) throw new Error(respuesta.message || 'Código inválido');
             currentRancho = respuesta;
             iniciarActividadUI();
             await cargarVacasParaMVZ();
         } catch (err) {
-            mostrarMensaje('mensaje-rancho', err.message);
+            mostrarMensaje('mensaje-rancho', err.message || 'Error inesperado');
         }
     }
 
@@ -726,34 +727,35 @@ function abrirModalVaca() {
         if (!historialContainer) return;
         historialContainer.innerHTML = '<p class="text-gray-500 text-center">Cargando historial...</p>';
 
-        // después de haber insertado el HTML del historial
-const btnPdf = document.getElementById('btn-generar-pdf-historial');
-if (btnPdf) {
-  btnPdf.removeEventListener('click', handleGenerarPdfDeHistorial); // por si acaso
-  btnPdf.addEventListener('click', handleGenerarPdfDeHistorial);
-}
-
+        // aseguramos que el botón de PDF tenga el listener correcto después de renderizar el historial
         try {
             const res = await fetch(`/api/actividades/mvz/${currentUser?.id || ''}`);
             if (!res.ok) throw new Error('No se pudo cargar el historial.');
             const sesiones = await res.json();
 
-            if (sesiones.length === 0) {
+            if (!sesiones || sesiones.length === 0) {
                 historialContainer.innerHTML = '<p class="text-gray-500 text-center">No hay actividades recientes.</p>';
-                return;
-            }
-
-            historialContainer.innerHTML = sesiones.map(sesion => `
-                <div class="bg-gray-100 p-3 rounded-lg flex items-center justify-between">
-                    <div class="flex items-center">
-                        <input type="checkbox" data-sesion-id="${sesion.sesion_id}" class="h-5 w-5 rounded border-gray-300 mr-3">
-                        <div>
-                            <p class="font-semibold text-gray-800">${sesion.tipo_actividad} en <em>${sesion.rancho_nombre}</em></p>
-                            <p class="text-xs text-gray-500">${sesion.conteo} animales - ${new Date(sesion.fecha).toLocaleDateString('es-MX', {day: 'numeric', month: 'long'})}</p>
+            } else {
+                historialContainer.innerHTML = sesiones.map(sesion => `
+                    <div class="bg-gray-100 p-3 rounded-lg flex items-center justify-between">
+                        <div class="flex items-center">
+                            <input type="checkbox" data-sesion-id="${sesion.sesion_id}" class="h-5 w-5 rounded border-gray-300 mr-3">
+                            <div>
+                                <p class="font-semibold text-gray-800">${sesion.tipo_actividad} en <em>${sesion.rancho_nombre}</em></p>
+                                <p class="text-xs text-gray-500">${sesion.conteo} animales - ${new Date(sesion.fecha).toLocaleDateString('es-MX', {day: 'numeric', month: 'long'})}</p>
+                            </div>
                         </div>
                     </div>
-                </div>
-            `).join('');
+                `).join('');
+            }
+
+            // botón PDF: (quitamos listeners previos y añadimos uno nuevo)
+            const btnPdf = document.getElementById('btn-generar-pdf-historial');
+            if (btnPdf) {
+                btnPdf.replaceWith(btnPdf.cloneNode(true)); // remove all listeners simply
+                const nuevoBtnPdf = document.getElementById('btn-generar-pdf-historial');
+                nuevoBtnPdf.addEventListener('click', handleGenerarPdfDeHistorial);
+            }
 
         } catch (error) {
             historialContainer.innerHTML = '<p class="text-red-500 text-center">Error al cargar historial.</p>';
@@ -776,7 +778,10 @@ if (btnPdf) {
                 body: JSON.stringify({ sesion_ids: sesionesSeleccionadas, mvzNombre: currentUser?.nombre || '' })
             });
 
-            if (!res.ok) throw new Error('El servidor no pudo generar el PDF.');
+            if (!res.ok) {
+                const txt = await res.text().catch(()=>null);
+                throw new Error(txt || 'El servidor no pudo generar el PDF.');
+            }
             
             const blob = await res.blob();
             const url = window.URL.createObjectURL(blob);
@@ -818,11 +823,12 @@ if (btnPdf) {
         if (!currentRancho || !currentRancho.id) return;
         try {
             const res = await fetch(`/api/vacas/rancho/${currentRancho.id}`);
+            if (!res.ok) throw new Error('No se pudieron cargar vacas');
             const vacas = await res.json();
             const datalist = document.getElementById('lista-aretes-autocompletar');
             if (datalist) datalist.innerHTML = '';
             vacasIndex.clear();
-            vacas.forEach(v => {
+            (vacas || []).forEach(v => {
                 datalist?.insertAdjacentHTML('beforeend', `<option value="${v.numero_siniiga}">`);
                 vacasIndex.set(String(v.numero_siniiga).trim(), { id: v.id, nombre: v.nombre, raza: v.raza || '' });
             });
