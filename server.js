@@ -197,39 +197,105 @@ app.delete('/api/vacas/:vacaId', async (req, res) => {
 });
 
 // ================== ACTIVIDADES, HISTORIAL Y REPORTES ==================
+// En server.js, reemplaza el endpoint '/api/actividades' con este:
 app.post('/api/actividades', async (req, res) => {
   try {
-    const { mvzId, ranchoId = null, loteActividad } = req.body || {};
-    if (!mvzId || !Array.isArray(loteActividad) || loteActividad.length === 0) return res.status(400).json({ message: 'Faltan datos para procesar la actividad.' });
+    const { mvzId, ranchoId = null, loteActividad, mvzNombre, ranchoNombre } = req.body || {};
+    if (!mvzId || !Array.isArray(loteActividad) || loteActividad.length === 0) {
+      return res.status(400).json({ message: 'Faltan datos para procesar la actividad.' });
+    }
 
     const sesionId = crypto.randomUUID();
 
-    // Mapear arete a id de vaca si rancho registrado
-    let mapaAreteAId = new Map();
-    if (ranchoId) {
-      const aretes = loteActividad.map(i => i.areteVaca).filter(Boolean);
-      if (aretes.length) {
-        const { data: vacas } = await supabase.from('vacas').select('id, numero_siniiga').in('numero_siniiga', aretes);
-        (vacas || []).forEach(v => mapaAreteAId.set(String(v.numero_siniiga), v.id));
-      }
-    }
-
     const actividadesParaInsertar = loteActividad.map(item => ({
-      tipo_actividad: item.tipoLabel || item.tipo || 'Actividad',
-      descripcion: item.detalles || {},
-      fecha_actividad: item.fecha || new Date().toISOString(),
-      id_vaca: mapaAreteAId.get(String(item.areteVaca)) || null,
-      id_usuario: mvzId,
-      extra_data: { arete: item.areteVaca, raza: item.raza, lote: item.loteNumero, rancho_id: ranchoId },
-   
-      sesion_id: sesionId
-
+        tipo_actividad: item.tipoLabel,
+        descripcion: item.detalles || {},
+        fecha_actividad: item.fecha,
+        id_vaca: item.vacaId || null, // Asumimos que el front puede enviar el id de la vaca
+        id_usuario: mvzId,
+        sesion_id: sesionId,
+        extra_data: { arete: item.areteVaca, raza: item.raza, lote: item.loteNumero, rancho_id: ranchoId }
     }));
 
-    const { data, error } = await supabase.from('actividades').insert(actividadesParaInsertar).select();
+    const { error } = await supabase.from('actividades').insert(actividadesParaInsertar);
     if (error) throw error;
-    res.status(201).json({ success: true, actividades: data });
+    
+    // --- LÓGICA DE PDF INTEGRADA (COMO EN TU VERSIÓN ANTIGUA) ---
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="reporte_${Date.now()}.pdf"`);
+    
+    const doc = new PDFDocument({ size: 'LETTER', margin: 40 });
+    doc.pipe(res);
+
+    // Aquí usamos la lógica de diseño de PDF que ya habíamos reconstruido
+    doc.fontSize(16).font('Helvetica-Bold').text('JFB Ganadería Inteligente', { align: 'right' });
+    doc.fontSize(10).font('Helvetica')
+      .text(`Rancho: ${ranchoNombre || 'Independiente'}`, { align: 'right' })
+      .text(`Médico Veterinario: ${mvzNombre || '-'}`, { align: 'right' });
+    doc.moveDown(1.5);
+    
+    const yBarra = doc.y;
+    const tituloActividad = (loteActividad[0]?.tipoLabel || 'Actividades').toUpperCase();
+    doc.rect(40, yBarra, doc.page.width - 80, 20).fill('#001F3D');
+    doc.fillColor('white').font('Helvetica-Bold').fontSize(12).text(`REPORTE DE ${tituloActividad}`, 40, yBarra + 4, { align: 'center' });
+    doc.fillColor('black').moveDown(2);
+
+    const tableTop = doc.y;
+    doc.font('Helvetica-Bold');
+    doc.text('Arete', 40, tableTop, { width: 70 });
+    doc.text('Raza', 110, tableTop, { width: 80 });
+    doc.text('Lote', 190, tableTop, { width: 40, align: 'center' });
+    doc.text('Fecha', 230, tableTop, { width: 80 });
+    doc.text('Detalles', 310, tableTop, { width: 260 });
+    doc.moveTo(40, doc.y).lineTo(doc.page.width - 40, doc.y).stroke();
+    doc.moveDown(0.5);
+
+    doc.font('Helvetica');
+    loteActividad.forEach(item => {
+        const detallesFiltrados = Object.entries(item.detalles || {}).filter(([k,v])=>v&&v!=='No'&&v!=='').map(([k,v])=>`${prettyLabel(k)}: ${v}`).join('; ');
+        const y = doc.y;
+        // ... (resto de la lógica para dibujar la tabla, que es igual a la que ya te había dado)
+        doc.text(item.areteVaca, 40, y, { width: 70 });
+        doc.text(item.raza || '-', 110, y, { width: 80 });
+        doc.text(item.loteNumero, 190, y, { width: 40, align: 'center' });
+        doc.text(formatDate(item.fecha), 230, y, { width: 80 });
+        doc.text(detallesFiltrados || 'Sin detalles', 310, y, { width: 260 });
+        doc.y += Math.max(doc.heightOfString(item.raza || '-', {width:80}), doc.heightOfString(detallesFiltrados || '-', {width:260})) + 5;
+        doc.moveTo(40, doc.y).lineTo(doc.page.width - 40, doc.y).strokeColor('#cccccc').stroke();
+        doc.moveDown(0.5);
+    });
+
+    doc.end();
+
   } catch (err) { handleServerError(res, err); }
+});
+// En server.js, agrega este nuevo endpoint
+app.get('/api/actividades/vaca/:vacaId', async (req, res) => {
+  try {
+    const { vacaId } = req.params;
+    if (!vacaId) {
+        return res.status(400).json({ message: 'Se requiere el ID de la vaca.' });
+    }
+
+    const { data, error } = await supabase
+      .from('actividades')
+      .select('*, usuarios ( nombre )') // Supabase puede traer el nombre del usuario (MVZ) automáticamente
+      .eq('id_vaca', vacaId)
+      .order('fecha_actividad', { ascending: false });
+    
+    if (error) throw error;
+    
+    // El resultado ya incluye el nombre del MVZ en un objeto "usuarios"
+    const historial = data.map(act => ({
+        ...act,
+        nombreMvz: act.usuarios ? act.usuarios.nombre : 'Desconocido'
+    }));
+
+    res.json(historial);
+
+  } catch (err) {
+    handleServerError(res, err);
+  }
 });
 
 app.get('/api/actividades/mvz/:mvzId', async (req, res) => {

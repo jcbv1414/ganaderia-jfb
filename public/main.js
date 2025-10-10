@@ -210,6 +210,19 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!ranchoId) return;
 
         try {
+            const ranchoPrincipal = currentUser?.ranchos?.[0]; 
+    if (ranchoPrincipal) {
+        const infoRanchoEl = document.getElementById('info-rancho-propietario'); // Asegúrate de tener un div con este id en tu HTML
+        if (infoRanchoEl) {
+            infoRanchoEl.innerHTML = `
+                <p class="text-sm text-gray-600">Nombre del Rancho:</p>
+                <h2 class="text-xl font-bold text-brand-green">${ranchoPrincipal.nombre}</h2>
+                <p class="mt-2 text-sm text-gray-600">Código de Acceso para tu MVZ:</p>
+                <p class="text-2xl font-bold text-gray-800 tracking-widest bg-gray-100 p-2 rounded-lg inline-block">${ranchoPrincipal.codigo}</p>
+                <p class="text-xs text-gray-500 mt-1">Comparte este código con tu veterinario para que pueda acceder a tu rancho.</p>
+            `;
+        }
+    }
             const res = await fetch(`/api/rancho/${ranchoId}/estadisticas`);
             if (!res.ok) throw new Error('No se pudieron cargar las estadísticas.');
             const stats = await res.json();
@@ -330,6 +343,53 @@ async function renderizarVistaMiMvz() {
 }
 
     async function renderizarVistaMisVacas() {
+        // En main.js, dentro de renderizarVistaMisVacas
+container.querySelectorAll('.btn-ver-historial').forEach(btn => {
+    btn.onclick = () => verHistorialVaca(btn.dataset.vacaId, btn.dataset.vacaNombre);
+});
+
+// Y agrega estas funciones de forma global o dentro del DOMContentLoaded
+const modalHistorial = document.getElementById('modal-historial-vaca');
+const btnCerrarModalHistorial = document.getElementById('btn-cerrar-modal-historial');
+if(btnCerrarModalHistorial) btnCerrarModalHistorial.onclick = () => modalHistorial.classList.add('hidden');
+
+async function verHistorialVaca(vacaId, vacaNombre) {
+    if (!modalHistorial) return;
+
+    document.getElementById('modal-historial-nombre-vaca').textContent = vacaNombre;
+    const contenidoEl = document.getElementById('modal-historial-contenido');
+    contenidoEl.innerHTML = '<p class="text-gray-500">Cargando...</p>';
+    modalHistorial.classList.remove('hidden');
+
+    try {
+        const res = await fetch(`/api/actividades/vaca/${vacaId}`);
+        if (!res.ok) throw new Error('No se pudo cargar el historial.');
+        const historial = await res.json();
+
+        if (historial.length === 0) {
+            contenidoEl.innerHTML = '<p class="text-gray-500">No hay actividades registradas para este animal.</p>';
+            return;
+        }
+
+        contenidoEl.innerHTML = historial.map(item => {
+            const detallesHtml = Object.entries(item.descripcion || {})
+                .map(([key, value]) => `<p><strong class="font-medium text-gray-600">${prettyLabel(key)}:</strong> ${value}</p>`)
+                .join('');
+
+            return `
+                <div class="bg-gray-50 p-3 rounded-lg border">
+                    <p class="font-bold text-brand-green">${item.tipo_actividad}</p>
+                    <p class="text-xs text-gray-500 mb-2">
+                        ${new Date(item.fecha_actividad).toLocaleDateString('es-MX')} por ${item.nombreMvz}
+                    </p>
+                    <div class="text-sm space-y-1">${detallesHtml}</div>
+                </div>
+            `;
+        }).join('');
+    } catch (error) {
+        contenidoEl.innerHTML = '<p class="text-red-500">Error al cargar el historial.</p>';
+    }
+}
         const ranchoId = currentUser.ranchos?.[0]?.id;
         if (!ranchoId) return;
 
@@ -359,6 +419,9 @@ async function renderizarVistaMiMvz() {
                                     <h3 class="text-lg font-bold text-gray-800">${vaca.nombre}</h3>
                                     <p class="text-sm text-gray-500">ID: #${vaca.numero_siniiga}</p>
                                 </div>
+                                <button data-vaca-id="${vaca.id}" data-vaca-nombre="${vaca.nombre}" class="btn-ver-historial mt-2 text-sm font-semibold text-brand-green">
+    Ver Historial
+</button>
                                 <button data-vaca-id="${vaca.id}" class="btn-eliminar-vaca text-red-500 hover:text-red-700"><i class="fa-solid fa-trash-can"></i></button>
                             </div>
                             <div class="text-xs text-gray-600 mt-2">
@@ -672,7 +735,7 @@ function abrirModalVaca() {
             Object.keys(PROCEDIMIENTOS).forEach((key, index) => {
                 const proc = PROCEDIMIENTOS[key];
                 const button = document.createElement('button');
-                button.className = `flex-shrink-0 w-4/5 mr-4 text-left ${colores[index % colores.length]} text-white p-4 rounded-lg font-bold flex items-center shadow-lg`;
+                button.className = `text-left ${colores[index % colores.length]} text-white p-4 rounded-lg font-bold flex items-center shadow-lg`;
                 button.dataset.actividad = key;
                 button.innerHTML = `<i class="fa-solid ${iconos[index % iconos.length]} w-6 text-center mr-3"></i>${proc.titulo}`;
                 button.onclick = () => abrirModalActividad(key);
@@ -718,36 +781,60 @@ function abrirModalVaca() {
     };
 }
 
+// En el nuevo main.js, busca la función que finaliza la actividad y reemplázala:
 async function handleFinalizarYReportar() {
     if (loteActividadActual.length === 0) return;
-    const btn = document.getElementById('btn-finalizar-actividad-modal');
-    if (btn) {
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Guardando...';
-    }
+    
+    // Prepara el spinner y deshabilita el botón
+    const btn = document.getElementById('btn-finalizar-actividad-modal'); // Asegúrate que el ID del botón sea correcto
+    if (btn) { btn.disabled = true; btn.textContent = 'Procesando...'; }
 
     try {
-            const payload = {
-                mvzId: currentUser?.id, ranchoId: currentRancho?.id || null,
-                ranchoNombre: currentRancho?.id ? currentRancho.nombre : document.getElementById('rancho-independiente-nombre')?.value?.trim(),
-                loteActividad: loteActividadActual
-            };
-            const resSave = await fetch('/api/actividades', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-            if (!resSave.ok) throw new Error('No se pudo guardar la actividad.');
-            loteActividadActual = [];
-            const loteInfoEl = document.getElementById('lote-info');
+        const payload = {
+            mvzId: currentUser?.id,
+            ranchoId: currentRancho?.id || null,
+            loteActividad: loteActividadActual,
+            // Datos extra para el encabezado del PDF
+            mvzNombre: currentUser?.nombre || '',
+            ranchoNombre: currentRancho?.nombre || document.getElementById('rancho-independiente-nombre')?.value?.trim() || 'Independiente'
+        };
+
+        const res = await fetch('/api/actividades', { // Apuntamos al endpoint modificado
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+            // Si el servidor devuelve un error, será en formato JSON
+            const errData = await res.json();
+            throw new Error(errData.message || 'Error en el servidor.');
+        }
+
+        // --- LÓGICA PARA DESCARGAR EL PDF (DE TU VERSIÓN ANTIGUA) ---
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `reporte_${loteActividadActual[0].tipoLabel}_${new Date().toISOString().slice(0,10)}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+        
+        // Limpiamos el lote y la UI
+        loteActividadActual = [];
+        const loteInfoEl = document.getElementById('lote-info');
             if (loteInfoEl) loteInfoEl.textContent = `0 vacas`;
             renderizarHistorialMVZ();
-        } catch (err) {
-            console.error("Error al finalizar:", err);
-            alert('Hubo un error al guardar la actividad.');
-        } finally {
-            if (btn) {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fa-solid fa-check-circle mr-2"></i>Finalizar Actividad';
-            }
-        }
+
+    } catch (err) {
+        console.error("Error al finalizar y generar PDF:", err);
+        alert(err.message || 'Hubo un error inesperado.');
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Finalizar Actividad'; }
     }
+}
 
     async function renderizarHistorialMVZ() {
         const historialContainer = document.getElementById('historial-actividades-mvz');
@@ -766,7 +853,7 @@ async function handleFinalizarYReportar() {
                 historialContainer.innerHTML = sesiones.map(sesion => `
                     <div class="bg-gray-100 p-3 rounded-lg flex items-center justify-between">
                         <div class="flex items-center">
-                            <input type="checkbox" data-sesion-id="${sesion.id_usuario}" class="h-5 w-5 rounded border-gray-300 mr-3">
+                            <input type="checkbox" data-sesion-id="${sesion.sesion_id}" class="h-5 w-5 rounded border-gray-300 mr-3">
                             <div>
                                 <p class="font-semibold text-gray-800">${sesion.tipo_actividad} en <em>${sesion.rancho_nombre}</em></p>
                                 <p class="text-xs text-gray-500">${sesion.conteo} animales - ${new Date(sesion.fecha).toLocaleDateString('es-MX', {day: 'numeric', month: 'long'})}</p>

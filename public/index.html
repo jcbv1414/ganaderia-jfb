@@ -40,8 +40,27 @@
         .progress-ring-percent { position: relative; font-size: 0.9rem; font-weight: 600; color: #166534; }
         .modal-content { max-height: 80vh; display: flex; flex-direction: column; }
         .modal-main { overflow-y: auto; }
-    </style>
-</head>
+        
+    #acciones-rapidas-container {
+      display: grid;
+      grid-auto-flow: column;
+      gap: 16px;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      padding: 16px;
+      scrollbar-width: none;
+    }
+
+    #acciones-rapidas-container::-webkit-scrollbar {
+      display: none;
+    }
+
+    #acciones-rapidas-container > button {
+      scroll-snap-align: center;
+      width: 75vw;
+    }
+</style>
+          </head>
 <body>
     <main id="app-content" class="relative z-10"></main>
     <div id="nav-container" class="hidden">
@@ -313,6 +332,17 @@
             </footer>
         </div>
     </div>
+    <div id="modal-historial-vaca" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg modal-content">
+        <header class="p-4 border-b border-gray-200 flex justify-between items-center">
+            <h2 class="text-lg font-bold">Historial de <span id="modal-historial-nombre-vaca"></span></h2>
+            <button id="btn-cerrar-modal-historial" class="text-2xl text-gray-500">&times;</button>
+        </header>
+        <main id="modal-historial-contenido" class="p-6 modal-main space-y-3">
+            <p class="text-gray-500">Cargando historial...</p>
+        </main>
+    </div>
+</div>
 
     <script src="main.js"></script>
 </body>
