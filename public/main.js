@@ -756,7 +756,7 @@ async function handleFinalizarYReportar() {
                 historialContainer.innerHTML = sesiones.map(sesion => `
                     <div class="bg-gray-100 p-3 rounded-lg flex items-center justify-between">
                         <div class="flex items-center">
-                            <input type="checkbox" data-sesion-id="${sesion.sesion_id}" class="h-5 w-5 rounded border-gray-300 mr-3">
+                            <input type="checkbox" data-sesion-id="${sesion.id_usuario}" class="h-5 w-5 rounded border-gray-300 mr-3">
                             <div>
                                 <p class="font-semibold text-gray-800">${sesion.tipo_actividad} en <em>${sesion.rancho_nombre}</em></p>
                                 <p class="text-xs text-gray-500">${sesion.conteo} animales - ${new Date(sesion.fecha).toLocaleDateString('es-MX', {day: 'numeric', month: 'long'})}</p>
@@ -792,7 +792,7 @@ async function handleFinalizarYReportar() {
             const res = await fetch('/api/historial/pdf', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sesion_ids: sesionesSeleccionadas, mvzNombre: currentUser?.nombre || '' })
+                body: JSON.stringify({ id_usuario: sesionesSeleccionadas, mvzNombre: currentUser?.nombre || '' })
             });
 
             if (!res.ok) {
