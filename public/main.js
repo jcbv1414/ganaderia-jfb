@@ -792,7 +792,7 @@ async function handleFinalizarYReportar() {
             const res = await fetch('/api/historial/pdf', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id_usuario: sesionesSeleccionadas, mvzNombre: currentUser?.nombre || '' })
+                body: JSON.stringify({ sesion_ids: sesionesSeleccionadas, mvzNombre: currentUser?.nombre || '' })
             });
 
             if (!res.ok) {
