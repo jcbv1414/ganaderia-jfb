@@ -255,7 +255,8 @@ app.post('/api/historial/pdf', async (req, res) => {
       actividades = actividadesBody;
     } else if (Array.isArray(sesion_ids) && sesion_ids.length) {
       // Buscamos actividades por sesion (campo sesion_id) - depende del esquema
-      const { data, error } = await supabase.from('actividades').select('*').in('sesion_id', sesion_ids).order('fecha_actividad', { ascending: false });
+     // LÍNEA CORREGIDA
+const { data, error } = await supabase.from('actividades').select('*').in('id_usuario', sesion_ids).order('fecha_actividad', { ascending: false });
       if (error) throw error;
       actividades = data || [];
     } else {

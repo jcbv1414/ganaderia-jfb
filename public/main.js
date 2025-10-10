@@ -651,7 +651,7 @@ function abrirModalVaca() {
         const esIndependiente = !currentRancho?.id;
         document.getElementById('rancho-independiente-input-container')?.classList.toggle('hidden', !esIndependiente);
         document.getElementById('rancho-nombre-activo').textContent = esIndependiente ? 'Trabajo Independiente' : (currentRancho?.nombre || '');
-        document.getElementById('rancho-logo').src = currentRancho?.logo_url || 'logo.png';
+        document.getElementById('rancho-logo').src = currentRancho?.logo_url || 'assets/logo.png';
         
         const accionesContainer = document.getElementById('acciones-rapidas-container');
         if (accionesContainer) {
