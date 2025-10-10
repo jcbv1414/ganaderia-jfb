@@ -396,7 +396,7 @@ function abrirModalVaca() {
             let years = today.getFullYear() - birthDate.getFullYear();
             let months = today.getMonth() - birthDate.getMonth();
             if (months < 0 || (months === 0 && today.getDate() < birthDate.getDate())) {
-                years--;
+                years--; 
                 months = (months + 12) % 12;
             }
             edadInput.value = `${years} años, ${months} meses`;
@@ -409,7 +409,8 @@ function abrirModalVaca() {
     if (sexoSelector && sexoInput) {
         sexoSelector.querySelectorAll('button').forEach(btn => {
             btn.onclick = () => {
-                sexoSelector.querySelector('.bg-brand-green')?.classList.remove('bg-brand-green', 'text-white');
+                const prev = sexoSelector.querySelector('.bg-brand-green');
+                if (prev) prev.classList.remove('bg-brand-green', 'text-white');
                 btn.classList.add('bg-brand-green', 'text-white');
                 sexoInput.value = btn.dataset.value;
             };
@@ -673,34 +674,49 @@ function abrirModalVaca() {
         
     }
 
-    function abrirModalActividad(tipo) {
-        const modal = document.getElementById('modal-actividad');
-        const form = document.getElementById('form-actividad-vaca');
-        if (!modal || !form) return;
-        form.reset();
-        modal.classList.remove('hidden');
-        document.getElementById('modal-actividad-titulo').textContent = PROCEDIMIENTOS[tipo].titulo;
-        
-        document.getElementById('actividad-lote').innerHTML = [1, 2, 3, 4, 5].map(l => `<option value="${l}">Lote ${l}</option>`).join('');
-        
-        renderizarCamposProcedimiento(tipo);
-        document.getElementById('btn-cerrar-modal-actividad')?.onclick = () => modal.classList.add('hidden');
-        document.getElementById('btn-guardar-siguiente')?.onclick = () => handleAgregarVacaAlLote(tipo, true);
-        document.getElementById('btn-finalizar-actividad-modal')?.onclick = async () => {
-            handleAgregarVacaAlLote(tipo, false);
-            await handleFinalizarYReportar();
-            modal.classList.add('hidden');
-        };
+   function abrirModalActividad(tipo) {
+    const modal = document.getElementById('modal-actividad');
+    const form = document.getElementById('form-actividad-vaca');
+    if (!modal || !form) return;
+    form.reset();
+    modal.classList.remove('hidden');
+
+    const tituloEl = document.getElementById('modal-actividad-titulo');
+    if (tituloEl && PROCEDIMIENTOS[tipo]) {
+        tituloEl.textContent = PROCEDIMIENTOS[tipo].titulo;
     }
 
-    async function handleFinalizarYReportar() {
-        if (loteActividadActual.length === 0) return;
-        const btn = document.getElementById('btn-finalizar-actividad-modal');
-        if (btn) {
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Guardando...';
-        }
-        try {
+    const actividadLoteEl = document.getElementById('actividad-lote');
+    if (actividadLoteEl) {
+        actividadLoteEl.innerHTML = [1, 2, 3, 4, 5].map(l => `<option value="${l}">Lote ${l}</option>`).join('');
+    }
+
+    renderizarCamposProcedimiento(tipo);
+
+    // CORRECCIÓN: no usar optional-chaining en el lado izquierdo de asignación
+    const btnCerrar = document.getElementById('btn-cerrar-modal-actividad');
+    if (btnCerrar) btnCerrar.onclick = () => modal.classList.add('hidden');
+
+    const btnGuardar = document.getElementById('btn-guardar-siguiente');
+    if (btnGuardar) btnGuardar.onclick = () => handleAgregarVacaAlLote(tipo, true);
+
+    const btnFinalizar = document.getElementById('btn-finalizar-actividad-modal');
+    if (btnFinalizar) btnFinalizar.onclick = async () => {
+        handleAgregarVacaAlLote(tipo, false);
+        await handleFinalizarYReportar();
+        modal.classList.add('hidden');
+    };
+}
+
+async function handleFinalizarYReportar() {
+    if (loteActividadActual.length === 0) return;
+    const btn = document.getElementById('btn-finalizar-actividad-modal');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Guardando...';
+    }
+
+    try {
             const payload = {
                 mvzId: currentUser?.id, ranchoId: currentRancho?.id || null,
                 ranchoNombre: currentRancho?.id ? currentRancho.nombre : document.getElementById('rancho-independiente-nombre')?.value?.trim(),
@@ -709,7 +725,8 @@ function abrirModalVaca() {
             const resSave = await fetch('/api/actividades', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             if (!resSave.ok) throw new Error('No se pudo guardar la actividad.');
             loteActividadActual = [];
-            document.getElementById('lote-info').textContent = `0 vacas`;
+            const loteInfoEl = document.getElementById('lote-info');
+            if (loteInfoEl) loteInfoEl.textContent = `0 vacas`;
             renderizarHistorialMVZ();
         } catch (err) {
             console.error("Error al finalizar:", err);
@@ -754,7 +771,7 @@ function abrirModalVaca() {
             if (btnPdf) {
                 btnPdf.replaceWith(btnPdf.cloneNode(true)); // remove all listeners simply
                 const nuevoBtnPdf = document.getElementById('btn-generar-pdf-historial');
-                nuevoBtnPdf.addEventListener('click', handleGenerarPdfDeHistorial);
+                if (nuevoBtnPdf) nuevoBtnPdf.addEventListener('click', handleGenerarPdfDeHistorial);
             }
 
         } catch (error) {
@@ -829,7 +846,7 @@ function abrirModalVaca() {
             if (datalist) datalist.innerHTML = '';
             vacasIndex.clear();
             (vacas || []).forEach(v => {
-                datalist?.insertAdjacentHTML('beforeend', `<option value="${v.numero_siniiga}">`);
+                if (datalist) datalist.insertAdjacentHTML('beforeend', `<option value="${v.numero_siniiga}">`);
                 vacasIndex.set(String(v.numero_siniiga).trim(), { id: v.id, nombre: v.nombre, raza: v.raza || '' });
             });
         } catch (err) { console.error("Error cargando vacas para MVZ:", err); }
@@ -857,7 +874,7 @@ function abrirModalVaca() {
         
         loteActividadActual.push({
             areteVaca: arete,
-            raza: vacasIndex.get(arete)?.raza || 'N/A',
+            raza: (vacasIndex.get(arete) && vacasIndex.get(arete).raza) || 'N/A',
             loteNumero: loteNumero,
             tipo: tipoActividad,
             tipoLabel: PROCEDIMIENTOS[tipoActividad].titulo,
@@ -866,7 +883,8 @@ function abrirModalVaca() {
         });
         
         mostrarMensaje('mensaje-vaca', `Vaca ${arete} agregada.`, false);
-        document.getElementById('lote-info').textContent = `${loteActividadActual.length} vacas (Lote ${loteNumero})`;
+        const loteInfoEl = document.getElementById('lote-info');
+        if (loteInfoEl) loteInfoEl.textContent = `${loteActividadActual.length} vacas (Lote ${loteNumero})`;
         
         if (limpiarForm && form) {
             // Limpia todo menos el lote
@@ -874,7 +892,7 @@ function abrirModalVaca() {
                  if(el.type === 'checkbox') el.checked = false;
                  else el.value = '';
             });
-            areteInput?.focus();
+            if (areteInput) areteInput.focus();
         }
     }
 
@@ -886,7 +904,7 @@ function abrirModalVaca() {
             try { currentUser = JSON.parse(savedUser); } catch(e){}
             iniciarSesion();
         } else {
-            navContainer?.classList.add('hidden');
+            if (navContainer) navContainer.classList.add('hidden');
             navigateTo('login');
         }
     }
