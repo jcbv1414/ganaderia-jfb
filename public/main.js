@@ -751,7 +751,13 @@ function abrirModalVaca() {
     const modal = document.getElementById('modal-actividad');
     const form = document.getElementById('form-actividad-vaca');
     if (!modal || !form) return;
+    
     form.reset();
+
+    form.querySelectorAll('select').forEach(select => {
+        select.selectedIndex = 0;
+    });
+
     modal.classList.remove('hidden');
 
     const tituloEl = document.getElementById('modal-actividad-titulo');
@@ -851,9 +857,9 @@ async function handleFinalizarYReportar() {
                 historialContainer.innerHTML = '<p class="text-gray-500 text-center">No hay actividades recientes.</p>';
             } else {
                 historialContainer.innerHTML = sesiones.map(sesion => {
-    const ranchoNombre = sesion.rancho_nombre || 'Rancho no especificado';
+    const ranchoNombre = sesion.rancho_nombre || 'No especificado';
     const conteoAnimales = sesion.conteo || 0;
-    const fecha = sesion.fecha ? new Date(sesion.fecha).toLocaleDateString('es-MX', {day: 'numeric', month: 'long'}) : 'Fecha inválida';
+    const fecha = sesion.fecha ? new Date(sesion.fecha).toLocaleDateString('es-MX', {day: 'numeric', month: 'long'}) : 'Inválida';
 
     return `
       <div class="bg-gray-100 p-3 rounded-lg flex items-center justify-between">
@@ -864,6 +870,9 @@ async function handleFinalizarYReportar() {
                   <p class="text-xs text-gray-500">${conteoAnimales} animales - ${fecha}</p>
               </div>
           </div>
+          <button data-sesion-id="${sesion.sesion_id}" class="btn-eliminar-sesion text-red-400 hover:text-red-600 px-2">
+              <i class="fa-solid fa-trash-can"></i>
+          </button>
       </div>
     `;
 }).join('');
@@ -937,7 +946,22 @@ async function handleFinalizarYReportar() {
                 return `<div><label class="block text-sm font-medium text-gray-700">${campo.label}</label><input type="text" name="${campo.id}" placeholder="${campo.placeholder || ''}" class="mt-1 w-full p-2 border border-gray-300 rounded-lg"></div>`;
             }
         }).join('');
-    }
+        // --- LÓGICA AGREGADA ---
+    // Añade los listeners para los campos condicionales
+    proc.campos.forEach(campo => {
+        if (campo.revela) {
+            const triggerEl = container.querySelector(`[name="${campo.id}"]`);
+            const targetEl = container.querySelector(`[name="${campo.revela}"]`).closest('div');
+
+            if (triggerEl && targetEl) {
+                triggerEl.addEventListener('change', () => {
+                    const show = triggerEl.value === 'Sí';
+                    targetEl.classList.toggle('hidden', !show);
+                });
+            }
+        }
+    });
+}
 
     async function cargarVacasParaMVZ() {
         if (!currentRancho || !currentRancho.id) return;

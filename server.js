@@ -38,7 +38,8 @@ const SALT_ROUNDS = Number(process.env.SALT_ROUNDS) || 10;
 const prettyLabel = (k) => String(k || '').replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
 const formatDate = (dateString) => {
   if (!dateString) return '-';
-  const d = new Date(dateString);
+  // Forzar la interpretación de la fecha como UTC para evitar desplazamientos
+  const d = new Date(dateString + 'T00:00:00Z'); 
   const day = String(d.getUTCDate()).padStart(2, '0');
   const month = String(d.getUTCMonth() + 1).padStart(2, '0');
   const year = d.getUTCFullYear();
@@ -215,7 +216,7 @@ app.post('/api/actividades', async (req, res) => {
         id_vaca: item.vacaId || null, // Asumimos que el front puede enviar el id de la vaca
         id_usuario: mvzId,
         sesion_id: sesionId,
-        extra_data: { arete: item.areteVaca, raza: item.raza, lote: item.loteNumero, rancho_id: ranchoId }
+        extra_data: { arete: item.areteVaca, raza: item.raza, lote: item.loteNumero, rancho_id: ranchoId, rancho_nombre: ranchoNombre }
     }));
 
     const { error } = await supabase.from('actividades').insert(actividadesParaInsertar);
@@ -347,7 +348,7 @@ app.post('/api/historial/pdf', async (req, res) => {
     // --- CORRECCIÓN DEL LOGO ---
     const logoPath = path.join(__dirname, 'public', 'assets', 'logo.png');
     if (fs.existsSync(logoPath)) {
-        doc.image(logoPath, 40, 30, { width: 90 });
+        doc.image(logoPath, 40, 25, { width: 90 });
     } else {
         console.warn('ADVERTENCIA: No se encontró el logo en la ruta:', logoPath);
     }
