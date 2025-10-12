@@ -850,17 +850,23 @@ async function handleFinalizarYReportar() {
             if (!sesiones || sesiones.length === 0) {
                 historialContainer.innerHTML = '<p class="text-gray-500 text-center">No hay actividades recientes.</p>';
             } else {
-                historialContainer.innerHTML = sesiones.map(sesion => `
-                    <div class="bg-gray-100 p-3 rounded-lg flex items-center justify-between">
-                        <div class="flex items-center">
-                            <input type="checkbox" data-sesion-id="${sesion.sesion_id}" class="h-5 w-5 rounded border-gray-300 mr-3">
-                            <div>
-                                <p class="font-semibold text-gray-800">${sesion.tipo_actividad} en <em>${sesion.rancho_nombre}</em></p>
-                                <p class="text-xs text-gray-500">${sesion.conteo} animales - ${new Date(sesion.fecha).toLocaleDateString('es-MX', {day: 'numeric', month: 'long'})}</p>
-                            </div>
-                        </div>
-                    </div>
-                `).join('');
+                historialContainer.innerHTML = sesiones.map(sesion => {
+    const ranchoNombre = sesion.rancho_nombre || 'Rancho no especificado';
+    const conteoAnimales = sesion.conteo || 0;
+    const fecha = sesion.fecha ? new Date(sesion.fecha).toLocaleDateString('es-MX', {day: 'numeric', month: 'long'}) : 'Fecha inválida';
+
+    return `
+      <div class="bg-gray-100 p-3 rounded-lg flex items-center justify-between">
+          <div class="flex items-center">
+              <input type="checkbox" data-sesion-id="${sesion.sesion_id}" class="h-5 w-5 rounded border-gray-300 mr-3">
+              <div>
+                  <p class="font-semibold text-gray-800">${sesion.tipo_actividad} en <em>${ranchoNombre}</em></p>
+                  <p class="text-xs text-gray-500">${conteoAnimales} animales - ${fecha}</p>
+              </div>
+          </div>
+      </div>
+    `;
+}).join('');
             }
 
             // botón PDF: (quitamos listeners previos y añadimos uno nuevo)

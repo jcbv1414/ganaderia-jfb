@@ -42,23 +42,20 @@
         .modal-main { overflow-y: auto; }
         
     #acciones-rapidas-container {
-      display: grid;
-      grid-auto-flow: column;
-      gap: 16px;
-      overflow-x: auto;
-      scroll-snap-type: x mandatory;
-      padding: 16px;
-      scrollbar-width: none;
-    }
+  display: block; /* Hacemos que sea un contenedor normal */
+  max-height: 280px; /* Altura máxima para mostrar aprox. 3-4 items */
+  overflow-y: auto; /* Habilita el scroll VERTICAL cuando hay más items */
+  padding-right: 8px; /* Espacio para la barra de scroll */
+}
 
     #acciones-rapidas-container::-webkit-scrollbar {
       display: none;
     }
 
     #acciones-rapidas-container > button {
-      scroll-snap-align: center;
-      width: 75vw;
-    }
+  width: 100%; /* Cada botón ocupa todo el ancho */
+  margin-bottom: 12px; /* Espacio entre los botones */
+}
 </style>
           </head>
 <body>
