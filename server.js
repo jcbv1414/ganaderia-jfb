@@ -272,6 +272,27 @@ app.post('/api/actividades', async (req, res) => {
   } catch (err) { handleServerError(res, err); }
 });
 // En server.js, agrega este nuevo endpoint
+app.delete('/api/sesiones/:sesionId', async (req, res) => {
+  try {
+    const { sesionId } = req.params;
+    if (!sesionId) {
+      return res.status(400).json({ message: 'Se requiere el ID de la sesión.' });
+    }
+
+    const { error } = await supabase
+      .from('actividades')
+      .delete()
+      .eq('sesion_id', sesionId);
+    
+    if (error) throw error;
+
+    res.json({ success: true, message: 'Sesión eliminada correctamente.' });
+
+  } catch (err) {
+    handleServerError(res, err);
+  }
+});
+// En server.js, agrega este nuevo endpoint
 app.get('/api/actividades/vaca/:vacaId', async (req, res) => {
   try {
     const { vacaId } = req.params;

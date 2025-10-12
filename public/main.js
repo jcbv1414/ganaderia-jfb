@@ -843,19 +843,21 @@ async function handleFinalizarYReportar() {
 }
 
     async function renderizarHistorialMVZ() {
-        const historialContainer = document.getElementById('historial-actividades-mvz');
-        if (!historialContainer) return;
-        historialContainer.innerHTML = '<p class="text-gray-500 text-center">Cargando historial...</p>';
+    const historialContainer = document.getElementById('historial-actividades-mvz');
+    if (!historialContainer) return;
+    historialContainer.innerHTML = '<p class="text-gray-500 text-center">Cargando historial...</p>';
 
-        // aseguramos que el botón de PDF tenga el listener correcto después de renderizar el historial
-        try {
-            const res = await fetch(`/api/actividades/mvz/${currentUser?.id || ''}`);
-            if (!res.ok) throw new Error('No se pudo cargar el historial.');
-            const sesiones = await res.json();
+    try {
+        const res = await fetch(`/api/actividades/mvz/${currentUser?.id || ''}`);
+        if (!res.ok) throw new Error('No se pudo cargar el historial.');
+        const sesiones = await res.json();
 
-            if (!sesiones || sesiones.length === 0) {
-                historialContainer.innerHTML = '<p class="text-gray-500 text-center">No hay actividades recientes.</p>';
-            } else {
+        // Filtramos las sesiones que no tengan una fecha válida
+        const sesionesValidas = sesiones.filter(s => s.fecha);
+
+        if (!sesionesValidas || sesionesValidas.length === 0) {
+            historialContainer.innerHTML = '<p class="text-gray-500 text-center">No hay actividades recientes.</p>';
+        } else {
                 historialContainer.innerHTML = sesiones.map(sesion => {
     const ranchoNombre = sesion.rancho_nombre || 'No especificado';
     const conteoAnimales = sesion.conteo || 0;
@@ -877,7 +879,7 @@ async function handleFinalizarYReportar() {
     `;
 }).join('');
             }
-
+            
             // botón PDF: (quitamos listeners previos y añadimos uno nuevo)
             const btnPdf = document.getElementById('btn-generar-pdf-historial');
             if (btnPdf) {
@@ -885,6 +887,26 @@ async function handleFinalizarYReportar() {
                 const nuevoBtnPdf = document.getElementById('btn-generar-pdf-historial');
                 if (nuevoBtnPdf) nuevoBtnPdf.addEventListener('click', handleGenerarPdfDeHistorial);
             }
+            // --- LÓGICA AGREGADA PARA EL BOTÓN DE BORRAR ---
+        historialContainer.querySelectorAll('.btn-eliminar-sesion').forEach(button => {
+            button.addEventListener('click', async (e) => {
+                const sesionId = e.currentTarget.dataset.sesionId;
+                if (!confirm('¿Estás seguro de que quieres eliminar esta sesión y todas sus actividades? Esta acción no se puede deshacer.')) {
+                    return;
+                }
+                
+                try {
+                    const deleteRes = await fetch(`/api/sesiones/${sesionId}`, { method: 'DELETE' });
+                    if (!deleteRes.ok) throw new Error('No se pudo eliminar la sesión.');
+                    
+                    // Si se borra con éxito, recargamos la lista del historial
+                    renderizarHistorialMVZ();
+
+                } catch (error) {
+                    alert(error.message || 'Error al eliminar la sesión.');
+                }
+            });
+        });
 
         } catch (error) {
             historialContainer.innerHTML = '<p class="text-red-500 text-center">Error al cargar historial.</p>';
