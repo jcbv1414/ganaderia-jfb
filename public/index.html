@@ -281,6 +281,9 @@
                             </div>
                         </div>
                         <button id="btn-fijar-rancho" class="text-2xl text-gray-400 hover:text-brand-green"><i class="fa-solid fa-thumbtack"></i></button>
+                        <button id="btn-logout-mvz" title="Salir" class="text-2xl text-gray-400 hover:text-red-500 ml-4">
+    <i class="fa-solid fa-right-from-bracket"></i>
+</button>
                     </div>
                 </header>
                 <div id="rancho-independiente-input-container" class="hidden mb-6">
@@ -315,13 +318,15 @@
             <main class="p-6 modal-main">
                 <form id="form-actividad-vaca">
                     <div class="grid grid-cols-2 gap-4 mb-4">
-                        <div><label for="actividad-lote" class="block text-sm font-medium text-gray-700 mb-1">Lote</label><select id="actividad-lote" class="w-full p-2 border border-gray-300 rounded-lg bg-white"></select></div>
-                        <div><label for="actividad-arete" class="block text-sm font-medium text-gray-700 mb-1">Arete</label><input type="text" id="actividad-arete" class="w-full p-2 border border-gray-300 rounded-lg" list="lista-aretes-autocompletar" required></div>
-                        <datalist id="lista-aretes-autocompletar"></datalist>
-                    </div>
-                    <div class="grid grid-cols-2 gap-4 mb-4">
-    <div><label ...>Lote</label>...</div>
-    <div><label ...>Arete</label>...</div>
+    <div>
+        <label for="actividad-lote" class="block text-sm font-medium text-gray-700 mb-1">Lote</label>
+        <select id="actividad-lote" class="w-full p-2 border border-gray-300 rounded-lg bg-white"></select>
+    </div>
+    <div>
+        <label for="actividad-arete" class="block text-sm font-medium text-gray-700 mb-1">Arete</label>
+        <input type="text" id="actividad-arete" class="w-full p-2 border border-gray-300 rounded-lg" list="lista-aretes-autocompletar" required>
+        <datalist id="lista-aretes-autocompletar"></datalist>
+    </div>
 </div>
 <div class="mb-4">
     <label for="actividad-raza" class="block text-sm font-medium text-gray-700 mb-1">Raza (opcional)</label>

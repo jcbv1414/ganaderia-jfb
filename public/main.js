@@ -92,6 +92,13 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => { if (el) el.textContent = ''; }, 4000);
     };
 
+    function logout() {
+    currentUser = null;
+    currentRancho = null;
+    sessionStorage.clear(); // Limpia toda la sesión
+    navigateTo('login');
+    navContainer.classList.add('hidden'); // Oculta la barra de navegación
+}
   // =================================================================
     // NAVEGACIÓN Y RENDERIZADO DE VISTAS
     // =================================================================
@@ -744,7 +751,9 @@ function abrirModalVaca() {
         }
         
         renderizarHistorialMVZ();
-        
+         // Conecta el nuevo botón de logout
+    const btnLogout = document.getElementById('btn-logout-mvz');
+    if (btnLogout) btnLogout.onclick = logout;
     }
 
    function abrirModalActividad(tipo) {
@@ -858,7 +867,7 @@ async function handleFinalizarYReportar() {
         if (!sesionesValidas || sesionesValidas.length === 0) {
             historialContainer.innerHTML = '<p class="text-gray-500 text-center">No hay actividades recientes.</p>';
         } else {
-                historialContainer.innerHTML = sesiones.map(sesion => {
+                historialContainer.innerHTML = sesionesValidas.map(sesion => {
     const ranchoNombre = sesion.rancho_nombre || 'No especificado';
     const conteoAnimales = sesion.conteo || 0;
     const fecha = sesion.fecha ? new Date(sesion.fecha).toLocaleDateString('es-MX', {day: 'numeric', month: 'long'}) : 'Inválida';
@@ -1056,6 +1065,7 @@ async function handleFinalizarYReportar() {
             if (navContainer) navContainer.classList.add('hidden');
             navigateTo('login');
         }
+        attachRazaAutocomplete('actividad-raza');
     }
     
     initApp();

@@ -367,12 +367,13 @@ app.post('/api/historial/pdf', async (req, res) => {
     doc.pipe(res);
 
     // --- CORRECCIÓN DEL LOGO ---
+    try {
     const logoPath = path.join(__dirname, 'public', 'assets', 'logo.png');
-    if (fs.existsSync(logoPath)) {
-        doc.image(logoPath, 40, 25, { width: 90 });
-    } else {
-        console.warn('ADVERTENCIA: No se encontró el logo en la ruta:', logoPath);
-    }
+    const logoBuffer = fs.readFileSync(logoPath);
+    doc.image(logoBuffer, 40, 25, { width: 90 });
+} catch (logoErr) {
+    console.warn('ADVERTENCIA: No se pudo cargar el logo para el PDF.', logoErr.message);
+}
     
     doc.fontSize(16).font('Helvetica-Bold').text('JFB Ganadería Inteligente', { align: 'right' });
     doc.fontSize(10).font('Helvetica')
