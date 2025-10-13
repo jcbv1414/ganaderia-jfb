@@ -670,71 +670,81 @@ function abrirModalVaca() {
     }
 
     // LÓGICA DEL MVZ (mantengo la estructura; eliminé duplicados de handleValidarRancho)
-    async function cargarDashboardMVZ() {
-    document.getElementById('dash-nombre-mvz').textContent = currentUser?.nombre?.split(' ')[0] || '';
-    document.getElementById('dash-fecha-actual-mvz').textContent = new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
+   async function cargarDashboardMVZ() {
+    // Verificamos si los elementos del encabezado existen antes de modificarlos
+    const nombreEl = document.getElementById('dash-nombre-mvz');
+    if (nombreEl) nombreEl.textContent = currentUser?.nombre?.split(' ')[0] || '';
+    
+    const fechaEl = document.getElementById('dash-fecha-actual-mvz');
+    if (fechaEl) fechaEl.textContent = new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
 
     try {
         // Cargar datos del resumen diario desde el servidor
         const resDash = await fetch(`/api/dashboard/mvz/${currentUser.id}`);
-        const dataDash = await resDash.json();
         if (resDash.ok) {
-            document.getElementById('resumen-visitas').textContent = dataDash.actividadesHoy || 0;
-            document.getElementById('detalle-visitas').textContent = "Actividades de Hoy";
-            document.getElementById('resumen-alertas-mvz').textContent = dataDash.alertas || 0;
-            document.getElementById('detalle-alertas').textContent = "Alertas Críticas";
+            const dataDash = await resDash.json();
+            const resumenVisitasEl = document.getElementById('resumen-visitas');
+            const detalleVisitasEl = document.getElementById('detalle-visitas');
+            const resumenAlertasEl = document.getElementById('resumen-alertas-mvz');
+            const detalleAlertasEl = document.getElementById('detalle-alertas');
+
+            if (resumenVisitasEl) resumenVisitasEl.textContent = dataDash.actividadesHoy || 0;
+            if (detalleVisitasEl) detalleVisitasEl.textContent = "Actividades de Hoy";
+            if (resumenAlertasEl) resumenAlertasEl.textContent = dataDash.alertas || 0;
+            if (detalleAlertasEl) detalleAlertasEl.textContent = "Alertas Críticas";
         }
 
-        // Cargar próximos eventos desde el servidor
+        // Cargar eventos del calendario
         const resEventos = await fetch(`/api/eventos/mvz/${currentUser.id}`);
-        const eventos = (await resEventos.json()).filter(e => !e.completado); // Solo muestra eventos no completados
+        const eventos = (await resEventos.json()).filter(e => !e.completado);
+        
         const eventosContainer = document.getElementById('lista-eventos');
         const pendientesContainer = document.getElementById('lista-pendientes');
 
-        if (eventosContainer) {
-            // --- INICIO DE LA CORRECCIÓN ---
-            // Lógica más precisa para determinar qué es "hoy"
-            const hoy = new Date();
-            const hoyAnio = hoy.getFullYear();
-            const hoyMes = hoy.getMonth();
-            const hoyDia = hoy.getDate();
+        // Lógica precisa para determinar qué es "hoy"
+        const hoy = new Date();
+        const hoyAnio = hoy.getFullYear();
+        const hoyMes = hoy.getMonth();
+        const hoyDia = hoy.getDate();
 
-            const eventosHoy = eventos.filter(e => {
-                const fechaEvento = new Date(e.fecha_evento);
-                return fechaEvento.getFullYear() === hoyAnio &&
-                       fechaEvento.getMonth() === hoyMes &&
-                       fechaEvento.getDate() === hoyDia;
-            });
+        const eventosHoy = eventos.filter(e => {
+            const fechaEvento = new Date(e.fecha_evento);
+            return fechaEvento.getFullYear() === hoyAnio &&
+                   fechaEvento.getMonth() === hoyMes &&
+                   fechaEvento.getDate() === hoyDia;
+        });
 
-            const eventosProximos = eventos.filter(e => !eventosHoy.includes(e));
-            // --- FIN DE LA CORRECCIÓN ---
+        const eventosProximos = eventos.filter(e => !eventosHoy.includes(e));
 
-            // Llenar "Pendientes Hoy" con los botones correctos
-            if (pendientesContainer) {
-                 if (eventosHoy.length > 0) {
-                    pendientesContainer.innerHTML = eventosHoy.map((e, i) => {
-                         const rancho = e.nombre_rancho_texto || e.ranchos?.nombre || 'General';
-                        return `
-                        <div class="bg-white p-3 rounded-lg shadow-sm mb-3">
-                            <p><strong>${i+1}.</strong> ${e.titulo} <em class="text-gray-500">(${rancho})</em></p>
-                            <div class="flex justify-end space-x-2 mt-2">
-                                <button onclick="handleCancelarEvento(${e.id})" class="text-xs text-red-600 font-semibold px-2 py-1">Cancelar</button>
-                                <button onclick="handleCompletarEvento(${e.id})" class="text-xs bg-green-600 text-white font-semibold px-3 py-1 rounded-full">Completar</button>
-                            </div>
-                        </div>`;
-                    }).join('');
-                } else {
-                     pendientesContainer.innerHTML = '<div class="bg-white p-4 rounded-xl shadow-md"><p class="text-sm text-gray-500">No hay pendientes para hoy.</p></div>';
-                }
+        // Llenar "Pendientes Hoy" solo si el contenedor existe
+        if (pendientesContainer) {
+             if (eventosHoy.length > 0) {
+                pendientesContainer.innerHTML = eventosHoy.map((e, i) => {
+                     const rancho = e.nombre_rancho_texto || e.ranchos?.nombre || 'General';
+                    return `
+                    <div class="bg-white p-3 rounded-lg shadow-sm mb-3">
+                        <p><strong>${i+1}.</strong> ${e.titulo} <em class="text-gray-500">(${rancho})</em></p>
+                        <div class="flex justify-end space-x-2 mt-2">
+                            <button onclick="handleCancelarEvento(${e.id})" class="text-xs text-red-600 font-semibold px-2 py-1">Cancelar</button>
+                            <button onclick="handleCompletarEvento(${e.id})" class="text-xs bg-green-600 text-white font-semibold px-3 py-1 rounded-full">Completar</button>
+                        </div>
+                    </div>`;
+                }).join('');
+            } else {
+                 pendientesContainer.innerHTML = '<div class="bg-white p-4 rounded-xl shadow-md"><p class="text-sm text-gray-500">No hay pendientes para hoy.</p></div>';
             }
+        }
 
-            // Llenar "Próximos Eventos"
+        // Llenar "Próximos Eventos" solo si el contenedor existe
+        if (eventosContainer) {
             if (eventosProximos.length > 0) {
                  eventosContainer.innerHTML = eventosProximos.slice(0, 3).map(e => {
                     const fecha = new Date(e.fecha_evento);
                     const manana = new Date(); manana.setDate(new Date().getDate() + 1);
+                    
                     let textoFecha = fecha.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
                     if (fecha.toDateString() === manana.toDateString()) textoFecha = 'Mañana';
+                    
                     const rancho = e.nombre_rancho_texto || e.ranchos?.nombre || 'General';
                     return `<div class="bg-white p-4 rounded-xl shadow-md mb-3"><div class="flex justify-between items-center"><p><i class="fa-solid fa-calendar-alt text-brand-green mr-2"></i><strong>${textoFecha}:</strong> ${e.titulo} <em>(${rancho})</em></p><i class="fa-solid fa-chevron-right text-gray-400"></i></div></div>`;
                 }).join('');
@@ -742,7 +752,9 @@ function abrirModalVaca() {
                 eventosContainer.innerHTML = '<div class="bg-white p-4 rounded-xl shadow-md"><p class="text-sm text-gray-500">No hay más eventos programados.</p></div>';
             }
         }
-    } catch (error) { console.error("Error cargando dashboard MVZ:", error); }
+    } catch (error) { 
+        console.error("Error cargando dashboard MVZ:", error); 
+    }
 }
     const accionesContainerTop = document.getElementById('acciones-rapidas-container');
     if (accionesContainerTop) accionesContainerTop.innerHTML = ''; // safe init
