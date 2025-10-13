@@ -247,13 +247,6 @@ app.post('/api/actividades', async (req, res) => {
       .text(`Rancho: ${ranchoNombre || 'Independiente'}`, { align: 'right' })
       .text(`Médico Veterinario: ${mvzNombre || '-'}`, { align: 'right' });
     doc.moveDown(1.5);
-
-    // Aquí usamos la lógica de diseño de PDF que ya habíamos reconstruido
-    doc.fontSize(16).font('Helvetica-Bold').text('JFB Ganadería Inteligente', { align: 'right' });
-    doc.fontSize(10).font('Helvetica')
-      .text(`Rancho: ${ranchoNombre || 'Independiente'}`, { align: 'right' })
-      .text(`Médico Veterinario: ${mvzNombre || '-'}`, { align: 'right' });
-    doc.moveDown(1.5);
     
     const yBarra = doc.y;
     const tituloActividad = (loteActividad[0]?.tipoLabel || 'Actividades').toUpperCase();

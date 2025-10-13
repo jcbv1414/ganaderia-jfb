@@ -851,11 +851,14 @@ function abrirModalVaca() {
     const form = document.getElementById('form-actividad-vaca');
     if (!modal || !form) return;
 
-    form.reset();
-    form.querySelectorAll('select').forEach(select => { select.selectedIndex = 0; });
+    // Reemplaza esta parte en abrirModalActividad
+form.reset(); // Limpia textos y checkboxes
 
-    // Vuelve a generar los campos para asegurar que los condicionales se oculten
-    renderizarCamposProcedimiento(tipo);
+// AÑADE ESTA LÍNEA para limpiar los menús desplegables
+form.querySelectorAll('select').forEach(select => { select.selectedIndex = -1; }); // Pone los selects en blanco
+
+// Vuelve a generar los campos para asegurar que los condicionales se oculten
+renderizarCamposProcedimiento(tipo);
 
     modal.classList.remove('hidden');
 
@@ -863,6 +866,15 @@ function abrirModalVaca() {
     if (tituloEl && PROCEDIMIENTOS[tipo]) {
         tituloEl.textContent = PROCEDIMIENTOS[tipo].titulo;
     }
+    // ----- PEGA ESTE BLOQUE -----
+const actividadLoteEl = document.getElementById('actividad-lote');
+if (actividadLoteEl) {
+    // Llenamos con opciones del 1 al 10
+    actividadLoteEl.innerHTML = ''; // Limpiamos primero
+    for (let i = 1; i <= 10; i++) {
+        actividadLoteEl.innerHTML += `<option value="${i}">Lote ${i}</option>`;
+    }
+}
 
     // ... (el resto de la función sigue igual, conectando los botones) ...
     const btnCerrar = document.getElementById('btn-cerrar-modal-actividad');
@@ -879,6 +891,12 @@ function abrirModalVaca() {
         await handleFinalizarYReportar();
         modal.classList.add('hidden');
     };
+    // ... al final de abrirModalActividad, antes del cierre "}"
+    // Llena la lista de razas para el autocompletado
+    const datalistRazas = document.getElementById('lista-razas-actividad');
+    if (datalistRazas) {
+        datalistRazas.innerHTML = RAZAS_BOVINAS.map(r => `<option value="${r}"></option>`).join('');
+    }
 }
 
 async function handleFinalizarYReportar() {
@@ -1121,29 +1139,28 @@ async function handleFinalizarYReportar() {
             }
         }
         
-        loteActividadActual.push({
-            areteVaca: arete,
-            raza: (vacasIndex.get(arete) && vacasIndex.get(arete).raza) || 'N/A',
-            loteNumero: loteNumero,
-            tipo: tipoActividad,
-            tipoLabel: PROCEDIMIENTOS[tipoActividad].titulo,
-            fecha: new Date().toISOString().split('T')[0],
-            detalles: detalles
-        });
+         loteActividadActual.push({
+        areteVaca: arete,
+        // CORRECCIÓN: Toma la raza del input del formulario
+        raza: form.querySelector('[name="raza"]').value.trim() || 'N/A',
+        loteNumero: loteNumero,
+        tipo: tipoActividad,
+        tipoLabel: PROCEDIMIENTOS[tipoActividad].titulo,
+        fecha: new Date().toISOString().split('T')[0],
+        detalles: detalles
+    });
         
-        mostrarMensaje('mensaje-vaca', `Vaca ${arete} agregada.`, false);
-        const loteInfoEl = document.getElementById('lote-info');
-        if (loteInfoEl) loteInfoEl.textContent = `${loteActividadActual.length} vacas (Lote ${loteNumero})`;
-        
-        if (limpiarForm && form) {
-            // Limpia todo menos el lote
-            form.querySelectorAll('input:not(#actividad-lote), select:not(#actividad-lote), textarea').forEach(el => {
-                 if(el.type === 'checkbox') el.checked = false;
-                 else el.value = '';
-            });
-            if (areteInput) areteInput.focus();
-        }
-    }
+         mostrarMensaje('mensaje-vaca', `Vaca ${arete} agregada.`, false);
+    const loteInfoEl = document.getElementById('lote-info');
+    if (loteInfoEl) loteInfoEl.textContent = `${loteActividadActual.length} vacas (Lote ${loteNumero})`;
+    
+    if (limpiarForm && form) {
+        form.reset();
+        form.querySelectorAll('select').forEach(select => { select.selectedIndex = -1; });
+        renderizarCamposProcedimiento(tipoActividad);
+        if (areteInput) areteInput.focus();
+    }
+}
     // =================================================================
 // FUNCIONES DEL CALENDARIO MVZ
 // =================================================================
