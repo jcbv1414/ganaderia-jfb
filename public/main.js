@@ -1517,44 +1517,53 @@ async function renderizarVistaCalendario() {
 // =================================================================
 async function inicializarCalendarioVisual() {
     const container = document.getElementById('calendario-visual-container');
-    if (!container || typeof VanillaCalendar !== 'function') return;
+    // Revisa si la nueva librería (FullCalendar) está cargada
+    if (!container || typeof FullCalendar === 'undefined') {
+        console.error("FullCalendar no está cargado. Revisa el script en index.html.");
+        container.innerHTML = '<p class="text-center text-red-500 text-xs p-2">Error al cargar la herramienta del calendario.</p>';
+        return;
+    }
+    // Limpia el contenedor por si había algo antes
+    container.innerHTML = '';
 
     try {
-        // 1. Obtiene los eventos del usuario
+        // 1. Obtiene los eventos del usuario (esto ya funcionaba)
         const res = await fetch(`/api/eventos/mvz/${currentUser.id}`);
         if (!res.ok) throw new Error('No se pudieron cargar los eventos para el calendario');
         const eventos = await res.json();
 
-        // 2. Extrae las fechas y las formatea como 'YYYY-MM-DD'
-        const fechasConEventos = eventos.map(e => {
-            // Asegura que la fecha se interprete correctamente sin problemas de zona horaria
-            const fecha = new Date(e.fecha_evento);
-            const anio = fecha.getFullYear();
-            const mes = String(fecha.getMonth() + 1).padStart(2, '0');
-            const dia = String(fecha.getDate()).padStart(2, '0');
-            return `${anio}-${mes}-${dia}`;
+        // 2. Transforma los eventos al formato que el nuevo calendario entiende
+        const eventosParaCalendario = eventos.map(e => ({
+            id: e.id,
+            title: e.titulo, // El texto que se mostrará en el calendario
+            start: e.fecha_evento, // La fecha del evento
+            extendedProps: { // Guardamos datos extra por si los necesitamos
+                rancho: e.nombre_rancho_texto || e.ranchos?.nombre || 'General',
+                descripcion: e.descripcion
+            }
+        }));
+
+        // 3. Configura e inicializa el nuevo calendario
+        const calendario = new FullCalendar.Calendar(container, {
+            initialView: 'dayGridMonth', // Vista de mes
+            locale: 'es', // Pone los días y meses en español
+            headerToolbar: {
+                left: 'prev',
+                center: 'title',
+                right: 'next'
+            },
+            events: eventosParaCalendario, // Aquí le pasamos los eventos
+            eventClick: function(info) {
+                // Al hacer clic en un evento, abre el modal de edición
+                const eventoOriginal = eventos.find(e => e.id == info.event.id);
+                if (eventoOriginal) {
+                    handleEditarEvento(eventoOriginal);
+                }
+            }
         });
 
-        // 3. Configura e inicializa el calendario
-        const opciones = {
-            settings: {
-                lang: 'es', // Pone el calendario en español
-                selection: {
-                    day: 'multiple-ranged', // Permite seleccionar rangos, pero lo usaremos para resaltar
-                },
-                visibility: {
-                    theme: 'light',
-                    weekend: false,
-                },
-            },
-            dates: {
-                // Pasa las fechas con eventos para que se resalten
-                highlighted: fechasConEventos,
-            },
-        };
-
-        const calendario = new VanillaCalendar(container, opciones);
-        calendario.init();
+        // 4. Dibuja el calendario en la pantalla
+        calendario.render();
 
     } catch (error) {
         console.error("Error al inicializar el calendario visual:", error);
