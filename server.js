@@ -401,9 +401,6 @@ app.post('/api/historial/pdf', async (req, res) => {
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="reporte_historial_${Date.now()}.pdf"`);
     
-    const doc = new PDFDocument({ size: 'LETTER', margin: 40 });
-    doc.pipe(res);
-
     // --- CORRECCIÓN DEL LOGO ---
     try {
     const logoPath = path.join(__dirname, 'public', 'assets', 'logo.png');
@@ -474,22 +471,6 @@ app.post('/api/historial/pdf', async (req, res) => {
   } catch (err) {
     handleServerError(res, err);
   }
-});
-
-// ================== NUEVOS ENDPOINTS DE CALENDARIO ==================
-// ✅ FEATURE 5: API PARA GESTIONAR EVENTOS DEL CALENDARIO
-app.post('/api/eventos', async (req, res) => {
-    try {
-        const { mvz_id, rancho_id, fecha_evento, titulo, descripcion, nombre_rancho_texto } = req.body;
-        if (!mvz_id || !fecha_evento || !titulo) {
-            return res.status(400).json({ message: 'Faltan datos obligatorios (mvz_id, fecha, titulo).' });
-        }
-        const { data, error } = await supabase.from('eventos').insert({
-            mvz_id, rancho_id, fecha_evento, titulo, descripcion, nombre_rancho_texto
-        }).select().single();
-        if (error) throw error;
-        res.status(201).json({ success: true, message: 'Evento creado', evento: data });
-    } catch (err) { handleServerError(res, err); }
 });
 
 app.get('/api/eventos/mvz/:mvzId', async (req, res) => {
@@ -600,15 +581,16 @@ app.get('/api/eventos/mvz/:mvzId', async (req, res) => {
     } catch (err) { handleServerError(res, err); }
 });
 
-// Endpoint para crear un nuevo evento
+// Endpoint para crear un nuevo evento (VERSIÓN ÚNICA Y CORREGIDA)
 app.post('/api/eventos', async (req, res) => {
     try {
         const { mvz_id, rancho_id, fecha_evento, titulo, descripcion, nombre_rancho_texto } = req.body;
         if (!mvz_id || !fecha_evento || !titulo) {
             return res.status(400).json({ message: 'Faltan datos obligatorios.' });
         }
-        // Si rancho_id es un string vacío, lo convertimos a null para la DB
-        const finalRanchoId = rancho_id === '' ? null : rancho_id;
+
+        // CORRECCIÓN: Si rancho_id es un string vacío, lo convertimos a null.
+        const finalRanchoId = (rancho_id === '' || rancho_id === null) ? null : rancho_id;
 
         const { data, error } = await supabase.from('eventos').insert({
             mvz_id, rancho_id: finalRanchoId, fecha_evento, titulo, descripcion, nombre_rancho_texto

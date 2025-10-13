@@ -851,29 +851,20 @@ function abrirModalVaca() {
     const form = document.getElementById('form-actividad-vaca');
     if (!modal || !form) return;
 
-    // 1. Limpia todos los inputs, textareas y checkboxes
     form.reset();
+    form.querySelectorAll('select').forEach(select => { select.selectedIndex = 0; });
 
-    // 2. Reinicia todos los menús desplegables a su primera opción
-    form.querySelectorAll('select').forEach(select => {
-        select.selectedIndex = 0; 
-    });
+    // Vuelve a generar los campos para asegurar que los condicionales se oculten
+    renderizarCamposProcedimiento(tipo);
 
-    // 3. Vuelve a ocultar los campos que solo aparecen con ciertas condiciones
-    renderizarCamposProcedimiento(tipo); // Llamamos a renderizar para que construya los campos
-    modal.classList.remove('hidden'); // Mostramos el modal
+    modal.classList.remove('hidden');
 
     const tituloEl = document.getElementById('modal-actividad-titulo');
     if (tituloEl && PROCEDIMIENTOS[tipo]) {
         tituloEl.textContent = PROCEDIMIENTOS[tipo].titulo;
     }
 
-    const actividadLoteEl = document.getElementById('actividad-lote');
-    if (actividadLoteEl) {
-        actividadLoteEl.innerHTML = [1, 2, 3, 4, 5].map(l => `<option value="${l}">Lote ${l}</option>`).join('');
-    }
-
-    // 4. (LA CORRECCIÓN MÁS IMPORTANTE) Vuelve a conectar TODOS los botones del modal
+    // ... (el resto de la función sigue igual, conectando los botones) ...
     const btnCerrar = document.getElementById('btn-cerrar-modal-actividad');
     if (btnCerrar) btnCerrar.onclick = () => modal.classList.add('hidden');
 
@@ -890,37 +881,40 @@ function abrirModalVaca() {
     };
 }
 
-// En el nuevo main.js, busca la función que finaliza la actividad y reemplázala:
 async function handleFinalizarYReportar() {
-    if (loteActividadActual.length === 0) return;
-    
-    // Prepara el spinner y deshabilita el botón
-    const btn = document.getElementById('btn-finalizar-actividad-modal'); // Asegúrate que el ID del botón sea correcto
+    if (loteActividadActual.length === 0) {
+        alert("No hay actividades en el lote para reportar.");
+        return;
+    }
+
+    const btn = document.getElementById('btn-finalizar-actividad-modal');
     if (btn) { btn.disabled = true; btn.textContent = 'Procesando...'; }
 
     try {
+        // CORRECCIÓN: Asegurarse de que el nombre del rancho sea el correcto
+        const nombreDelRancho = currentRancho?.nombre === 'Trabajo Independiente'
+            ? document.getElementById('rancho-independiente-nombre')?.value?.trim() || 'Independiente'
+            : currentRancho?.nombre || 'Independiente';
+
         const payload = {
             mvzId: currentUser?.id,
             ranchoId: currentRancho?.id || null,
             loteActividad: loteActividadActual,
-            // Datos extra para el encabezado del PDF
             mvzNombre: currentUser?.nombre || '',
-            ranchoNombre: currentRancho?.nombre || document.getElementById('rancho-independiente-nombre')?.value?.trim() || 'Independiente'
+            ranchoNombre: nombreDelRancho // Usamos el nombre corregido
         };
 
-        const res = await fetch('/api/actividades', { // Apuntamos al endpoint modificado
+        const res = await fetch('/api/actividades', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
 
         if (!res.ok) {
-            // Si el servidor devuelve un error, será en formato JSON
             const errData = await res.json();
             throw new Error(errData.message || 'Error en el servidor.');
         }
 
-        // --- LÓGICA PARA DESCARGAR EL PDF (DE TU VERSIÓN ANTIGUA) ---
         const blob = await res.blob();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -930,12 +924,10 @@ async function handleFinalizarYReportar() {
         a.click();
         a.remove();
         window.URL.revokeObjectURL(url);
-        
-        // Limpiamos el lote y la UI
+
         loteActividadActual = [];
-        const loteInfoEl = document.getElementById('lote-info');
-            if (loteInfoEl) loteInfoEl.textContent = `0 vacas`;
-            renderizarHistorialMVZ();
+        document.getElementById('lote-info').textContent = `0 vacas`;
+        renderizarHistorialMVZ();
 
     } catch (err) {
         console.error("Error al finalizar y generar PDF:", err);
