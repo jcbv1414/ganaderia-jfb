@@ -125,21 +125,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('form-registro').addEventListener('submit', handleRegister);
                 document.getElementById('link-a-login').addEventListener('click', (ev) => { ev.preventDefault(); navigateTo('login'); });
             }
-        } else if (viewId === 'inicio-propietario') {
-            document.getElementById('dash-nombre-propietario').textContent = currentUser?.nombre?.split(' ')[0] || '';
-            document.getElementById('dash-fecha-actual').textContent = new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
-            document.getElementById('btn-logout-propietario').onclick = logout; // Conecta el botón de salir
-            cargarDatosDashboardPropietario();
-        } else if (viewId === 'mis-vacas') {
+        }else if (viewId === 'inicio-propietario') {
+    document.getElementById('dash-nombre-propietario').textContent = currentUser?.nombre?.split(' ')[0] || '';
+    document.getElementById('dash-fecha-actual').textContent = new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
+    document.getElementById('btn-logout-propietario').onclick = logout;
+    // Conecta el nuevo botón de perfil a la vista de ajustes
+    document.getElementById('btn-perfil-propietario').onclick = () => navigateTo('ajustes');
+    cargarDatosDashboardPropietario();
+} else if (viewId === 'mis-vacas') {
             renderizarVistaMisVacas();
         } else if (viewId === 'mi-mvz') {
             renderizarVistaMiMvz();
         } else if (viewId === 'estadisticas') {
             renderizarVistaEstadisticas();
         } else if (viewId === 'inicio-mvz') {
-            document.getElementById('btn-logout-mvz').onclick = logout; // Conecta el botón de salir
-            cargarDashboardMVZ();
-        } else if (viewId === 'actividades-mvz') {
+    document.getElementById('btn-logout-mvz').onclick = logout;
+    // Conecta el nuevo botón de perfil a la vista de ajustes del MVZ
+    document.getElementById('btn-perfil-mvz').onclick = () => navigateTo('ajustes-mvz');
+    cargarDashboardMVZ();
+}else if (viewId === 'actividades-mvz') {
             initActividadesMvzListeners();
         } else if (viewId === 'calendario-mvz') { // <-- Aquí se añade la nueva vista
             renderizarVistaCalendario();
@@ -803,36 +807,94 @@ function abrirModalVaca() {
     document.getElementById('rancho-actions-container')?.classList.remove('hidden');
 
     const esIndependiente = !currentRancho?.id;
-    document.getElementById('rancho-independiente-input-container')?.classList.toggle('hidden', !esIndependiente);
+    const ranchoIndependienteInputContainer = document.getElementById('rancho-independiente-input-container');
+    const btnFijarRanchoIndependiente = document.getElementById('btn-fijar-rancho-independiente');
+
+    if (ranchoIndependienteInputContainer) {
+        ranchoIndependienteInputContainer.classList.toggle('hidden', !esIndependiente);
+    }
+
     document.getElementById('rancho-nombre-activo').textContent = esIndependiente ? 'Trabajo Independiente' : (currentRancho?.nombre || '');
     document.getElementById('rancho-logo').src = currentRancho?.logo_url || 'assets/logo.png';
 
     // Lógica del botón de fijar (pin)
-    const btnFijar = document.getElementById('btn-fijar-rancho');
-    if (btnFijar) {
-        // Revisa si el rancho actual es el que está guardado como "fijado"
-        const pinnedRancho = JSON.parse(localStorage.getItem('pinnedRancho') || 'null');
-        const isPinned = !esIndependiente && pinnedRancho && pinnedRancho.id === currentRancho?.id;
+    // El botón principal de fijar (fuera del input) sigue existiendo para ranchos registrados
+    const btnFijarPrincipal = document.getElementById('btn-fijar-rancho');
 
-        // Pone el color correcto al pin y lo deshabilita si es trabajo independiente
-        btnFijar.classList.toggle('text-brand-green', isPinned);
-        btnFijar.classList.toggle('text-gray-400', !isPinned);
-        btnFijar.disabled = esIndependiente;
+    // CORRECCIÓN: Manejar el botón de fijar según el modo (independiente o registrado)
+    if (esIndependiente) {
+        if (btnFijarPrincipal) btnFijarPrincipal.classList.add('hidden'); // Oculta el pin principal
+        if (btnFijarRanchoIndependiente) {
+            btnFijarRanchoIndependiente.classList.remove('hidden');
 
-        btnFijar.onclick = () => {
-            const currentlyPinned = JSON.parse(localStorage.getItem('pinnedRancho') || 'null');
-            if (currentlyPinned && currentlyPinned.id === currentRancho?.id) {
-                // Si ya está fijado, lo quita
-                localStorage.removeItem('pinnedRancho');
-                btnFijar.classList.replace('text-brand-green', 'text-gray-400');
-                alert('Rancho desfijado.');
-            } else {
-                // Si no está fijado, lo guarda
-                localStorage.setItem('pinnedRancho', JSON.stringify(currentRancho));
-                btnFijar.classList.replace('text-gray-400', 'text-brand-green');
-                alert(`Rancho '${currentRancho.nombre}' fijado como predeterminado.`);
+            // Carga el nombre del rancho independiente si estaba fijado
+            const pinnedRanchoData = localStorage.getItem('pinnedRancho');
+            if (pinnedRanchoData) {
+                try {
+                    const pinnedRancho = JSON.parse(pinnedRanchoData);
+                    if (pinnedRancho.nombre === 'Trabajo Independiente' && pinnedRancho.extra_data?.nombre_independiente) {
+                        document.getElementById('rancho-independiente-nombre').value = pinnedRancho.extra_data.nombre_independiente;
+                    }
+                } catch (e) { console.error("Error parsing pinned rancho data:", e); }
             }
-        };
+
+            // Ajusta el color del pin para el rancho independiente
+            const isPinned = pinnedRanchoData && JSON.parse(pinnedRanchoData).nombre === 'Trabajo Independiente';
+            btnFijarRanchoIndependiente.classList.toggle('text-brand-green', isPinned);
+            btnFijarRanchoIndependiente.classList.toggle('text-gray-400', !isPinned);
+
+            btnFijarRanchoIndependiente.onclick = () => {
+                const nombreIndependiente = document.getElementById('rancho-independiente-nombre').value.trim();
+                if (!nombreIndependiente) {
+                    alert('Por favor, ingresa un nombre para el rancho independiente antes de fijarlo.');
+                    return;
+                }
+
+                const pinnedRancho = JSON.parse(localStorage.getItem('pinnedRancho') || 'null');
+                const isCurrentlyPinned = pinnedRancho && pinnedRancho.nombre === 'Trabajo Independiente' && pinnedRancho.extra_data.nombre_independiente === nombreIndependiente;
+
+                if (isCurrentlyPinned) {
+                    localStorage.removeItem('pinnedRancho');
+                    btnFijarRanchoIndependiente.classList.replace('text-brand-green', 'text-gray-400');
+                    alert('Rancho independiente desfijado.');
+                } else {
+                    const newPinnedRancho = {
+                        id: null,
+                        nombre: 'Trabajo Independiente',
+                        extra_data: { nombre_independiente: nombreIndependiente }
+                    };
+                    localStorage.setItem('pinnedRancho', JSON.stringify(newPinnedRancho));
+                    btnFijarRanchoIndependiente.classList.replace('text-gray-400', 'text-brand-green');
+                    alert(`Rancho independiente '${nombreIndependiente}' fijado.`);
+                }
+            };
+        }
+    } else {
+        // Lógica para ranchos registrados (el pin sigue fuera del input)
+        if (btnFijarPrincipal) btnFijarPrincipal.classList.remove('hidden');
+        if (btnFijarRanchoIndependiente) btnFijarRanchoIndependiente.classList.add('hidden'); // Oculta el pin del input
+
+        if (btnFijarPrincipal) {
+            const pinnedRancho = JSON.parse(localStorage.getItem('pinnedRancho') || 'null');
+            const isPinned = !esIndependiente && pinnedRancho && pinnedRancho.id === currentRancho?.id;
+
+            btnFijarPrincipal.classList.toggle('text-brand-green', isPinned);
+            btnFijarPrincipal.classList.toggle('text-gray-400', !isPinned);
+            btnFijarPrincipal.disabled = esIndependiente;
+
+            btnFijarPrincipal.onclick = () => {
+                const currentlyPinned = JSON.parse(localStorage.getItem('pinnedRancho') || 'null');
+                if (currentlyPinned && currentlyPinned.id === currentRancho?.id) {
+                    localStorage.removeItem('pinnedRancho');
+                    btnFijarPrincipal.classList.replace('text-brand-green', 'text-gray-400');
+                    alert('Rancho desfijado.');
+                } else {
+                    localStorage.setItem('pinnedRancho', JSON.stringify(currentRancho));
+                    btnFijarPrincipal.classList.replace('text-gray-400', 'text-brand-green');
+                    alert(`Rancho '${currentRancho.nombre}' fijado como predeterminado.`);
+                }
+            };
+        }
     }
 
     const accionesContainer = document.getElementById('acciones-rapidas-container');
@@ -1081,6 +1143,7 @@ async function handleFinalizarYReportar() {
 
     // Crea el HTML para cada campo del formulario
     container.innerHTML = proc.campos.map(campo => {
+        if (campo.id === 'raza') return '';
         const revelaAttr = campo.revela ? `data-revela-target="${campo.revela}"` : '';
         const ocultoClass = campo.oculto ? 'hidden' : '';
 
