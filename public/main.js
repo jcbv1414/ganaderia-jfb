@@ -688,20 +688,33 @@ function abrirModalVaca() {
         const pendientesContainer = document.getElementById('lista-pendientes');
 
         if (eventosContainer) {
-            const hoy = new Date().toDateString();
-            const eventosHoy = eventos.filter(e => new Date(e.fecha_evento).toDateString() === hoy);
-            const eventosProximos = eventos.filter(e => new Date(e.fecha_evento).toDateString() !== hoy);
+            // --- INICIO DE LA CORRECCIÓN ---
+            // Lógica más precisa para determinar qué es "hoy"
+            const hoy = new Date();
+            const hoyAnio = hoy.getFullYear();
+            const hoyMes = hoy.getMonth();
+            const hoyDia = hoy.getDate();
 
-            // Llenar "Pendientes Hoy"
+            const eventosHoy = eventos.filter(e => {
+                const fechaEvento = new Date(e.fecha_evento);
+                return fechaEvento.getFullYear() === hoyAnio &&
+                       fechaEvento.getMonth() === hoyMes &&
+                       fechaEvento.getDate() === hoyDia;
+            });
+
+            const eventosProximos = eventos.filter(e => !eventosHoy.includes(e));
+            // --- FIN DE LA CORRECCIÓN ---
+
+            // Llenar "Pendientes Hoy" con los botones correctos
             if (pendientesContainer) {
                  if (eventosHoy.length > 0) {
                     pendientesContainer.innerHTML = eventosHoy.map((e, i) => {
                          const rancho = e.nombre_rancho_texto || e.ranchos?.nombre || 'General';
                         return `
-                        <div class="bg-white p-3 rounded-lg shadow-sm">
+                        <div class="bg-white p-3 rounded-lg shadow-sm mb-3">
                             <p><strong>${i+1}.</strong> ${e.titulo} <em class="text-gray-500">(${rancho})</em></p>
                             <div class="flex justify-end space-x-2 mt-2">
-                                <button onclick="handleCancelarEvento(${e.id})" class="text-xs text-red-600 font-semibold">Cancelar</button>
+                                <button onclick="handleCancelarEvento(${e.id})" class="text-xs text-red-600 font-semibold px-2 py-1">Cancelar</button>
                                 <button onclick="handleCompletarEvento(${e.id})" class="text-xs bg-green-600 text-white font-semibold px-3 py-1 rounded-full">Completar</button>
                             </div>
                         </div>`;
@@ -719,14 +732,14 @@ function abrirModalVaca() {
                     let textoFecha = fecha.toLocaleDateString('es-MX', { weekday: 'long' });
                     if (fecha.toDateString() === manana.toDateString()) textoFecha = 'Mañana';
                     const rancho = e.nombre_rancho_texto || e.ranchos?.nombre || 'General';
-                    return `<div class="bg-white p-4 rounded-xl shadow-md"><div class="flex justify-between items-center"><p><i class="fa-solid fa-calendar-alt text-brand-green mr-2"></i><strong>${textoFecha}:</strong> ${e.titulo} <em>(${rancho})</em></p><i class="fa-solid fa-chevron-right text-gray-400"></i></div></div>`;
+                    return `<div class="bg-white p-4 rounded-xl shadow-md mb-3"><div class="flex justify-between items-center"><p><i class="fa-solid fa-calendar-alt text-brand-green mr-2"></i><strong>${textoFecha}:</strong> ${e.titulo} <em>(${rancho})</em></p><i class="fa-solid fa-chevron-right text-gray-400"></i></div></div>`;
                 }).join('');
             } else {
                 eventosContainer.innerHTML = '<div class="bg-white p-4 rounded-xl shadow-md"><p class="text-sm text-gray-500">No hay más eventos programados.</p></div>';
             }
         }
     } catch (error) { console.error("Error cargando dashboard MVZ:", error); }
-}     
+}
     const accionesContainerTop = document.getElementById('acciones-rapidas-container');
     if (accionesContainerTop) accionesContainerTop.innerHTML = ''; // safe init
 
