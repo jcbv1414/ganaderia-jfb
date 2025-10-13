@@ -40,23 +40,38 @@
         .progress-ring-percent { position: relative; font-size: 0.9rem; font-weight: 600; color: #166534; }
         .modal-content { max-height: 80vh; display: flex; flex-direction: column; }
         .modal-main { overflow-y: auto; }
+         .modal-content {
+        display: flex;
+        flex-direction: column;
+        max-height: 85vh; /* Limita la altura del modal al 85% de la pantalla */
+    }
+    .modal-main {
+        overflow-y: auto; /* Hace que solo el contenido del formulario se deslice */
+    }
         /* ----- PEGA ESTE BLOQUE ----- */
-    #calendario-visual-container .fc-daygrid-day-number {
-        font-size: 0.9em;
-        padding: 4px;
-    }
-    #calendario-visual-container .fc-event {
-        font-size: 0.7em;
-        padding: 2px 4px;
-        white-space: normal; /* Permite que el texto del evento ocupe varias líneas */
-    }
-    #calendario-visual-container .fc-toolbar-title {
-        font-size: 1.25em;
-    }
-    /* ----- PEGA ESTE BLOQUE ----- */
-    #calendario-visual-container {
-        min-height: 450px; /* Le da al calendario una altura mínima para renderizarse */
-    }
+    #calendario-visual-container .fc-header-toolbar {
+    padding: 0 10px;
+    margin-bottom: 10px !important;
+  }
+  #calendario-visual-container .fc-toolbar-title {
+    font-size: 1.25em;
+    font-weight: 600;
+  }
+  #calendario-visual-container .fc-daygrid-day-number {
+    font-size: 0.8em;
+    padding: 4px;
+  }
+  #calendario-visual-container .fc-event {
+    font-size: 0.75em;
+    padding: 2px 4px;
+    white-space: normal;
+    border: none;
+    background-color: #166534; /* Verde de tu marca */
+    color: white;
+  }
+  #calendario-visual-container {
+    min-height: 400px; /* Altura mínima para que se dibuje */
+  }
         
     #acciones-rapidas-container {
   display: block; /* Hacemos que sea un contenedor normal */

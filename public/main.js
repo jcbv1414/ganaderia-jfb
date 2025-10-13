@@ -733,7 +733,7 @@ function abrirModalVaca() {
                  eventosContainer.innerHTML = eventosProximos.slice(0, 3).map(e => {
                     const fecha = new Date(e.fecha_evento);
                     const manana = new Date(); manana.setDate(new Date().getDate() + 1);
-                    let textoFecha = fecha.toLocaleDateString('es-MX', { weekday: 'long' });
+                    let textoFecha = fecha.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
                     if (fecha.toDateString() === manana.toDateString()) textoFecha = 'Mañana';
                     const rancho = e.nombre_rancho_texto || e.ranchos?.nombre || 'General';
                     return `<div class="bg-white p-4 rounded-xl shadow-md mb-3"><div class="flex justify-between items-center"><p><i class="fa-solid fa-calendar-alt text-brand-green mr-2"></i><strong>${textoFecha}:</strong> ${e.titulo} <em>(${rancho})</em></p><i class="fa-solid fa-chevron-right text-gray-400"></i></div></div>`;
@@ -1516,53 +1516,41 @@ async function renderizarVistaCalendario() {
 // FUNCIÓN PARA INICIALIZAR EL CALENDARIO VISUAL
 // =================================================================
 async function inicializarCalendarioVisual() {
+    // Espera a que el DOM esté completamente listo
+    await new Promise(resolve => setTimeout(resolve, 0));
+
     const container = document.getElementById('calendario-visual-container');
-    // Revisa si la nueva librería (FullCalendar) está cargada
     if (!container || typeof FullCalendar === 'undefined') {
         console.error("FullCalendar no está cargado. Revisa el script en index.html.");
         container.innerHTML = '<p class="text-center text-red-500 text-xs p-2">Error al cargar la herramienta del calendario.</p>';
         return;
     }
-    // Limpia el contenedor por si había algo antes
-    container.innerHTML = '';
+    container.innerHTML = ''; // Limpia el contenedor
 
     try {
-        // 1. Obtiene los eventos del usuario (esto ya funcionaba)
         const res = await fetch(`/api/eventos/mvz/${currentUser.id}`);
         if (!res.ok) throw new Error('No se pudieron cargar los eventos para el calendario');
         const eventos = await res.json();
 
-        // 2. Transforma los eventos al formato que el nuevo calendario entiende
         const eventosParaCalendario = eventos.map(e => ({
             id: e.id,
-            title: e.titulo, // El texto que se mostrará en el calendario
-            start: e.fecha_evento, // La fecha del evento
-            extendedProps: { // Guardamos datos extra por si los necesitamos
-                rancho: e.nombre_rancho_texto || e.ranchos?.nombre || 'General',
-                descripcion: e.descripcion
-            }
+            title: e.titulo,
+            start: e.fecha_evento,
+            extendedProps: { rancho: e.nombre_rancho_texto || e.ranchos?.nombre || 'General' }
         }));
 
-        // 3. Configura e inicializa el nuevo calendario
         const calendario = new FullCalendar.Calendar(container, {
-            initialView: 'dayGridMonth', // Vista de mes
-            locale: 'es', // Pone los días y meses en español
-            headerToolbar: {
-                left: 'prev',
-                center: 'title',
-                right: 'next'
-            },
-            events: eventosParaCalendario, // Aquí le pasamos los eventos
+            initialView: 'dayGridMonth',
+            locale: 'es',
+            height: 'auto', // Se ajusta al contenedor
+            headerToolbar: { left: 'prev', center: 'title', right: 'next' },
+            events: eventosParaCalendario,
             eventClick: function(info) {
-                // Al hacer clic en un evento, abre el modal de edición
                 const eventoOriginal = eventos.find(e => e.id == info.event.id);
-                if (eventoOriginal) {
-                    handleEditarEvento(eventoOriginal);
-                }
+                if (eventoOriginal) handleEditarEvento(eventoOriginal);
             }
         });
 
-        // 4. Dibuja el calendario en la pantalla
         calendario.render();
 
     } catch (error) {
