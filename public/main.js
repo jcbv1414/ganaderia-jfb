@@ -1283,8 +1283,10 @@ async function handleGuardarEvento(e) {
         }
         
     }
-    // ----- PEGA ESTAS DOS FUNCIONES AL FINAL DE main.js -----
-async function handleCompletarEvento(eventoId) {
+   // ----- REEMPLAZA LAS DOS ÚLTIMAS FUNCIONES CON ESTE BLOQUE -----
+
+// Hacemos la función global añadiendo "window." al principio
+window.handleCompletarEvento = async function(eventoId) {
     try {
         const res = await fetch(`/api/eventos/${eventoId}`, {
             method: 'PATCH',
@@ -1296,7 +1298,8 @@ async function handleCompletarEvento(eventoId) {
     } catch (error) { alert(error.message); }
 }
 
-async function handleCancelarEvento(eventoId) {
+// Hacemos también esta función global
+window.handleCancelarEvento = async function(eventoId) {
     if (!confirm('¿Estás seguro de que quieres cancelar este evento?')) return;
     try {
         const res = await fetch(`/api/eventos/${eventoId}`, {
@@ -1308,6 +1311,8 @@ async function handleCancelarEvento(eventoId) {
         cargarDashboardMVZ(); // Recarga el dashboard para que el evento desaparezca
     } catch (error) { alert(error.message); }
 }
+
+// ... la función initApp(); debe quedar debajo de esto
     
     initApp();
 });
