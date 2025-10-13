@@ -1046,7 +1046,9 @@ async function handleFinalizarYReportar() {
                 historialContainer.innerHTML = sesionesValidas.map(sesion => {
     const ranchoNombre = sesion.rancho_nombre || 'No especificado';
     const conteoAnimales = sesion.conteo || 0;
-    const fecha = sesion.fecha ? new Date(sesion.fecha).toLocaleDateString('es-MX', {day: 'numeric', month: 'long'}) : 'Inválida';
+    // CORRECCIÓN: Forzar la interpretación de la fecha como UTC.
+const fechaUTC = new Date(sesion.fecha + 'T00:00:00Z');
+const fecha = fechaUTC.toLocaleDateString('es-MX', {day: 'numeric', month: 'long', timeZone: 'UTC'});
 
     return `
       <div class="bg-gray-100 p-3 rounded-lg flex items-center justify-between">
@@ -1206,32 +1208,31 @@ async function handleFinalizarYReportar() {
         const formData = new FormData(form);
         const detalles = {};
         for (const [key, value] of formData.entries()) {
-            if (!['actividad-lote', 'actividad-arete'].includes(key) && value) {
+            if (!['actividad-lote', 'actividad-arete', 'raza'].includes(key) && value) {
                 detalles[key] = value;
             }
         }
         
          loteActividadActual.push({
-    areteVaca: arete,
-    // CORRECCIÓN: Captura la raza del input de texto, no de la base de datos
-    raza: form.querySelector('#actividad-raza').value.trim() || 'N/A', 
-    loteNumero: loteNumero,
-    tipo: tipoActividad,
-    tipoLabel: PROCEDIMIENTOS[tipoActividad].titulo,
-    fecha: new Date().toISOString().split('T')[0],
-    detalles: detalles
-});
+        areteVaca: arete,
+        raza: form.querySelector('#actividad-raza').value.trim() || 'N/A',
+        loteNumero: loteNumero,
+        tipo: tipoActividad,
+        tipoLabel: PROCEDIMIENTOS[tipoActividad].titulo,
+        fecha: new Date().toISOString().split('T')[0],
+        detalles: detalles
+    });
         
          mostrarMensaje('mensaje-vaca', `Vaca ${arete} agregada.`, false);
-    const loteInfoEl = document.getElementById('lote-info');
-    if (loteInfoEl) loteInfoEl.textContent = `${loteActividadActual.length} vacas (Lote ${loteNumero})`;
-    
-    if (limpiarForm && form) {
-        form.reset();
+    const loteInfoEl = document.getElementById('lote-info');
+    if (loteInfoEl) loteInfoEl.textContent = `${loteActividadActual.length} vacas (Lote ${loteNumero})`;
+
+    if (limpiarForm && form) {
+        form.reset();
         form.querySelectorAll('select').forEach(select => { select.selectedIndex = -1; });
         renderizarCamposProcedimiento(tipoActividad);
-        if (areteInput) areteInput.focus();
-    }
+        if (areteInput) areteInput.focus();
+    }
 }
     // =================================================================
 // FUNCIONES DEL CALENDARIO MVZ

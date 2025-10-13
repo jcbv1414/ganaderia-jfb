@@ -425,23 +425,29 @@ app.post('/api/historial/pdf', async (req, res) => {
     doc.moveDown(0.5);
 
     doc.font('Helvetica');
-    actividades.forEach(item => {
-        const arete = item.extra_data?.arete || '-';
-        const raza = item.extra_data?.raza || '-';
-        const lote = item.extra_data?.lote || '-';
-        const fecha = item.fecha_actividad;
+  actividades.forEach(item => {
+        const arete = item.extra_data?.arete || '-';
+        const raza = item.extra_data?.raza || '-';
+        const lote = item.extra_data?.lote || '-';
+        const fecha = item.fecha_actividad;
 
-        // --- CORRECCIÓN DE LOS DETALLES ---
-        let detalles = item.descripcion || {};
-        // Si 'detalles' es un string, lo parseamos a objeto
-        if (typeof detalles === 'string') {
-            try { detalles = JSON.parse(detalles); } catch (e) { detalles = {}; }
-        }
-        
-        const detallesFiltrados = Object.entries(detalles)
-            .filter(([key, value]) => value && value !== 'No' && value !== '')
-            .map(([key, value]) => `${prettyLabel(key)}: ${value}`)
-            .join('; ');
+        // --- CORRECCIÓN IMPORTANTE ---
+        // Esta lógica ahora maneja los detalles correctamente,
+        // sin importar si están guardados como texto o como objeto.
+        let detalles = item.descripcion || {};
+        if (typeof detalles === 'string') {
+            try {
+                detalles = JSON.parse(detalles);
+            } catch (e) {
+                // Si no es un JSON válido, lo tratamos como una simple observación
+                detalles = { 'Observaciones': detalles };
+            }
+        }
+        
+        const detallesFiltrados = Object.entries(detalles)
+            .filter(([key, value]) => value && value !== 'No' && value !== '' && key !== 'raza') // También quitamos 'raza' aquí por si acaso
+            .map(([key, value]) => `${prettyLabel(key)}: ${value}`)
+            .join('; ');
 
         const y = doc.y;
         if (doc.y > 700) doc.addPage();
