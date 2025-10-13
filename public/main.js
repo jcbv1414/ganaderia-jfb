@@ -683,54 +683,50 @@ function abrirModalVaca() {
 
         // Cargar próximos eventos desde el servidor
         const resEventos = await fetch(`/api/eventos/mvz/${currentUser.id}`);
-        const eventos = await resEventos.json();
+        const eventos = (await resEventos.json()).filter(e => !e.completado); // Solo muestra eventos no completados
         const eventosContainer = document.getElementById('lista-eventos');
         const pendientesContainer = document.getElementById('lista-pendientes');
-        
-        if (eventosContainer) {
-            if (eventos.length === 0) {
-                eventosContainer.innerHTML = '<p class="text-sm text-gray-500">No tienes eventos próximos agendados.</p>';
-                 if(pendientesContainer) pendientesContainer.innerHTML = '<p class="text-sm text-gray-500">No hay pendientes para hoy.</p>';
-            } else {
-                const hoy = new Date().toDateString();
-                const eventosHoy = eventos.filter(e => new Date(e.fecha_evento).toDateString() === hoy);
-                const eventosProximos = eventos.filter(e => new Date(e.fecha_evento).toDateString() !== hoy);
 
-                // Llenar "Pendientes Hoy"
-                if (pendientesContainer) {
-                     if (eventosHoy.length > 0) {
-                        pendientesContainer.innerHTML = eventosHoy.map((e, i) => {
-                             const rancho = e.nombre_rancho_texto || e.ranchos?.nombre || 'General';
-                            return `<div class="flex justify-between items-center"><p><strong>${i+1}.</strong> ${e.titulo} <em class="text-gray-500">(${rancho})</em></p><button class="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-semibold">Ver Detalles</button></div>`;
-                        }).join('');
-                    } else {
-                         pendientesContainer.innerHTML = '<p class="text-sm text-gray-500">No hay pendientes para hoy.</p>';
-                    }
-                }
-               
-                // Llenar "Próximos Eventos"
-                if (eventosProximos.length > 0) {
-                     eventosContainer.innerHTML = eventosProximos.slice(0, 2).map(e => {
-                        const fecha = new Date(e.fecha_evento);
-                        const manana = new Date();
-                        manana.setDate(new Date().getDate() + 1);
-                        
-                        let textoFecha = fecha.toLocaleDateString('es-MX', { weekday: 'long' });
-                        if (fecha.toDateString() === manana.toDateString()) textoFecha = 'Mañana';
-                        
-                        const rancho = e.nombre_rancho_texto || e.ranchos?.nombre || 'General';
-                        return `<div class="flex justify-between items-center"><p><i class="fa-solid fa-calendar-alt text-brand-green mr-2"></i><strong>${textoFecha}:</strong> ${e.titulo} <em>(${rancho})</em></p><i class="fa-solid fa-chevron-right text-gray-400"></i></div>`;
+        if (eventosContainer) {
+            const hoy = new Date().toDateString();
+            const eventosHoy = eventos.filter(e => new Date(e.fecha_evento).toDateString() === hoy);
+            const eventosProximos = eventos.filter(e => new Date(e.fecha_evento).toDateString() !== hoy);
+
+            // Llenar "Pendientes Hoy"
+            if (pendientesContainer) {
+                 if (eventosHoy.length > 0) {
+                    pendientesContainer.innerHTML = eventosHoy.map((e, i) => {
+                         const rancho = e.nombre_rancho_texto || e.ranchos?.nombre || 'General';
+                        return `
+                        <div class="bg-white p-3 rounded-lg shadow-sm">
+                            <p><strong>${i+1}.</strong> ${e.titulo} <em class="text-gray-500">(${rancho})</em></p>
+                            <div class="flex justify-end space-x-2 mt-2">
+                                <button onclick="handleCancelarEvento(${e.id})" class="text-xs text-red-600 font-semibold">Cancelar</button>
+                                <button onclick="handleCompletarEvento(${e.id})" class="text-xs bg-green-600 text-white font-semibold px-3 py-1 rounded-full">Completar</button>
+                            </div>
+                        </div>`;
                     }).join('');
                 } else {
-                    eventosContainer.innerHTML = '<p class="text-sm text-gray-500">No hay más eventos programados.</p>';
+                     pendientesContainer.innerHTML = '<div class="bg-white p-4 rounded-xl shadow-md"><p class="text-sm text-gray-500">No hay pendientes para hoy.</p></div>';
                 }
             }
+
+            // Llenar "Próximos Eventos"
+            if (eventosProximos.length > 0) {
+                 eventosContainer.innerHTML = eventosProximos.slice(0, 3).map(e => {
+                    const fecha = new Date(e.fecha_evento);
+                    const manana = new Date(); manana.setDate(new Date().getDate() + 1);
+                    let textoFecha = fecha.toLocaleDateString('es-MX', { weekday: 'long' });
+                    if (fecha.toDateString() === manana.toDateString()) textoFecha = 'Mañana';
+                    const rancho = e.nombre_rancho_texto || e.ranchos?.nombre || 'General';
+                    return `<div class="bg-white p-4 rounded-xl shadow-md"><div class="flex justify-between items-center"><p><i class="fa-solid fa-calendar-alt text-brand-green mr-2"></i><strong>${textoFecha}:</strong> ${e.titulo} <em>(${rancho})</em></p><i class="fa-solid fa-chevron-right text-gray-400"></i></div></div>`;
+                }).join('');
+            } else {
+                eventosContainer.innerHTML = '<div class="bg-white p-4 rounded-xl shadow-md"><p class="text-sm text-gray-500">No hay más eventos programados.</p></div>';
+            }
         }
-    } catch (error) {
-        console.error("Error cargando dashboard MVZ:", error);
-    }
-}
-     
+    } catch (error) { console.error("Error cargando dashboard MVZ:", error); }
+}     
     const accionesContainerTop = document.getElementById('acciones-rapidas-container');
     if (accionesContainerTop) accionesContainerTop.innerHTML = ''; // safe init
 
@@ -1063,7 +1059,7 @@ async function handleFinalizarYReportar() {
         }
     }
     
-    function renderizarCamposProcedimiento(tipo, forzarReinicio = false) {
+ function renderizarCamposProcedimiento(tipo) {
     const container = document.getElementById('campos-dinamicos-procedimiento');
     if (!container) return;
     container.innerHTML = '';
@@ -1075,19 +1071,19 @@ async function handleFinalizarYReportar() {
         const revelaAttr = campo.revela ? `data-revela-target="${campo.revela}"` : '';
         const ocultoClass = campo.oculto ? 'hidden' : '';
 
+        // CORRECCIÓN: Se eliminó la lógica duplicada y se limpió la creación de campos
         if (campo.tipo === 'select') {
-            return `<div class="${ocultoClass}"><label class="block text-sm font-medium text-gray-700">${campo.label}</label><select name="${campo.id}" ${revelaAttr} class="mt-1 w-full p-2 border border-gray-300 rounded-lg bg-white">${campo.opciones.map(o=>`<option value="${o}">${o}</option>`).join('')}</select></div>`;
+            // Añadimos una primera opción vacía y seleccionada por defecto
+            const opciones = [`<option value="" disabled selected>Selecciona una opción</option>`, ...campo.opciones.map(o => `<option value="${o}">${o}</option>`)].join('');
+            return `<div class="${ocultoClass}"><label class="block text-sm font-medium text-gray-700">${campo.label}</label><select name="${campo.id}" ${revelaAttr} class="mt-1 w-full p-2 border border-gray-300 rounded-lg bg-white">${opciones}</select></div>`;
         } else if (campo.tipo === 'textarea') {
             return `<div><label class="block text-sm font-medium text-gray-700">${campo.label}</label><textarea name="${campo.id}" rows="2" class="mt-1 w-full p-2 border border-gray-300 rounded-lg"></textarea></div>`;
         } else if (campo.tipo === 'checkbox') {
-            return `<label class="flex items-center space-x-2"><input type="checkbox" name="${campo.id}" value="Sí" class="h-5 w-5 rounded border-gray-300"><span class="text-sm font-medium text-gray-700">${campo.label}</span></label>`;
+            return `<label class="flex items-center space-x-2 mt-2"><input type="checkbox" name="${campo.id}" value="Sí" class="h-5 w-5 rounded border-gray-300"><span class="text-sm font-medium text-gray-700">${campo.label}</span></label>`;
         } else { // text, date, etc.
             return `<div class="${ocultoClass}"><label class="block text-sm font-medium text-gray-700">${campo.label}</label><input type="${campo.tipo || 'text'}" name="${campo.id}" placeholder="${campo.placeholder || ''}" class="mt-1 w-full p-2 border border-gray-300 rounded-lg"></div>`;
         }
     }).join('');
-
-    // Si solo estamos reiniciando, no necesitamos añadir los listeners de nuevo.
-    if (forzarReinicio) return;
 
     // Añade la lógica para mostrar/ocultar campos
     container.querySelectorAll('[data-revela-target]').forEach(triggerEl => {
@@ -1095,7 +1091,6 @@ async function handleFinalizarYReportar() {
             const targetName = triggerEl.dataset.revelaTarget;
             const targetEl = container.querySelector(`[name="${targetName}"]`);
             if (targetEl) {
-                // Muestra el campo si la opción es "Sí" o "IA Convencional"
                 const show = triggerEl.value === 'Sí' || triggerEl.value === 'IA Convencional';
                 targetEl.closest('div').classList.toggle('hidden', !show);
             }
@@ -1140,15 +1135,15 @@ async function handleFinalizarYReportar() {
         }
         
          loteActividadActual.push({
-        areteVaca: arete,
-        // CORRECCIÓN: Toma la raza del input del formulario
-        raza: form.querySelector('[name="raza"]').value.trim() || 'N/A',
-        loteNumero: loteNumero,
-        tipo: tipoActividad,
-        tipoLabel: PROCEDIMIENTOS[tipoActividad].titulo,
-        fecha: new Date().toISOString().split('T')[0],
-        detalles: detalles
-    });
+    areteVaca: arete,
+    // CORRECCIÓN: Captura la raza del input de texto, no de la base de datos
+    raza: form.querySelector('#actividad-raza').value.trim() || 'N/A', 
+    loteNumero: loteNumero,
+    tipo: tipoActividad,
+    tipoLabel: PROCEDIMIENTOS[tipoActividad].titulo,
+    fecha: new Date().toISOString().split('T')[0],
+    detalles: detalles
+});
         
          mostrarMensaje('mensaje-vaca', `Vaca ${arete} agregada.`, false);
     const loteInfoEl = document.getElementById('lote-info');
@@ -1275,6 +1270,31 @@ async function handleGuardarEvento(e) {
         }
         
     }
+    // ----- PEGA ESTAS DOS FUNCIONES AL FINAL DE main.js -----
+async function handleCompletarEvento(eventoId) {
+    try {
+        const res = await fetch(`/api/eventos/${eventoId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ completado: true })
+        });
+        if (!res.ok) throw new Error('No se pudo completar el evento.');
+        cargarDashboardMVZ(); // Recarga el dashboard para que el evento desaparezca
+    } catch (error) { alert(error.message); }
+}
+
+async function handleCancelarEvento(eventoId) {
+    if (!confirm('¿Estás seguro de que quieres cancelar este evento?')) return;
+    try {
+        const res = await fetch(`/api/eventos/${eventoId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ borrar: true })
+        });
+        if (!res.ok) throw new Error('No se pudo cancelar el evento.');
+        cargarDashboardMVZ(); // Recarga el dashboard para que el evento desaparezca
+    } catch (error) { alert(error.message); }
+}
     
     initApp();
 });

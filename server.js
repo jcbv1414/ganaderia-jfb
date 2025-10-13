@@ -616,7 +616,27 @@ app.get('/api/dashboard/mvz/:mvzId', async (req, res) => {
         });
     } catch (err) { handleServerError(res, err); }
 });
+// Endpoint para actualizar un evento (completar o borrar)
+app.patch('/api/eventos/:eventoId', async (req, res) => {
+    try {
+        const { eventoId } = req.params;
+        const { completado, borrar } = req.body;
 
+        if (borrar) {
+            const { error } = await supabase.from('eventos').delete().eq('id', eventoId);
+            if (error) throw error;
+            return res.json({ success: true, message: 'Evento eliminado.' });
+        }
+
+        if (typeof completado !== 'undefined') {
+            const { data, error } = await supabase.from('eventos').update({ completado }).eq('id', eventoId).select().single();
+            if (error) throw error;
+            return res.json({ success: true, message: 'Evento actualizado', evento: data });
+        }
+
+        res.status(400).json({ message: 'Acción no válida.' });
+    } catch (err) { handleServerError(res, err); }
+});
 // ================== INICIO DEL SERVIDOR ==================
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
