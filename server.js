@@ -31,26 +31,18 @@ app.use(express.json()); // para JSON
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// CONSTANTES
+// CONSTANTES Y HELPERS
 const SALT_ROUNDS = Number(process.env.SALT_ROUNDS) || 10;
-
-// HELPERS
 const prettyLabel = (k) => String(k || '').replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
 const formatDate = (dateString) => {
-  if (!dateString) return '-';
-  // Forzar la interpretación de la fecha como UTC para evitar desplazamientos
-  const d = new Date(dateString + 'T00:00:00Z'); 
-  const day = String(d.getUTCDate()).padStart(2, '0');
-  const month = String(d.getUTCMonth() + 1).padStart(2, '0');
-  const year = d.getUTCFullYear();
-  return `${day}/${month}/${year}`;
+  if (!dateString) return '-';
+  const d = new Date(dateString + 'T00:00:00Z'); 
+  return new Intl.DateTimeFormat('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' }).format(d);
 };
-
-// FUNCIONES DE RESPUESTA DE ERROR UNIFORMES
 function handleServerError(res, err, code = 500) {
-  console.error(err && err.message ? err.message : err);
-  if (res.headersSent) return;
-  res.status(code).json({ success: false, message: err && err.message ? err.message : 'Error del servidor' });
+  console.error(err.message || err);
+  if (res.headersSent) return;
+  res.status(code).json({ success: false, message: err.message || 'Error del servidor' });
 }
 
 // ================== ENDPOINT: REGISTER ==================
@@ -137,6 +129,18 @@ app.get('/api/rancho/:ranchoId/mvz', async (req, res) => {
   } catch (err) { handleServerError(res, err); }
 });
 
+app.get('/api/ranchos/mvz/:mvzId', async (req, res) => {
+    try {
+        const { mvzId } = req.params;
+        const { data, error } = await supabase
+            .from('rancho_mvz_permisos')
+            .select('ranchos (*)')
+            .eq('mvz_id', mvzId);
+        if (error) throw error;
+        res.json(data.map(item => item.ranchos) || []);
+    } catch (err) { handleServerError(res, err); }
+});
+
 // ================== VACAS ==================
 app.get('/api/vacas/rancho/:ranchoId', async (req, res) => {
   try {
@@ -199,35 +203,47 @@ app.delete('/api/vacas/:vacaId', async (req, res) => {
 });
 
 // ================== ACTIVIDADES, HISTORIAL Y REPORTES ==================
-// En server.js, reemplaza el endpoint '/api/actividades' con este:
 app.post('/api/actividades', async (req, res) => {
-  try {
-    const { mvzId, ranchoId = null, loteActividad, mvzNombre, ranchoNombre } = req.body || {};
-    if (!mvzId || !Array.isArray(loteActividad) || loteActividad.length === 0) {
-      return res.status(400).json({ message: 'Faltan datos para procesar la actividad.' });
-    }
-
-    const sesionId = crypto.randomUUID();
-
-    const actividadesParaInsertar = loteActividad.map(item => ({
-        tipo_actividad: item.tipoLabel,
-        descripcion: item.detalles || {},
-        fecha_actividad: item.fecha,
-        id_vaca: item.vacaId || null, // Asumimos que el front puede enviar el id de la vaca
-        id_usuario: mvzId,
-        sesion_id: sesionId,
-        extra_data: { arete: item.areteVaca, raza: item.raza, lote: item.loteNumero, rancho_id: ranchoId, rancho_nombre: ranchoNombre }
-    }));
-
-    const { error } = await supabase.from('actividades').insert(actividadesParaInsertar);
-    if (error) throw error;
+  try {
+    const { mvzId, loteActividad, mvzNombre, ranchoNombre } = req.body;
+    if (!mvzId || !Array.isArray(loteActividad) || loteActividad.length === 0) {
+      return res.status(400).json({ message: 'Faltan datos para procesar la actividad.' });
+    }
+    const sesionId = crypto.randomUUID();
+    const actividadesParaInsertar = loteActividad.map(item => ({
+        tipo_actividad: item.tipoLabel,
+        descripcion: item.detalles || {},
+        fecha_actividad: item.fecha,
+        id_vaca: item.vacaId || null,
+        id_usuario: mvzId,
+        sesion_id: sesionId,
+        extra_data: { arete: item.areteVaca, raza: item.raza, lote: item.loteNumero, rancho_id: item.ranchoId, rancho_nombre: ranchoNombre }
+    }));
+    const { error } = await supabase.from('actividades').insert(actividadesParaInsertar);
+    if (error) throw error;
     
-    // --- LÓGICA DE PDF INTEGRADA (COMO EN TU VERSIÓN ANTIGUA) ---
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="reporte_${Date.now()}.pdf"`);
-    
-    const doc = new PDFDocument({ size: 'LETTER', margin: 40 });
-    doc.pipe(res);
+  // --- LÓGICA DE PDF INTEGRADA ---
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="reporte_${Date.now()}.pdf"`);
+    
+    const doc = new PDFDocument({ size: 'LETTER', margin: 40 });
+    doc.pipe(res);
+
+    // CORRECCIÓN: Añadir el logo al PDF
+    try {
+      const logoPath = path.join(__dirname, 'public', 'assets', 'logo.png');
+      if (fs.existsSync(logoPath)) {
+        doc.image(logoPath, 40, 25, { width: 90 });
+      }
+    } catch (logoErr) {
+      console.warn('Advertencia: No se pudo cargar el logo para el PDF.', logoErr.message);
+    }
+
+    doc.fontSize(16).font('Helvetica-Bold').text('JFB Ganadería Inteligente', { align: 'right' });
+    doc.fontSize(10).font('Helvetica')
+      .text(`Rancho: ${ranchoNombre || 'Independiente'}`, { align: 'right' })
+      .text(`Médico Veterinario: ${mvzNombre || '-'}`, { align: 'right' });
+    doc.moveDown(1.5);
 
     // Aquí usamos la lógica de diseño de PDF que ya habíamos reconstruido
     doc.fontSize(16).font('Helvetica-Bold').text('JFB Ganadería Inteligente', { align: 'right' });
@@ -322,21 +338,40 @@ app.get('/api/actividades/vaca/:vacaId', async (req, res) => {
 });
 
 app.get('/api/actividades/mvz/:mvzId', async (req, res) => {
-  try {
-    const { mvzId } = req.params;
-    if (!mvzId) return res.status(400).json({ message: 'mvzId requerido.' });
+  try {
+    const { mvzId } = req.params;
+    if (!mvzId) return res.status(400).json({ message: 'mvzId requerido.' });
 
-    // Esto debe apoyarse en un RPC o consulta que agrupe por sesión; si no existe, devolvemos actividades recientes.
-    // Intentamos RPC primero (si existe)
-    try {
-      const { data, error } = await supabase.rpc('get_sesiones_actividad_mvz', { mvz_id: mvzId });
-      if (!error && Array.isArray(data)) return res.json(data);
-    } catch (rpcErr) { /* no crítico, continuamos con consulta */ }
+    // Consulta mejorada para obtener los datos necesarios para agrupar
+    const { data, error } = await supabase
+      .from('actividades')
+      .select('sesion_id, tipo_actividad, fecha_actividad, extra_data')
+      .eq('id_usuario', mvzId)
+      .order('created_at', { ascending: false });
 
-    const { data, error } = await supabase.from('actividades').select('*').eq('id_usuario', mvzId).order('fecha_actividad', { ascending: false }).limit(50);
-    if (error) throw error;
-    res.json(data || []);
-  } catch (err) { handleServerError(res, err); }
+    if (error) throw error;
+
+    // Agrupamos las actividades por sesión aquí en el servidor
+    const sesiones = (data || []).reduce((acc, act) => {
+        // Si la sesión aún no está en nuestro acumulador, la creamos
+        if (!acc[act.sesion_id]) {
+            acc[act.sesion_id] = {
+                sesion_id: act.sesion_id,
+                tipo_actividad: act.tipo_actividad,
+                rancho_nombre: act.extra_data?.rancho_nombre || 'Independiente',
+                fecha: act.fecha_actividad,
+                conteo: 0
+            };
+        }
+        // Incrementamos el contador de animales para esa sesión
+        acc[act.sesion_id].conteo++;
+        return acc;
+    }, {});
+
+    // Convertimos el objeto de sesiones de nuevo a un array y lo enviamos
+    res.json(Object.values(sesiones));
+
+  } catch (err) { handleServerError(res, err); }
 });
 
 // Generar PDF desde sesiones/actividades (recibe array de sesion_ids o array de actividades)
@@ -438,6 +473,36 @@ app.post('/api/historial/pdf', async (req, res) => {
   }
 });
 
+// ================== NUEVOS ENDPOINTS DE CALENDARIO ==================
+// ✅ FEATURE 5: API PARA GESTIONAR EVENTOS DEL CALENDARIO
+app.post('/api/eventos', async (req, res) => {
+    try {
+        const { mvz_id, rancho_id, fecha_evento, titulo, descripcion, nombre_rancho_texto } = req.body;
+        if (!mvz_id || !fecha_evento || !titulo) {
+            return res.status(400).json({ message: 'Faltan datos obligatorios (mvz_id, fecha, titulo).' });
+        }
+        const { data, error } = await supabase.from('eventos').insert({
+            mvz_id, rancho_id, fecha_evento, titulo, descripcion, nombre_rancho_texto
+        }).select().single();
+        if (error) throw error;
+        res.status(201).json({ success: true, message: 'Evento creado', evento: data });
+    } catch (err) { handleServerError(res, err); }
+});
+
+app.get('/api/eventos/mvz/:mvzId', async (req, res) => {
+    try {
+        const { mvzId } = req.params;
+        const { data, error } = await supabase
+            .from('eventos')
+            .select('*')
+            .eq('mvz_id', mvzId)
+            .gte('fecha_evento', new Date().toISOString()) // Solo eventos futuros
+            .order('fecha_evento', { ascending: true });
+        if (error) throw error;
+        res.json(data || []);
+    } catch (err) { handleServerError(res, err); }
+});
+
 // ================== ESTADÍSTICAS ==================
 app.get('/api/rancho/:ranchoId/estadisticas', async (req, res) => {
   try {
@@ -484,6 +549,94 @@ app.get('/api/rancho/:ranchoId/estadisticas', async (req, res) => {
 
     res.json(stats);
   } catch (err) { handleServerError(res, err); }
+});
+
+// ✅ FEATURE 5: Endpoint para datos del dashboard del MVZ
+app.get('/api/dashboard/mvz/:mvzId', async (req, res) => {
+    try {
+        const { mvzId } = req.params;
+        
+        // Conteo de ranchos asociados
+        const { count: ranchosCount, error: ranchosError } = await supabase
+            .from('rancho_mvz_permisos')
+            .select('*', { count: 'exact', head: true })
+            .eq('mvz_id', mvzId);
+
+        // Conteo de actividades hoy
+        const today = new Date().toISOString().slice(0, 10);
+        const { count: actividadesHoy, error: actError } = await supabase
+            .from('actividades')
+            .select('*', { count: 'exact', head: true })
+            .eq('id_usuario', mvzId)
+            .eq('fecha_actividad', today);
+
+        if (ranchosError || actError) throw (ranchosError || actError);
+
+        res.json({
+            ranchosAsociados: ranchosCount || 0,
+            actividadesHoy: actividadesHoy || 0,
+            // Aquí podrías agregar más lógicas complejas, como animales críticos
+            alertas: 0 // Placeholder
+        });
+
+    } catch (err) { handleServerError(res, err); }
+});
+// ================== EVENTOS Y DASHBOARD MVZ ==================
+// Endpoint para obtener los eventos de un MVZ
+app.get('/api/eventos/mvz/:mvzId', async (req, res) => {
+    try {
+        const { mvzId } = req.params;
+        const { data, error } = await supabase
+            .from('eventos')
+            .select('*, ranchos (nombre)') // Incluye el nombre del rancho si está asociado
+            .eq('mvz_id', mvzId)
+            .gte('fecha_evento', new Date().toISOString()) // Solo eventos futuros
+            .order('fecha_evento', { ascending: true });
+        if (error) throw error;
+        res.json(data || []);
+    } catch (err) { handleServerError(res, err); }
+});
+
+// Endpoint para crear un nuevo evento
+app.post('/api/eventos', async (req, res) => {
+    try {
+        const { mvz_id, rancho_id, fecha_evento, titulo, descripcion, nombre_rancho_texto } = req.body;
+        if (!mvz_id || !fecha_evento || !titulo) {
+            return res.status(400).json({ message: 'Faltan datos obligatorios.' });
+        }
+        // Si rancho_id es un string vacío, lo convertimos a null para la DB
+        const finalRanchoId = rancho_id === '' ? null : rancho_id;
+
+        const { data, error } = await supabase.from('eventos').insert({
+            mvz_id, rancho_id: finalRanchoId, fecha_evento, titulo, descripcion, nombre_rancho_texto
+        }).select().single();
+
+        if (error) throw error;
+        res.status(201).json({ success: true, message: 'Evento creado', evento: data });
+    } catch (err) { handleServerError(res, err); }
+});
+
+// Endpoint para los datos reales del Dashboard del MVZ
+app.get('/api/dashboard/mvz/:mvzId', async (req, res) => {
+    try {
+        const { mvzId } = req.params;
+        const today = new Date().toISOString().slice(0, 10);
+
+        // Conteo de actividades para hoy
+        const { count: actividadesHoy, error: actError } = await supabase
+            .from('actividades')
+            .select('*', { count: 'exact', head: true })
+            .eq('id_usuario', mvzId)
+            .eq('fecha_actividad', today);
+
+        if (actError) throw actError;
+
+        // Aquí puedes agregar más lógica para las alertas en el futuro
+        res.json({
+            actividadesHoy: actividadesHoy || 0,
+            alertas: 0 // Dato de ejemplo por ahora
+        });
+    } catch (err) { handleServerError(res, err); }
 });
 
 // ================== INICIO DEL SERVIDOR ==================

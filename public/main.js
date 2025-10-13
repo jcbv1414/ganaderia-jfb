@@ -93,11 +93,12 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     function logout() {
-    currentUser = null;
-    currentRancho = null;
-    sessionStorage.clear(); // Limpia toda la sesión
-    navigateTo('login');
-    navContainer.classList.add('hidden'); // Oculta la barra de navegación
+    currentUser = null;
+    currentRancho = null;
+    localStorage.removeItem('pinnedRancho'); // Limpia el rancho fijado
+    sessionStorage.clear();
+    navigateTo('login');
+    navContainer.classList.add('hidden');
 }
   // =================================================================
     // NAVEGACIÓN Y RENDERIZADO DE VISTAS
@@ -114,7 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         appContent.appendChild(template.content.cloneNode(true));
         
-        // Lógica post-renderizado
+        // Lógica post-renderizado (ESTE ES EL BLOQUE CORREGIDO)
         if (viewId.startsWith('login') || viewId.startsWith('registro')) {
             document.body.className = '';
             if (viewId === 'login') {
@@ -127,6 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (viewId === 'inicio-propietario') {
             document.getElementById('dash-nombre-propietario').textContent = currentUser?.nombre?.split(' ')[0] || '';
             document.getElementById('dash-fecha-actual').textContent = new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
+            document.getElementById('btn-logout-propietario').onclick = logout; // Conecta el botón de salir
             cargarDatosDashboardPropietario();
         } else if (viewId === 'mis-vacas') {
             renderizarVistaMisVacas();
@@ -135,9 +137,12 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (viewId === 'estadisticas') {
             renderizarVistaEstadisticas();
         } else if (viewId === 'inicio-mvz') {
+            document.getElementById('btn-logout-mvz').onclick = logout; // Conecta el botón de salir
             cargarDashboardMVZ();
         } else if (viewId === 'actividades-mvz') {
             initActividadesMvzListeners();
+        } else if (viewId === 'calendario-mvz') { // <-- Aquí se añade la nueva vista
+            renderizarVistaCalendario();
         }
     }
 
@@ -661,52 +666,112 @@ function abrirModalVaca() {
     }
 
     // LÓGICA DEL MVZ (mantengo la estructura; eliminé duplicados de handleValidarRancho)
-    function cargarDashboardMVZ() { 
-        const datosDashboard = {
-            visitas: 3, detalleVisitas: "2 ranchos, 1 remota", alertas: 5, detalleAlertas: "4 críticos, 1 parto",
-            pendientes: [
-                { id: 1, texto: "Lote 1: Revisión 3 vacas", rancho: "(El Roble)", completado: false },
-                { id: 2, texto: "Lote B: Vacunación general", rancho: "(La Cabaña)", completado: true }
-            ],
-            eventos: [
-                { fecha: "Mañana", texto: "Parto esperado vaca #123 (El Roble)" },
-                { fecha: "Jueves", texto: "Chequeo reproductivo (La Hacienda)" }
-            ]
-        };
-        document.getElementById('dash-nombre-mvz').textContent = currentUser?.nombre?.split(' ')[0] || '';
-        document.getElementById('resumen-visitas').textContent = datosDashboard.visitas;
-        document.getElementById('detalle-visitas').textContent = datosDashboard.detalleVisitas;
-        document.getElementById('resumen-alertas-mvz').textContent = datosDashboard.alertas;
-        document.getElementById('detalle-alertas').textContent = datosDashboard.detalleAlertas;
-        const pendientesContainer = document.getElementById('lista-pendientes');
-        if (pendientesContainer) pendientesContainer.innerHTML = datosDashboard.pendientes.map((p, i) => `<div class="flex justify-between items-center"><p><strong>${i+1}.</strong> ${p.texto} <em class="text-gray-500">${p.rancho}</em></p><button class="${p.completado ? 'bg-green-100 text-green-700' : 'bg-blue-600 text-white'} px-3 py-1 rounded-full text-sm font-semibold">${p.completado ? 'Completado' : 'Ver Detalles'}</button></div>`).join('');
+    async function cargarDashboardMVZ() {
+    document.getElementById('dash-nombre-mvz').textContent = currentUser?.nombre?.split(' ')[0] || '';
+    document.getElementById('dash-fecha-actual-mvz').textContent = new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
+
+    try {
+        // Cargar datos del resumen diario desde el servidor
+        const resDash = await fetch(`/api/dashboard/mvz/${currentUser.id}`);
+        const dataDash = await resDash.json();
+        if (resDash.ok) {
+            document.getElementById('resumen-visitas').textContent = dataDash.actividadesHoy || 0;
+            document.getElementById('detalle-visitas').textContent = "Actividades de Hoy";
+            document.getElementById('resumen-alertas-mvz').textContent = dataDash.alertas || 0;
+            document.getElementById('detalle-alertas').textContent = "Alertas Críticas";
+        }
+
+        // Cargar próximos eventos desde el servidor
+        const resEventos = await fetch(`/api/eventos/mvz/${currentUser.id}`);
+        const eventos = await resEventos.json();
         const eventosContainer = document.getElementById('lista-eventos');
-        if (eventosContainer) eventosContainer.innerHTML = datosDashboard.eventos.map(e => `<div class="flex justify-between items-center"><p><i class="fa-solid fa-calendar-alt text-brand-green mr-2"></i><strong>${e.fecha}:</strong> ${e.texto}</p><i class="fa-solid fa-chevron-right text-gray-400"></i></div>`).join(''); 
+        const pendientesContainer = document.getElementById('lista-pendientes');
+        
+        if (eventosContainer) {
+            if (eventos.length === 0) {
+                eventosContainer.innerHTML = '<p class="text-sm text-gray-500">No tienes eventos próximos agendados.</p>';
+                 if(pendientesContainer) pendientesContainer.innerHTML = '<p class="text-sm text-gray-500">No hay pendientes para hoy.</p>';
+            } else {
+                const hoy = new Date().toDateString();
+                const eventosHoy = eventos.filter(e => new Date(e.fecha_evento).toDateString() === hoy);
+                const eventosProximos = eventos.filter(e => new Date(e.fecha_evento).toDateString() !== hoy);
+
+                // Llenar "Pendientes Hoy"
+                if (pendientesContainer) {
+                     if (eventosHoy.length > 0) {
+                        pendientesContainer.innerHTML = eventosHoy.map((e, i) => {
+                             const rancho = e.nombre_rancho_texto || e.ranchos?.nombre || 'General';
+                            return `<div class="flex justify-between items-center"><p><strong>${i+1}.</strong> ${e.titulo} <em class="text-gray-500">(${rancho})</em></p><button class="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-semibold">Ver Detalles</button></div>`;
+                        }).join('');
+                    } else {
+                         pendientesContainer.innerHTML = '<p class="text-sm text-gray-500">No hay pendientes para hoy.</p>';
+                    }
+                }
+               
+                // Llenar "Próximos Eventos"
+                if (eventosProximos.length > 0) {
+                     eventosContainer.innerHTML = eventosProximos.slice(0, 2).map(e => {
+                        const fecha = new Date(e.fecha_evento);
+                        const manana = new Date();
+                        manana.setDate(new Date().getDate() + 1);
+                        
+                        let textoFecha = fecha.toLocaleDateString('es-MX', { weekday: 'long' });
+                        if (fecha.toDateString() === manana.toDateString()) textoFecha = 'Mañana';
+                        
+                        const rancho = e.nombre_rancho_texto || e.ranchos?.nombre || 'General';
+                        return `<div class="flex justify-between items-center"><p><i class="fa-solid fa-calendar-alt text-brand-green mr-2"></i><strong>${textoFecha}:</strong> ${e.titulo} <em>(${rancho})</em></p><i class="fa-solid fa-chevron-right text-gray-400"></i></div>`;
+                    }).join('');
+                } else {
+                    eventosContainer.innerHTML = '<p class="text-sm text-gray-500">No hay más eventos programados.</p>';
+                }
+            }
+        }
+    } catch (error) {
+        console.error("Error cargando dashboard MVZ:", error);
     }
+}
      
     const accionesContainerTop = document.getElementById('acciones-rapidas-container');
     if (accionesContainerTop) accionesContainerTop.innerHTML = ''; // safe init
 
-    function initActividadesMvzListeners() {
-        const modoCont = document.getElementById('modo-seleccion-container');
-        const ranchoActions = document.getElementById('rancho-actions-container');
-        if (modoCont) modoCont.classList.remove('hidden');
-        if (ranchoActions) ranchoActions.classList.add('hidden');
-        loteActividadActual = [];
-        
-        const btnShow = document.getElementById('btn-show-rancho-registrado');
-        if (btnShow) btnShow.onclick = () => {
-            const container = document.getElementById('rancho-access-container');
-            if (container) container.classList.toggle('hidden');
-        };
-        const btnInd = document.getElementById('btn-iniciar-independiente');
-        if (btnInd) btnInd.onclick = () => {
-            currentRancho = { id: null, nombre: 'Rancho Independiente' };
-            iniciarActividadUI();
-        };
-        const btnValidar = document.getElementById('btn-validar-rancho');
-        if (btnValidar) btnValidar.onclick = handleValidarRancho;
+    async function initActividadesMvzListeners() {
+    const modoCont = document.getElementById('modo-seleccion-container');
+    const ranchoActions = document.getElementById('rancho-actions-container');
+    loteActividadActual = []; // Reinicia el lote actual
+
+    // Lógica para cargar el rancho fijado al iniciar
+    const pinnedRanchoData = localStorage.getItem('pinnedRancho');
+    if (pinnedRanchoData) {
+        try {
+            const rancho = JSON.parse(pinnedRanchoData);
+            if (rancho && rancho.id && rancho.nombre) {
+                currentRancho = rancho;
+                iniciarActividadUI();
+                await cargarVacasParaMVZ();
+                return; // Importante: Salta la pantalla de selección de modo
+            }
+        } catch (e) {
+            localStorage.removeItem('pinnedRancho'); // Limpia si hay datos corruptos
+        }
     }
+
+    // Si no hay rancho fijado, muestra la selección de modo de trabajo
+    if (modoCont) modoCont.classList.remove('hidden');
+    if (ranchoActions) ranchoActions.classList.add('hidden');
+
+    const btnShow = document.getElementById('btn-show-rancho-registrado');
+    if (btnShow) btnShow.onclick = () => {
+        const container = document.getElementById('rancho-access-container');
+        if (container) container.classList.toggle('hidden');
+    };
+    const btnInd = document.getElementById('btn-iniciar-independiente');
+    if (btnInd) btnInd.onclick = () => {
+        currentRancho = { id: null, nombre: 'Trabajo Independiente' };
+        iniciarActividadUI();
+    };
+    const btnValidar = document.getElementById('btn-validar-rancho');
+    if (btnValidar) btnValidar.onclick = handleValidarRancho;
+}
 
     async function handleValidarRancho() {
         const codigoEl = document.getElementById('codigo-rancho');
@@ -725,52 +790,82 @@ function abrirModalVaca() {
     }
 
     function iniciarActividadUI() {
-        document.getElementById('modo-seleccion-container')?.classList.add('hidden');
-        document.getElementById('rancho-actions-container')?.classList.remove('hidden');
-    
-        const esIndependiente = !currentRancho?.id;
-        document.getElementById('rancho-independiente-input-container')?.classList.toggle('hidden', !esIndependiente);
-        document.getElementById('rancho-nombre-activo').textContent = esIndependiente ? 'Trabajo Independiente' : (currentRancho?.nombre || '');
-        document.getElementById('rancho-logo').src = currentRancho?.logo_url || 'assets/logo.png';
-        
-        const accionesContainer = document.getElementById('acciones-rapidas-container');
-        if (accionesContainer) {
-            accionesContainer.innerHTML = '';
-            const colores = ['bg-teal-600', 'bg-sky-600', 'bg-lime-600', 'bg-amber-600'];
-            const iconos = ['fa-syringe', 'fa-vial', 'fa-egg', 'fa-pills'];
-        
-            Object.keys(PROCEDIMIENTOS).forEach((key, index) => {
-                const proc = PROCEDIMIENTOS[key];
-                const button = document.createElement('button');
-                button.className = `text-left ${colores[index % colores.length]} text-white p-4 rounded-lg font-bold flex items-center shadow-lg`;
-                button.dataset.actividad = key;
-                button.innerHTML = `<i class="fa-solid ${iconos[index % iconos.length]} w-6 text-center mr-3"></i>${proc.titulo}`;
-                button.onclick = () => abrirModalActividad(key);
-                accionesContainer.appendChild(button);
-            });
-        }
-        
-        renderizarHistorialMVZ();
-         // Conecta el nuevo botón de logout
-    const btnLogout = document.getElementById('btn-logout-mvz');
-    if (btnLogout) btnLogout.onclick = logout;
+    document.getElementById('modo-seleccion-container')?.classList.add('hidden');
+    document.getElementById('rancho-actions-container')?.classList.remove('hidden');
+
+    const esIndependiente = !currentRancho?.id;
+    document.getElementById('rancho-independiente-input-container')?.classList.toggle('hidden', !esIndependiente);
+    document.getElementById('rancho-nombre-activo').textContent = esIndependiente ? 'Trabajo Independiente' : (currentRancho?.nombre || '');
+    document.getElementById('rancho-logo').src = currentRancho?.logo_url || 'assets/logo.png';
+
+    // Lógica del botón de fijar (pin)
+    const btnFijar = document.getElementById('btn-fijar-rancho');
+    if (btnFijar) {
+        // Revisa si el rancho actual es el que está guardado como "fijado"
+        const pinnedRancho = JSON.parse(localStorage.getItem('pinnedRancho') || 'null');
+        const isPinned = !esIndependiente && pinnedRancho && pinnedRancho.id === currentRancho?.id;
+
+        // Pone el color correcto al pin y lo deshabilita si es trabajo independiente
+        btnFijar.classList.toggle('text-brand-green', isPinned);
+        btnFijar.classList.toggle('text-gray-400', !isPinned);
+        btnFijar.disabled = esIndependiente;
+
+        btnFijar.onclick = () => {
+            const currentlyPinned = JSON.parse(localStorage.getItem('pinnedRancho') || 'null');
+            if (currentlyPinned && currentlyPinned.id === currentRancho?.id) {
+                // Si ya está fijado, lo quita
+                localStorage.removeItem('pinnedRancho');
+                btnFijar.classList.replace('text-brand-green', 'text-gray-400');
+                alert('Rancho desfijado.');
+            } else {
+                // Si no está fijado, lo guarda
+                localStorage.setItem('pinnedRancho', JSON.stringify(currentRancho));
+                btnFijar.classList.replace('text-gray-400', 'text-brand-green');
+                alert(`Rancho '${currentRancho.nombre}' fijado como predeterminado.`);
+            }
+        };
     }
+
+    const accionesContainer = document.getElementById('acciones-rapidas-container');
+    if (accionesContainer) {
+        accionesContainer.innerHTML = '';
+        const colores = ['bg-teal-600', 'bg-sky-600', 'bg-lime-600', 'bg-amber-600', 'bg-indigo-600'];
+        const iconos = ['fa-syringe', 'fa-vial', 'fa-egg', 'fa-pills', 'fa-stethoscope'];
+
+        Object.keys(PROCEDIMIENTOS).forEach((key, index) => {
+            const proc = PROCEDIMIENTOS[key];
+            const button = document.createElement('button');
+            button.className = `text-left ${colores[index % colores.length]} text-white p-4 rounded-lg font-bold flex items-center shadow-lg`;
+            button.dataset.actividad = key;
+            button.innerHTML = `<i class="fa-solid ${iconos[index % iconos.length]} w-6 text-center mr-3"></i>${proc.titulo}`;
+            button.onclick = () => abrirModalActividad(key);
+            accionesContainer.appendChild(button);
+        });
+    }
+
+    renderizarHistorialMVZ();
+}
 
    function abrirModalActividad(tipo) {
     const modal = document.getElementById('modal-actividad');
     const form = document.getElementById('form-actividad-vaca');
     if (!modal || !form) return;
-    
-    form.reset();
 
+    // 1. Limpia todos los inputs, textareas y checkboxes
+    form.reset();
+    
+    // 2. Reinicia todos los menús desplegables a su primera opción
     form.querySelectorAll('select').forEach(select => {
         select.selectedIndex = 0;
     });
 
+    // 3. Vuelve a ocultar los campos que solo aparecen con ciertas condiciones
+    renderizarCamposProcedimiento(tipo, true); // El 'true' es para forzar el reinicio visual
+    
     modal.classList.remove('hidden');
 
     const tituloEl = document.getElementById('modal-actividad-titulo');
-    if (tituloEl && PROCEDIMIENTOS[tipo]) {
+    if (tituloEl && PROCEDIMientos[tipo]) {
         tituloEl.textContent = PROCEDIMIENTOS[tipo].titulo;
     }
 
@@ -779,9 +874,7 @@ function abrirModalVaca() {
         actividadLoteEl.innerHTML = [1, 2, 3, 4, 5].map(l => `<option value="${l}">Lote ${l}</option>`).join('');
     }
 
-    renderizarCamposProcedimiento(tipo);
-
-    // CORRECCIÓN: no usar optional-chaining en el lado izquierdo de asignación
+    // Vuelve a conectar los botones del modal
     const btnCerrar = document.getElementById('btn-cerrar-modal-actividad');
     if (btnCerrar) btnCerrar.onclick = () => modal.classList.add('hidden');
 
@@ -790,7 +883,10 @@ function abrirModalVaca() {
 
     const btnFinalizar = document.getElementById('btn-finalizar-actividad-modal');
     if (btnFinalizar) btnFinalizar.onclick = async () => {
-        handleAgregarVacaAlLote(tipo, false);
+        // Solo agrega la vaca si el campo de arete tiene algo escrito
+        if (document.getElementById('actividad-arete')?.value.trim()) {
+            handleAgregarVacaAlLote(tipo, false);
+        }
         await handleFinalizarYReportar();
         modal.classList.add('hidden');
     };
@@ -959,38 +1055,43 @@ async function handleFinalizarYReportar() {
         }
     }
     
-    function renderizarCamposProcedimiento(tipo) {
-        const container = document.getElementById('campos-dinamicos-procedimiento');
-        if (!container) return;
-        container.innerHTML = '';
-        const proc = PROCEDIMIENTOS[tipo];
-        if (!proc) return;
+    function renderizarCamposProcedimiento(tipo, forzarReinicio = false) {
+    const container = document.getElementById('campos-dinamicos-procedimiento');
+    if (!container) return;
+    container.innerHTML = '';
+    const proc = PROCEDIMIENTOS[tipo];
+    if (!proc) return;
 
-        container.innerHTML = proc.campos.map(campo => {
-            if (campo.tipo === 'select') {
-                return `<div><label class="block text-sm font-medium text-gray-700">${campo.label}</label><select name="${campo.id}" class="mt-1 w-full p-2 border border-gray-300 rounded-lg bg-white">${campo.opciones.map(o=>`<option value="${o}">${o}</option>`).join('')}</select></div>`;
-            } else if (campo.tipo === 'textarea') {
-                return `<div><label class="block text-sm font-medium text-gray-700">${campo.label}</label><textarea name="${campo.id}" rows="2" class="mt-1 w-full p-2 border border-gray-300 rounded-lg"></textarea></div>`;
-            } else if (campo.tipo === 'checkbox') {
-                return `<label class="flex items-center space-x-2"><input type="checkbox" name="${campo.id}" value="Sí" class="h-5 w-5 rounded border-gray-300"><span class="text-sm font-medium text-gray-700">${campo.label}</span></label>`;
-            } else { // text
-                return `<div><label class="block text-sm font-medium text-gray-700">${campo.label}</label><input type="text" name="${campo.id}" placeholder="${campo.placeholder || ''}" class="mt-1 w-full p-2 border border-gray-300 rounded-lg"></div>`;
-            }
-        }).join('');
-        // --- LÓGICA AGREGADA ---
-    // Añade los listeners para los campos condicionales
-    proc.campos.forEach(campo => {
-        if (campo.revela) {
-            const triggerEl = container.querySelector(`[name="${campo.id}"]`);
-            const targetEl = container.querySelector(`[name="${campo.revela}"]`).closest('div');
+    // Crea el HTML para cada campo del formulario
+    container.innerHTML = proc.campos.map(campo => {
+        const revelaAttr = campo.revela ? `data-revela-target="${campo.revela}"` : '';
+        const ocultoClass = campo.oculto ? 'hidden' : '';
 
-            if (triggerEl && targetEl) {
-                triggerEl.addEventListener('change', () => {
-                    const show = triggerEl.value === 'Sí';
-                    targetEl.classList.toggle('hidden', !show);
-                });
-            }
+        if (campo.tipo === 'select') {
+            return `<div class="${ocultoClass}"><label class="block text-sm font-medium text-gray-700">${campo.label}</label><select name="${campo.id}" ${revelaAttr} class="mt-1 w-full p-2 border border-gray-300 rounded-lg bg-white">${campo.opciones.map(o=>`<option value="${o}">${o}</option>`).join('')}</select></div>`;
+        } else if (campo.tipo === 'textarea') {
+            return `<div><label class="block text-sm font-medium text-gray-700">${campo.label}</label><textarea name="${campo.id}" rows="2" class="mt-1 w-full p-2 border border-gray-300 rounded-lg"></textarea></div>`;
+        } else if (campo.tipo === 'checkbox') {
+            return `<label class="flex items-center space-x-2"><input type="checkbox" name="${campo.id}" value="Sí" class="h-5 w-5 rounded border-gray-300"><span class="text-sm font-medium text-gray-700">${campo.label}</span></label>`;
+        } else { // text, date, etc.
+            return `<div class="${ocultoClass}"><label class="block text-sm font-medium text-gray-700">${campo.label}</label><input type="${campo.tipo || 'text'}" name="${campo.id}" placeholder="${campo.placeholder || ''}" class="mt-1 w-full p-2 border border-gray-300 rounded-lg"></div>`;
         }
+    }).join('');
+
+    // Si solo estamos reiniciando, no necesitamos añadir los listeners de nuevo.
+    if (forzarReinicio) return;
+
+    // Añade la lógica para mostrar/ocultar campos
+    container.querySelectorAll('[data-revela-target]').forEach(triggerEl => {
+        triggerEl.addEventListener('change', () => {
+            const targetName = triggerEl.dataset.revelaTarget;
+            const targetEl = container.querySelector(`[name="${targetName}"]`);
+            if (targetEl) {
+                // Muestra el campo si la opción es "Sí" o "IA Convencional"
+                const show = triggerEl.value === 'Sí' || triggerEl.value === 'IA Convencional';
+                targetEl.closest('div').classList.toggle('hidden', !show);
+            }
+        });
     });
 }
 
@@ -1053,6 +1154,109 @@ async function handleFinalizarYReportar() {
             if (areteInput) areteInput.focus();
         }
     }
+    // =================================================================
+// FUNCIONES DEL CALENDARIO MVZ
+// =================================================================
+async function renderizarVistaCalendario() {
+    const btnAbrirModal = document.getElementById('btn-abrir-modal-evento');
+    const modal = document.getElementById('modal-agregar-evento');
+    const btnCerrarModal = document.getElementById('btn-cerrar-modal-evento');
+    const form = document.getElementById('form-agregar-evento');
+
+    if (btnAbrirModal) btnAbrirModal.onclick = async () => {
+        form.reset();
+        await cargarSelectDeRanchos();
+        modal.classList.remove('hidden');
+    };
+    if (btnCerrarModal) btnCerrarModal.onclick = () => modal.classList.add('hidden');
+    if (form) {
+        form.onsubmit = handleGuardarEvento;
+    }
+    await cargarEventos();
+}
+
+async function cargarEventos() {
+    const container = document.getElementById('lista-eventos-calendario');
+    container.innerHTML = '<p class="text-gray-500 text-center">Cargando...</p>';
+    try {
+        const res = await fetch(`/api/eventos/mvz/${currentUser.id}`);
+        if (!res.ok) throw new Error('No se pudieron cargar los eventos');
+        const eventos = await res.json();
+        if (eventos.length === 0) {
+            container.innerHTML = '<p class="text-center text-gray-500 mt-8">No tienes eventos próximos agendados.</p>';
+        } else {
+            container.innerHTML = eventos.map(e => {
+                 const fecha = new Date(e.fecha_evento);
+                 const rancho = e.nombre_rancho_texto || e.ranchos?.nombre || 'General';
+                 return `
+                    <div class="bg-white p-4 rounded-xl shadow-md space-y-1">
+                        <p class="font-bold text-brand-green">${e.titulo}</p>
+                        <p class="text-sm text-gray-600"><i class="fa-solid fa-house-medical w-5 text-center mr-1 text-gray-400"></i>Rancho: ${rancho}</p>
+                        <p class="text-sm text-gray-600"><i class="fa-solid fa-clock w-5 text-center mr-1 text-gray-400"></i>${fecha.toLocaleString('es-MX', { dateStyle: 'full', timeStyle: 'short' })}</p>
+                        ${e.descripcion ? `<p class="text-xs text-gray-500 mt-2 pt-2 border-t">${e.descripcion}</p>` : ''}
+                    </div>`;
+            }).join('');
+        }
+    } catch (error) {
+        container.innerHTML = '<p class="text-red-500 text-center">Error al cargar eventos.</p>';
+    }
+}
+
+async function cargarSelectDeRanchos() {
+    const select = document.getElementById('select-ranchos-evento');
+    if (!select) return;
+    select.innerHTML = '<option value="">Otro / No especificar</option>'; // Opción por defecto
+    try {
+        // Esta es una nueva llamada directa a Supabase desde el frontend.
+        // Asegúrate de tener las políticas de RLS correctas en `rancho_mvz_permisos`.
+        const { data: permisos, error } = await supabase
+            .from('rancho_mvz_permisos')
+            .select('ranchos (*)')
+            .eq('mvz_id', currentUser.id);
+
+        if (error) throw error;
+        const ranchos = permisos.map(p => p.ranchos).filter(Boolean);
+        
+        ranchos.forEach(r => {
+            if(r) select.innerHTML += `<option value="${r.id}">${r.nombre}</option>`;
+        });
+    } catch (error) { console.error('Error cargando ranchos para select:', error); }
+}
+
+async function handleGuardarEvento(e) {
+    e.preventDefault();
+    const form = e.target;
+    const btn = form.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.textContent = 'Guardando...';
+
+    const formData = new FormData(form);
+    const payload = Object.fromEntries(formData.entries());
+    payload.mvz_id = currentUser.id;
+
+    try {
+        const res = await fetch('/api/eventos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const respuesta = await res.json();
+        if (!res.ok) throw new Error(respuesta.message);
+
+        mostrarMensaje('evento-mensaje', '¡Evento guardado con éxito!', false);
+        setTimeout(() => {
+            document.getElementById('modal-agregar-evento').classList.add('hidden');
+            form.reset();
+            cargarEventos(); // Recargar la lista de eventos en la vista de calendario
+            cargarDashboardMVZ(); // Actualizar el dashboard por si el evento es para hoy o mañana
+        }, 1200);
+    } catch (error) {
+        mostrarMensaje('evento-mensaje', error.message, true);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Guardar Evento';
+    }
+}
 
     // INICIALIZACIÓN DE LA APLICACIÓN
     function initApp() {
