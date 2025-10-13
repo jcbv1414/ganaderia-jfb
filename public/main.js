@@ -964,10 +964,11 @@ if (actividadLoteEl) {
     };
     // ... al final de abrirModalActividad, antes del cierre "}"
     // Llena la lista de razas para el autocompletado
-    const datalistRazas = document.getElementById('lista-razas-actividad');
-    if (datalistRazas) {
-        datalistRazas.innerHTML = RAZAS_BOVINAS.map(r => `<option value="${r}"></option>`).join('');
-    }
+    //...dentro de abrirModalActividad, al final
+    // Activa el nuevo sistema de autocompletado personalizado
+    crearAutocompletado('actividad-raza', 'sugerencias-raza-container', RAZAS_BOVINAS);
+
+
 }
 
 async function handleFinalizarYReportar() {
@@ -1376,6 +1377,49 @@ window.handleCancelarEvento = async function(eventoId) {
 }
 
 // ... la función initApp(); debe quedar debajo de esto
-    
+    // =================================================================
+// FUNCIÓN DE AUTOCOMPLETADO PERSONALIZADO
+// =================================================================
+function crearAutocompletado(inputId, containerId, data) {
+    const inputEl = document.getElementById(inputId);
+    const containerEl = document.getElementById(containerId);
+
+    if (!inputEl || !containerEl) return;
+
+    inputEl.addEventListener('input', () => {
+        const query = inputEl.value.toLowerCase();
+        containerEl.innerHTML = ''; // Limpia sugerencias anteriores
+
+        if (query.length === 0) {
+            containerEl.classList.add('hidden');
+            return;
+        }
+
+        const sugerencias = data.filter(item => item.toLowerCase().includes(query));
+
+        if (sugerencias.length > 0) {
+            sugerencias.forEach(item => {
+                const divSugerencia = document.createElement('div');
+                divSugerencia.className = 'p-2 cursor-pointer hover:bg-gray-100';
+                divSugerencia.textContent = item;
+                divSugerencia.onclick = () => {
+                    inputEl.value = item; // Rellena el input
+                    containerEl.classList.add('hidden'); // Oculta la lista
+                };
+                containerEl.appendChild(divSugerencia);
+            });
+            containerEl.classList.remove('hidden'); // Muestra la lista
+        } else {
+            containerEl.classList.add('hidden'); // Oculta si no hay sugerencias
+        }
+    });
+
+    // Oculta la lista si se hace clic en cualquier otro lugar de la pantalla
+    document.addEventListener('click', (e) => {
+        if (e.target !== inputEl) {
+            containerEl.classList.add('hidden');
+        }
+    });
+}
     initApp();
 });
