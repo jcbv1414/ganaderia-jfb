@@ -853,19 +853,18 @@ function abrirModalVaca() {
 
     // 1. Limpia todos los inputs, textareas y checkboxes
     form.reset();
-    
+
     // 2. Reinicia todos los menús desplegables a su primera opción
     form.querySelectorAll('select').forEach(select => {
-        select.selectedIndex = 0;
+        select.selectedIndex = 0; 
     });
 
     // 3. Vuelve a ocultar los campos que solo aparecen con ciertas condiciones
-    renderizarCamposProcedimiento(tipo, true); // El 'true' es para forzar el reinicio visual
-    
-    modal.classList.remove('hidden');
+    renderizarCamposProcedimiento(tipo); // Llamamos a renderizar para que construya los campos
+    modal.classList.remove('hidden'); // Mostramos el modal
 
     const tituloEl = document.getElementById('modal-actividad-titulo');
-    if (tituloEl && PROCEDIMientos[tipo]) {
+    if (tituloEl && PROCEDIMIENTOS[tipo]) {
         tituloEl.textContent = PROCEDIMIENTOS[tipo].titulo;
     }
 
@@ -874,7 +873,7 @@ function abrirModalVaca() {
         actividadLoteEl.innerHTML = [1, 2, 3, 4, 5].map(l => `<option value="${l}">Lote ${l}</option>`).join('');
     }
 
-    // Vuelve a conectar los botones del modal
+    // 4. (LA CORRECCIÓN MÁS IMPORTANTE) Vuelve a conectar TODOS los botones del modal
     const btnCerrar = document.getElementById('btn-cerrar-modal-actividad');
     if (btnCerrar) btnCerrar.onclick = () => modal.classList.add('hidden');
 
@@ -883,7 +882,6 @@ function abrirModalVaca() {
 
     const btnFinalizar = document.getElementById('btn-finalizar-actividad-modal');
     if (btnFinalizar) btnFinalizar.onclick = async () => {
-        // Solo agrega la vaca si el campo de arete tiene algo escrito
         if (document.getElementById('actividad-arete')?.value.trim()) {
             handleAgregarVacaAlLote(tipo, false);
         }
@@ -1207,20 +1205,17 @@ async function cargarSelectDeRanchos() {
     if (!select) return;
     select.innerHTML = '<option value="">Otro / No especificar</option>'; // Opción por defecto
     try {
-        // Esta es una nueva llamada directa a Supabase desde el frontend.
-        // Asegúrate de tener las políticas de RLS correctas en `rancho_mvz_permisos`.
-        const { data: permisos, error } = await supabase
-            .from('rancho_mvz_permisos')
-            .select('ranchos (*)')
-            .eq('mvz_id', currentUser.id);
+        // Ahora le preguntamos a nuestra nueva ruta en el servidor
+        const res = await fetch(`/api/ranchos/mvz/${currentUser.id}`);
+        if (!res.ok) throw new Error('Error del servidor al cargar ranchos');
+        const ranchos = await res.json();
 
-        if (error) throw error;
-        const ranchos = permisos.map(p => p.ranchos).filter(Boolean);
-        
         ranchos.forEach(r => {
             if(r) select.innerHTML += `<option value="${r.id}">${r.nombre}</option>`;
         });
-    } catch (error) { console.error('Error cargando ranchos para select:', error); }
+    } catch (error) { 
+        console.error('Error cargando ranchos para select:', error); 
+    }
 }
 
 async function handleGuardarEvento(e) {
@@ -1269,7 +1264,7 @@ async function handleGuardarEvento(e) {
             if (navContainer) navContainer.classList.add('hidden');
             navigateTo('login');
         }
-        attachRazaAutocomplete('actividad-raza');
+        
     }
     
     initApp();

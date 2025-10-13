@@ -129,6 +129,7 @@ app.get('/api/rancho/:ranchoId/mvz', async (req, res) => {
   } catch (err) { handleServerError(res, err); }
 });
 
+// Endpoint para que un MVZ obtenga la lista de sus ranchos asociados
 app.get('/api/ranchos/mvz/:mvzId', async (req, res) => {
     try {
         const { mvzId } = req.params;
@@ -137,7 +138,9 @@ app.get('/api/ranchos/mvz/:mvzId', async (req, res) => {
             .select('ranchos (*)')
             .eq('mvz_id', mvzId);
         if (error) throw error;
-        res.json(data.map(item => item.ranchos) || []);
+        // Filtramos por si algún rancho es nulo y devolvemos solo la lista de ranchos
+        const ranchos = data.map(item => item.ranchos).filter(Boolean);
+        res.json(ranchos || []);
     } catch (err) { handleServerError(res, err); }
 });
 
