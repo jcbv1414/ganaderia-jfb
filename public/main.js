@@ -221,71 +221,80 @@ document.addEventListener('DOMContentLoaded', () => {
     // LÓGICA DEL PROPIETARIO
     // =================================================================
     async function cargarDatosDashboardPropietario() {
-        if (!currentUser || currentUser.rol !== 'propietario') return;
-        const ranchoId = currentUser.ranchos?.[0]?.id;
-        if (!ranchoId) return;
+    if (!currentUser || currentUser.rol !== 'propietario') return;
 
-        try {
-            const ranchoPrincipal = currentUser?.ranchos?.[0]; 
-    if (ranchoPrincipal) {
-        const infoRanchoEl = document.getElementById('info-rancho-propietario'); // Asegúrate de tener un div con este id en tu HTML
-        if (infoRanchoEl) {
-            infoRanchoEl.innerHTML = `
-                <p class="text-sm text-gray-600">Nombre del Rancho:</p>
-                <h2 class="text-xl font-bold text-brand-green">${ranchoPrincipal.nombre}</h2>
-                <p class="mt-2 text-sm text-gray-600">Código de Acceso para tu MVZ:</p>
-                <p class="text-2xl font-bold text-gray-800 tracking-widest bg-gray-100 p-2 rounded-lg inline-block">${ranchoPrincipal.codigo}</p>
-                <p class="text-xs text-gray-500 mt-1">Comparte este código con tu veterinario para que pueda acceder a tu rancho.</p>
-            `;
-        }
+    // --- PARTE 1: Muestra la información del rancho y el código ---
+    const ranchoPrincipal = currentUser?.ranchos?.[0]; 
+    const infoRanchoEl = document.getElementById('info-rancho-propietario');
+
+    if (ranchoPrincipal && infoRanchoEl) {
+        infoRanchoEl.innerHTML = `
+            <p class="text-sm text-gray-600">Nombre del Rancho:</p>
+            <h3 class="text-xl font-bold text-brand-green">${ranchoPrincipal.nombre}</h3>
+            <p class="mt-4 text-sm text-gray-600">Código de Acceso para tu MVZ:</p>
+            <p class="text-2xl font-mono font-bold text-gray-800 tracking-widest bg-gray-100 p-2 rounded-lg inline-block">${ranchoPrincipal.codigo}</p>
+            <p class="text-xs text-gray-500 mt-1">Comparte este código con tu veterinario.</p>
+        `;
+    } else if (infoRanchoEl) {
+        infoRanchoEl.innerHTML = '<p class="text-red-500">No se encontraron datos de tu rancho. Por favor, contacta a soporte.</p>';
     }
-            const res = await fetch(`/api/rancho/${ranchoId}/estadisticas`);
-            if (!res.ok) throw new Error('No se pudieron cargar las estadísticas.');
-            const stats = await res.json();
 
-            let totalVacas = 0, totalGestantes = 0;
-            Object.values(stats).forEach(lote => {
-                totalVacas += lote.totalVacas || 0;
-                totalGestantes += lote.estados?.Gestante || 0;
-            });
+    // Si no hay rancho, no continuamos a buscar estadísticas
+    const ranchoId = ranchoPrincipal?.id;
+    if (!ranchoId) return;
 
-            document.getElementById('resumen-total-vacas').textContent = totalVacas;
-            document.getElementById('resumen-vacas-gestantes').textContent = totalGestantes;
-            document.getElementById('resumen-alertas').textContent = 3; // Dato de ejemplo
+    // --- PARTE 2: Carga las estadísticas y los lotes ---
+    try {
+        const res = await fetch(`/api/rancho/${ranchoId}/estadisticas`);
+        if (!res.ok) throw new Error('No se pudieron cargar las estadísticas.');
+        const stats = await res.json();
 
-            const lotesContainer = document.getElementById('lotes-container');
-            if (!lotesContainer) return;
-            lotesContainer.innerHTML = '';
-            
-            if (Object.keys(stats).length === 0) {
-                lotesContainer.innerHTML = '<p class="text-gray-500">No hay lotes con datos para mostrar.</p>';
-                return;
-            }
-            
-            Object.entries(stats).slice(0, 3).forEach(([numeroLote, datosLote]) => { // Muestra hasta 3 lotes
+        let totalVacas = 0, totalGestantes = 0;
+        Object.values(stats).forEach(lote => {
+            totalVacas += lote.totalVacas || 0;
+            totalGestantes += lote.estados?.Gestante || 0;
+        });
+
+        // Verificamos que los elementos existan antes de modificarlos
+        const totalVacasEl = document.getElementById('resumen-total-vacas');
+        const gestantesEl = document.getElementById('resumen-vacas-gestantes');
+        if (totalVacasEl) totalVacasEl.textContent = totalVacas;
+        if (gestantesEl) gestantesEl.textContent = totalGestantes;
+        
+        // ... (el resto del código para mostrar los lotes sigue igual) ...
+        const lotesContainer = document.getElementById('lotes-container');
+        if (!lotesContainer) return;
+        lotesContainer.innerHTML = '';
+        
+        if (Object.keys(stats).length === 0) {
+            lotesContainer.innerHTML = '<p class="text-gray-500">No hay lotes con datos para mostrar.</p>';
+        } else {
+            Object.entries(stats).slice(0, 3).forEach(([numeroLote, datosLote]) => {
                 const vacasEnLote = datosLote.totalVacas || 0;
                 const gestantesEnLote = datosLote.estados?.Gestante || 0;
                 const porcentajeGestacion = vacasEnLote > 0 ? Math.round((gestantesEnLote / vacasEnLote) * 100) : 0;
                 const loteCardHTML = `
-                    <div class="bg-white p-4 rounded-xl shadow-md flex items-center justify-between">
-                        <div class="flex items-center">
-                            <div class="progress-ring mr-4" style="--value: ${porcentajeGestacion}; --color: #22c55e;">
-                                <span class="progress-ring-percent">${porcentajeGestacion}%</span>
-                            </div>
-                            <div>
-                                <p class="font-semibold">Lote ${numeroLote}</p>
-                                <p class="text-sm text-gray-500">Gestación</p>
-                            </div>
+                <div class="bg-white p-4 rounded-xl shadow-md flex items-center justify-between">
+                    <div class="flex items-center">
+                        <div class="progress-ring mr-4" style="--value: ${porcentajeGestacion}; --color: #22c55e;">
+                            <span class="progress-ring-percent">${porcentajeGestacion}%</span>
                         </div>
-                        <i class="fa-solid fa-chevron-right text-gray-400"></i>
-                    </div>`;
+                        <div>
+                            <p class="font-semibold">Lote ${numeroLote}</p>
+                            <p class="text-sm text-gray-500">Gestación</p>
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-gray-400"></i>
+                </div>`;
                 lotesContainer.innerHTML += loteCardHTML;
             });
-        } catch (error) {
-            const el = document.getElementById('lotes-container');
-            if (el) el.innerHTML = '<p class="text-red-500">No se pudieron cargar los datos.</p>';
         }
+    } catch (error) {
+        const el = document.getElementById('lotes-container');
+        if (el) el.innerHTML = '<p class="text-red-500">No se pudieron cargar los datos de los lotes.</p>';
+        console.error("Error cargando estadísticas del propietario:", error);
     }
+}
 
 async function renderizarVistaMiMvz() {
     const ranchoId = currentUser.ranchos?.[0]?.id;
