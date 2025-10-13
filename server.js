@@ -425,45 +425,62 @@ app.post('/api/historial/pdf', async (req, res) => {
     doc.moveDown(0.5);
 
     doc.font('Helvetica');
-  actividades.forEach(item => {
-        const arete = item.extra_data?.arete || '-';
-        const raza = item.extra_data?.raza || '-';
-        const lote = item.extra_data?.lote || '-';
-        const fecha = item.fecha_actividad;
+ actividades.forEach((item, index) => {
+    const arete = item.extra_data?.arete || item.areteVaca || '-';
+    const raza = item.extra_data?.raza || 'N/A';
+    const lote = item.extra_data?.lote || 'N/A';
+    const tipoLabel = item.tipoLabel || item.tipo || 'Actividad';
 
-        // --- CORRECCIÓN IMPORTANTE ---
-        // Esta lógica ahora maneja los detalles correctamente,
-        // sin importar si están guardados como texto o como objeto.
-        let detalles = item.descripcion || {};
-        if (typeof detalles === 'string') {
-            try {
-                detalles = JSON.parse(detalles);
-            } catch (e) {
-                // Si no es un JSON válido, lo tratamos como una simple observación
-                detalles = { 'Observaciones': detalles };
-            }
-        }
-        
-        const detallesFiltrados = Object.entries(detalles)
-            .filter(([key, value]) => value && value !== 'No' && value !== '' && key !== 'raza') // También quitamos 'raza' aquí por si acaso
-            .map(([key, value]) => `${prettyLabel(key)}: ${value}`)
-            .join('; ');
+    // Asegurarse de que fecha_actividad tenga un valor antes de intentar formatearlo
+    const rawDate = item.fecha_actividad || item.fecha; // Usar fecha o fecha_actividad
+    const dateObj = rawDate ? new Date(rawDate + 'T00:00:00Z') : null; // Asumir UTC para evitar desfases
+    const fecha = dateObj ? dateObj.toLocaleDateString('es-MX', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'UTC' }) : 'Fecha desconocida';
 
-        const y = doc.y;
-        if (doc.y > 700) doc.addPage();
-        
-        doc.text(arete, 40, y, { width: 70 });
-        doc.text(raza, 110, y, { width: 80 });
-        doc.text(lote, 190, y, { width: 40, align: 'center' });
-        doc.text(formatDate(fecha), 230, y, { width: 80 });
-        doc.text(detallesFiltrados || 'Sin detalles', 310, y, { width: 260 });
-        
-        const rowHeight = doc.y - y + 10; // Altura calculada dinámicamente
-        doc.y = y + rowHeight;
-        
-        doc.moveTo(40, doc.y).lineTo(doc.page.width - 40, doc.y).strokeColor('#cccccc').stroke();
+    let detalles = item.descripcion || {};
+    if (typeof detalles === 'string') {
+        try {
+            detalles = JSON.parse(detalles);
+        } catch (e) {
+            detalles = { 'Observaciones': detalles };
+        }
+    }
+    // Filtramos "raza" nuevamente para asegurar que no aparezca en los detalles
+    const detallesFiltrados = Object.entries(detalles)
+        .filter(([key, value]) => value && value !== 'No' && value !== '' && key !== 'raza')
+        .map(([key, value]) => `${prettyLabel(key)}: ${value}`)
+        .join('; ');
+
+    // Altura inicial para la fila
+    let currentY = doc.y;
+
+    // Tipo de Actividad como título de sección
+    doc.font('Helvetica-Bold').fontSize(12).text(`${tipoLabel} (Lote: ${lote})`, 50, currentY);
+    currentY = doc.y + 5; // Espacio después del título
+
+    // Detalles principales en dos columnas
+    doc.font('Helvetica').fontSize(10);
+    doc.text(`Arete: ${arete}`, 60, currentY, { width: 200 });
+    doc.text(`Raza: ${raza}`, 260, currentY, { width: 100 });
+    doc.text(`Fecha: ${fecha}`, 360, currentY, { width: 150 });
+    currentY = doc.y + 15; // Espacio después de la primera línea de detalles
+
+    // Detalles adicionales (la cadena "Estática: Sí; Ciclando: No;")
+    if (detallesFiltrados) {
+        doc.font('Helvetica-Oblique').fontSize(9).text(`Detalles: ${detallesFiltrados}`, 60, currentY, { width: 450 });
+        currentY = doc.y + 15;
+    }
+
+    // Línea separadora para la siguiente actividad
+    doc.strokeColor('#cccccc').lineWidth(0.5).moveTo(50, currentY).lineTo(550, currentY).stroke();
+    doc.moveDown(0.5); // Pequeño espacio después del separador
+
+    // Añadir una nueva página si no hay suficiente espacio para la siguiente actividad
+    if (doc.y + 60 > doc.page.height - doc.page.margins.bottom && index < actividades.length - 1) {
+        doc.addPage();
+        doc.text('Historial de Actividades (continuación)', 50, 50); // Título de continuación
         doc.moveDown(0.5);
-    });
+    }
+});
 
     doc.end();
 
@@ -623,24 +640,52 @@ app.get('/api/dashboard/mvz/:mvzId', async (req, res) => {
     } catch (err) { handleServerError(res, err); }
 });
 // Endpoint para actualizar un evento (completar o borrar)
-app.patch('/api/eventos/:eventoId', async (req, res) => {
+// ================== RUTAS PARA GESTIONAR EVENTOS ==================
+
+// Endpoint para ACTUALIZAR (Editar) un evento existente
+app.put('/api/eventos/:eventoId', async (req, res) => {
     try {
         const { eventoId } = req.params;
-        const { completado, borrar } = req.body;
+        const { titulo, fecha_evento, rancho_id, nombre_rancho_texto, descripcion } = req.body;
 
-        if (borrar) {
-            const { error } = await supabase.from('eventos').delete().eq('id', eventoId);
-            if (error) throw error;
-            return res.json({ success: true, message: 'Evento eliminado.' });
+        // Validamos que los datos necesarios estén presentes
+        if (!titulo || !fecha_evento) {
+            return res.status(400).json({ message: 'El título y la fecha son obligatorios.' });
         }
 
-        if (typeof completado !== 'undefined') {
-            const { data, error } = await supabase.from('eventos').update({ completado }).eq('id', eventoId).select().single();
-            if (error) throw error;
-            return res.json({ success: true, message: 'Evento actualizado', evento: data });
-        }
+        const finalRanchoId = (rancho_id === '' || rancho_id === null) ? null : rancho_id;
 
-        res.status(400).json({ message: 'Acción no válida.' });
+        const { data, error } = await supabase
+            .from('eventos')
+            .update({
+                titulo,
+                fecha_evento,
+                rancho_id: finalRanchoId,
+                nombre_rancho_texto,
+                descripcion
+            })
+            .eq('id', eventoId)
+            .select()
+            .single();
+
+        if (error) throw error;
+        res.json({ success: true, message: 'Evento actualizado', evento: data });
+
+    } catch (err) { handleServerError(res, err); }
+});
+
+// Endpoint para ELIMINAR un evento
+app.delete('/api/eventos/:eventoId', async (req, res) => {
+    try {
+        const { eventoId } = req.params;
+        const { error } = await supabase
+            .from('eventos')
+            .delete()
+            .eq('id', eventoId);
+
+        if (error) throw error;
+        res.json({ success: true, message: 'Evento eliminado.' });
+
     } catch (err) { handleServerError(res, err); }
 });
 // ================== INICIO DEL SERVIDOR ==================

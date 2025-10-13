@@ -58,6 +58,11 @@
 }
 </style>
           </head>
+          <head>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vanilla-js-calendar@2.6.2/build/vanilla-js-calendar.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/vanilla-js-calendar@2.6.2/build/vanilla-js-calendar.min.js" defer></script>
+    <title>JFB Ganadería Inteligente</title>
+    </head>
 <body>
     <main id="app-content" class="relative z-10"></main>
     <div id="nav-container" class="hidden">
@@ -338,7 +343,8 @@
                 <i class="fa-solid fa-plus mr-2"></i>Nuevo Evento
             </button>
         </header>
-
+<div id="calendario-visual-container" class="bg-white p-2 rounded-xl shadow-md mb-6"></div>
+        <section>
         <section>
             <h2 class="text-lg font-semibold mb-3 text-gray-700">Próximos Eventos</h2>
             <div id="lista-eventos-calendario" class="space-y-3">
@@ -354,6 +360,8 @@
                 <button id="btn-cerrar-modal-evento" class="text-2xl text-gray-500">&times;</button>
             </header>
             <form id="form-agregar-evento">
+                 <input type="hidden" name="evento_id" id="evento-id-input">
+    <main class="p-6 modal-main">
                     <main class="p-6 modal-main">
                         <div class="space-y-4">
                             <div>
@@ -381,8 +389,8 @@
                         </div>
                     </main>
                     <footer class="p-4 bg-gray-50 rounded-b-2xl">
-                        <button type="submit" class="w-full bg-brand-green text-white py-3 rounded-lg font-semibold">Guardar Evento</button>
-                    </footer>
+    <button type="submit" id="btn-guardar-evento" class="w-full bg-brand-green text-white py-3 rounded-lg font-semibold">Guardar Evento</button>
+</footer>
                 </form>
         </div>
     </div>

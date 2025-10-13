@@ -1238,21 +1238,27 @@ const fecha = fechaUTC.toLocaleDateString('es-MX', {day: 'numeric', month: 'long
 // FUNCIONES DEL CALENDARIO MVZ
 // =================================================================
 async function renderizarVistaCalendario() {
-    const btnAbrirModal = document.getElementById('btn-abrir-modal-evento');
     const modal = document.getElementById('modal-agregar-evento');
+    const btnAbrirModal = document.getElementById('btn-abrir-modal-evento');
     const btnCerrarModal = document.getElementById('btn-cerrar-modal-evento');
     const form = document.getElementById('form-agregar-evento');
 
     if (btnAbrirModal) btnAbrirModal.onclick = async () => {
         form.reset();
+        document.getElementById('evento-id-input').value = ''; 
         await cargarSelectDeRanchos();
+        modal.querySelector('h2').textContent = 'Agendar Evento';
+        document.getElementById('btn-guardar-evento').textContent = 'Guardar Evento';
         modal.classList.remove('hidden');
     };
     if (btnCerrarModal) btnCerrarModal.onclick = () => modal.classList.add('hidden');
     if (form) {
         form.onsubmit = handleGuardarEvento;
     }
+
+    // Llama a las funciones para cargar tanto la lista como el calendario visual
     await cargarEventos();
+    await inicializarCalendarioVisual(); // <-- Nueva función llamada aquí
 }
 
 async function cargarEventos() {
@@ -1268,12 +1274,19 @@ async function cargarEventos() {
             container.innerHTML = eventos.map(e => {
                  const fecha = new Date(e.fecha_evento);
                  const rancho = e.nombre_rancho_texto || e.ranchos?.nombre || 'General';
+                 // Pasamos el objeto de evento completo a las funciones
                  return `
-                    <div class="bg-white p-4 rounded-xl shadow-md space-y-1">
-                        <p class="font-bold text-brand-green">${e.titulo}</p>
-                        <p class="text-sm text-gray-600"><i class="fa-solid fa-house-medical w-5 text-center mr-1 text-gray-400"></i>Rancho: ${rancho}</p>
-                        <p class="text-sm text-gray-600"><i class="fa-solid fa-clock w-5 text-center mr-1 text-gray-400"></i>${fecha.toLocaleString('es-MX', { dateStyle: 'full', timeStyle: 'short' })}</p>
-                        ${e.descripcion ? `<p class="text-xs text-gray-500 mt-2 pt-2 border-t">${e.descripcion}</p>` : ''}
+                    <div class="bg-white p-4 rounded-xl shadow-md space-y-2">
+                        <div>
+                            <p class="font-bold text-brand-green">${e.titulo}</p>
+                            <p class="text-sm text-gray-600"><i class="fa-solid fa-house-medical w-5 text-center mr-1 text-gray-400"></i>Rancho: ${rancho}</p>
+                            <p class="text-sm text-gray-600"><i class="fa-solid fa-clock w-5 text-center mr-1 text-gray-400"></i>${fecha.toLocaleString('es-MX', { dateStyle: 'full', timeStyle: 'short' })}</p>
+                            ${e.descripcion ? `<p class="text-xs text-gray-500 mt-2 pt-2 border-t">${e.descripcion}</p>` : ''}
+                        </div>
+                        <div class="flex justify-end space-x-3 pt-2 border-t border-gray-100">
+                            <button onclick='handleEliminarEvento(${e.id})' class="text-sm text-red-600 font-semibold">Eliminar</button>
+                            <button onclick='handleEditarEvento(${JSON.stringify(e)})' class="text-sm bg-gray-600 text-white font-semibold px-4 py-1 rounded-md">Editar</button>
+                        </div>
                     </div>`;
             }).join('');
         }
@@ -1303,35 +1316,42 @@ async function cargarSelectDeRanchos() {
 async function handleGuardarEvento(e) {
     e.preventDefault();
     const form = e.target;
-    const btn = form.querySelector('button[type="submit"]');
+    const btn = document.getElementById('btn-guardar-evento');
     btn.disabled = true;
     btn.textContent = 'Guardando...';
 
     const formData = new FormData(form);
     const payload = Object.fromEntries(formData.entries());
+    const eventoId = payload.evento_id; // Obtenemos el ID del campo oculto
+
+    // Decide si es una actualización (PUT) o una creación (POST)
+    const isUpdating = eventoId && eventoId !== '';
+    const method = isUpdating ? 'PUT' : 'POST';
+    const url = isUpdating ? `/api/eventos/${eventoId}` : '/api/eventos';
+
     payload.mvz_id = currentUser.id;
 
     try {
-        const res = await fetch('/api/eventos', {
-            method: 'POST',
+        const res = await fetch(url, {
+            method: method,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
         const respuesta = await res.json();
         if (!res.ok) throw new Error(respuesta.message);
 
-        mostrarMensaje('evento-mensaje', '¡Evento guardado con éxito!', false);
+        mostrarMensaje('evento-mensaje', `¡Evento ${isUpdating ? 'actualizado' : 'guardado'} con éxito!`, false);
         setTimeout(() => {
             document.getElementById('modal-agregar-evento').classList.add('hidden');
             form.reset();
-            cargarEventos(); // Recargar la lista de eventos en la vista de calendario
-            cargarDashboardMVZ(); // Actualizar el dashboard por si el evento es para hoy o mañana
+            cargarEventos();
+            cargarDashboardMVZ();
         }, 1200);
     } catch (error) {
         mostrarMensaje('evento-mensaje', error.message, true);
     } finally {
         btn.disabled = false;
-        btn.textContent = 'Guardar Evento';
+        // El texto del botón se restablece en renderizarVistaCalendario
     }
 }
 
@@ -1421,6 +1441,125 @@ function crearAutocompletado(inputId, containerId, data) {
             containerEl.classList.add('hidden');
         }
     });
+}
+// =================================================================
+// FUNCIONES PARA EDITAR Y ELIMINAR EVENTOS
+// =================================================================
+
+// Abre el modal con los datos del evento para editarlo
+window.handleEditarEvento = async function(evento) {
+    const modal = document.getElementById('modal-agregar-evento');
+    const form = document.getElementById('form-agregar-evento');
+    form.reset();
+    await cargarSelectDeRanchos(); // Asegura que la lista de ranchos esté cargada
+
+    // Rellenar el formulario con los datos del evento
+    form.querySelector('#evento-id-input').value = evento.id;
+    form.querySelector('[name="titulo"]').value = evento.titulo;
+
+    // Formatear la fecha para el input datetime-local
+    const fechaParaInput = new Date(evento.fecha_evento).toISOString().slice(0, 16);
+    form.querySelector('[name="fecha_evento"]').value = fechaParaInput;
+
+    form.querySelector('[name="rancho_id"]').value = evento.rancho_id || '';
+    form.querySelector('[name="nombre_rancho_texto"]').value = evento.nombre_rancho_texto || '';
+    form.querySelector('[name="descripcion"]').value = evento.descripcion || '';
+
+    // Cambiar el texto del botón y el título del modal
+    document.getElementById('modal-agregar-evento').querySelector('h2').textContent = 'Editar Evento';
+    document.getElementById('btn-guardar-evento').textContent = 'Actualizar Evento';
+
+    modal.classList.remove('hidden');
+}
+
+// Elimina un evento tras confirmación
+window.handleEliminarEvento = async function(eventoId) {
+    if (!confirm('¿Estás seguro de que quieres eliminar este evento? Esta acción no se puede deshacer.')) {
+        return;
+    }
+    try {
+        const res = await fetch(`/api/eventos/${eventoId}`, {
+            method: 'DELETE'
+        });
+        if (!res.ok) throw new Error('No se pudo eliminar el evento.');
+
+        cargarEventos(); // Recarga la lista del calendario
+        cargarDashboardMVZ(); // Recarga el inicio por si el evento era para hoy
+    } catch (error) {
+        alert(error.message);
+    }
+}
+
+// Sobrescribimos renderizarVistaCalendario para que resetee el botón
+async function renderizarVistaCalendario() {
+    const modal = document.getElementById('modal-agregar-evento');
+    const btnAbrirModal = document.getElementById('btn-abrir-modal-evento');
+    const btnCerrarModal = document.getElementById('btn-cerrar-modal-evento');
+    const form = document.getElementById('form-agregar-evento');
+
+    if (btnAbrirModal) btnAbrirModal.onclick = async () => {
+        form.reset();
+        document.getElementById('evento-id-input').value = ''; // Limpia el ID oculto
+        await cargarSelectDeRanchos();
+        // Restablece el título y el botón para "Crear"
+        modal.querySelector('h2').textContent = 'Agendar Evento';
+        document.getElementById('btn-guardar-evento').textContent = 'Guardar Evento';
+        modal.classList.remove('hidden');
+    };
+    if (btnCerrarModal) btnCerrarModal.onclick = () => modal.classList.add('hidden');
+    if (form) {
+        form.onsubmit = handleGuardarEvento;
+    }
+    await cargarEventos();
+}
+// =================================================================
+// FUNCIÓN PARA INICIALIZAR EL CALENDARIO VISUAL
+// =================================================================
+async function inicializarCalendarioVisual() {
+    const container = document.getElementById('calendario-visual-container');
+    if (!container || typeof VanillaCalendar !== 'function') return;
+
+    try {
+        // 1. Obtiene los eventos del usuario
+        const res = await fetch(`/api/eventos/mvz/${currentUser.id}`);
+        if (!res.ok) throw new Error('No se pudieron cargar los eventos para el calendario');
+        const eventos = await res.json();
+
+        // 2. Extrae las fechas y las formatea como 'YYYY-MM-DD'
+        const fechasConEventos = eventos.map(e => {
+            // Asegura que la fecha se interprete correctamente sin problemas de zona horaria
+            const fecha = new Date(e.fecha_evento);
+            const anio = fecha.getFullYear();
+            const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+            const dia = String(fecha.getDate()).padStart(2, '0');
+            return `${anio}-${mes}-${dia}`;
+        });
+
+        // 3. Configura e inicializa el calendario
+        const opciones = {
+            settings: {
+                lang: 'es', // Pone el calendario en español
+                selection: {
+                    day: 'multiple-ranged', // Permite seleccionar rangos, pero lo usaremos para resaltar
+                },
+                visibility: {
+                    theme: 'light',
+                    weekend: false,
+                },
+            },
+            dates: {
+                // Pasa las fechas con eventos para que se resalten
+                highlighted: fechasConEventos,
+            },
+        };
+
+        const calendario = new VanillaCalendar(container, opciones);
+        calendario.init();
+
+    } catch (error) {
+        console.error("Error al inicializar el calendario visual:", error);
+        container.innerHTML = '<p class="text-center text-red-500 text-xs p-2">No se pudo cargar el calendario.</p>';
+    }
 }
     initApp();
 });
