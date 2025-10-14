@@ -158,41 +158,54 @@ app.get('/api/vacas/rancho/:ranchoId', async (req, res) => {
 
 // Subir vaca (acepta foto opcional)
 app.post('/api/vacas', upload.single('fotoVaca'), async (req, res) => {
-  try {
-    const body = req.body || {};
-    const { nombre, siniiga, pierna, sexo, raza, nacimiento, padre, madre, origen, propietarioId, ranchoId } = body;
-    if (!nombre || !siniiga || !propietarioId || !ranchoId) return res.status(400).json({ message: 'Faltan datos importantes (nombre, siniiga, propietarioId, ranchoId).' });
+    try {
+        // ----- EL "CHISMOSO" -----
+        console.log('--- NUEVA SOLICITUD PARA GUARDAR VACA ---');
+        console.log('Datos recibidos en el body:', req.body);
+        // -------------------------
 
-    let fotoPublicUrl = null;
-    if (req.file) {
-      const fotoFile = req.file;
-      const fileName = `vacas/${ranchoId}-${String(siniiga).replace(/\s+/g, '_')}-${Date.now()}`;
-      const { error: uploadError } = await supabase.storage.from('fotos-ganado').upload(fileName, fotoFile.buffer, { contentType: fotoFile.mimetype });
-      if (uploadError) throw uploadError;
-      const { data: urlData } = supabase.storage.from('fotos-ganado').getPublicUrl(fileName);
-      fotoPublicUrl = urlData ? urlData.publicUrl : null;
+        const { nombre, siniiga, pierna, sexo, raza, nacimiento, padre, madre, origen, propietarioId, ranchoId, lote } = req.body;
+
+        if (!nombre || !siniiga || !propietarioId || !ranchoId) {
+            console.error('Validación falló. Datos que SÍ llegaron:', { nombre, siniiga, propietarioId, ranchoId });
+            return res.status(400).json({ message: 'Faltan datos importantes (nombre, siniiga, propietarioId, ranchoId).' });
+        }
+
+        let fotoPublicUrl = null;
+        if (req.file) {
+            const fotoFile = req.file;
+            const fileName = `vacas/${ranchoId}-${String(siniiga).replace(/\s+/g, '_')}-${Date.now()}`;
+            const { error: uploadError } = await supabase.storage.from('fotos-ganado').upload(fileName, fotoFile.buffer, { contentType: fotoFile.mimetype });
+            if (uploadError) throw uploadError;
+            const { data: urlData } = supabase.storage.from('fotos-ganado').getPublicUrl(fileName);
+            fotoPublicUrl = urlData ? urlData.publicUrl : null;
+        }
+
+        const insertPayload = {
+            nombre: String(nombre).trim(),
+            numero_siniiga: String(siniiga).trim(),
+            numero_pierna: pierna || null,
+            sexo: sexo || null,
+            raza: raza || null,
+            fecha_nacimiento: nacimiento || null,
+            padre: padre || null,
+            madre: madre || null,
+            origen: origen || null,
+            id_usuario: propietarioId,
+            rancho_id: ranchoId,
+            estado: 'Activa',
+            foto_url: fotoPublicUrl,
+            lote: lote || null
+        };
+
+        const { data, error } = await supabase.from('vacas').insert(insertPayload).select().single();
+        if (error) throw error;
+        res.status(201).json({ success: true, message: 'Vaca registrada', vaca: data });
+
+    } catch (err) { 
+        console.error("ERROR COMPLETO EN /api/vacas:", err);
+        handleServerError(res, err); 
     }
-
-    const insertPayload = {
-      nombre: String(nombre).trim(),
-      numero_siniiga: String(siniiga).trim(),
-      numero_pierna: pierna || null,
-      sexo: sexo || null,
-      raza: raza || null,
-      fecha_nacimiento: nacimiento || null,
-      padre: padre || null,
-      madre: madre || null,
-      origen: origen || null,
-      id_usuario: propietarioId,
-      rancho_id: ranchoId,
-      estado: 'Activa',
-      foto_url: fotoPublicUrl
-    };
-
-    const { data, error } = await supabase.from('vacas').insert(insertPayload).select().single();
-    if (error) throw error;
-    res.status(201).json({ success: true, message: 'Vaca registrada', vaca: data });
-  } catch (err) { handleServerError(res, err); }
 });
 
 app.delete('/api/vacas/:vacaId', async (req, res) => {
