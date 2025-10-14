@@ -578,13 +578,12 @@ async function handleGuardarVaca(cerrarAlFinalizar) {
             alert(error.message || 'Error inesperado');
         }
     }
-    window.verHistorialVaca = async function(vacaId, vacaNombre) {
+   window.verHistorialVaca = async function(vacaId, vacaNombre) {
     const modalHistorial = document.getElementById('modal-historial-vaca');
     if (!modalHistorial) return;
 
     const prettyLabel = (k) => String(k || '').replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
-    
-    // Cierra el modal al hacer clic en el botón de cerrar
+
     const btnCerrarModalHistorial = document.getElementById('btn-cerrar-modal-historial');
     if(btnCerrarModalHistorial) btnCerrarModalHistorial.onclick = () => modalHistorial.classList.add('hidden');
 
@@ -604,10 +603,25 @@ async function handleGuardarVaca(cerrarAlFinalizar) {
         }
 
         contenidoEl.innerHTML = historial.map(item => {
-            // Lógica para formatear los detalles (ya la tienes, es correcta)
-            const detallesHtml = Object.entries(item.descripcion || {})
+            // ----- INICIO DE LA CORRECCIÓN CLAVE -----
+            // 1. Preparamos una variable para los detalles.
+            let detalles = item.descripcion || {};
+
+            // 2. Si los detalles son un texto (string), intentamos "traducirlos" a un objeto.
+            if (typeof detalles === 'string') {
+                try {
+                    detalles = JSON.parse(detalles);
+                } catch (e) {
+                    // Si no se puede traducir (porque es un texto simple), lo mostramos como una nota.
+                    detalles = { 'Nota': detalles };
+                }
+            }
+            
+            // 3. Ahora sí, creamos el HTML a partir del objeto ya corregido.
+            const detallesHtml = Object.entries(detalles)
                 .map(([key, value]) => `<p><strong class="font-medium text-gray-600">${prettyLabel(key)}:</strong> ${value}</p>`)
                 .join('');
+            // ----- FIN DE LA CORRECCIÓN CLAVE -----
 
             return `
             <div class="bg-gray-50 p-3 rounded-lg border mb-2">
