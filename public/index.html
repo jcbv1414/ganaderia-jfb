@@ -98,20 +98,19 @@
 <body>
     <main id="app-content" class="relative z-10"></main>
     <div id="nav-container" class="hidden">
-        <nav id="nav-propietario" class="bottom-nav">
-             <button class="nav-button active" data-vista="inicio-propietario"><i class="fa-solid fa-house"></i><span>Inicio</span></button>
-             <button class="nav-button" data-vista="mis-vacas"><i class="fa-solid fa-cow"></i><span>Mi Ganado</span></button>
-             <button class="nav-button" data-vista="mi-mvz"><i class="fa-solid fa-user-doctor"></i><span>MVZ</span></button>
-             <button class="nav-button" data-vista="estadisticas"><i class="fa-solid fa-chart-pie"></i><span>Estadísticas</span></button>
-             
-        </nav>
-        <nav id="nav-mvz" class="bottom-nav hidden">
+        <nav id="nav-propietario" class="bottom-nav hidden">
+    <button class="nav-button active" data-vista="inicio-propietario"><i class="fa-solid fa-house"></i><span>Inicio</span></button>
+    <button class="nav-button" data-vista="mis-vacas"><i class="fa-solid fa-cow"></i><span>Mi Ganado</span></button>
+    <button class="nav-button" data-vista="mi-mvz"><i class="fa-solid fa-user-doctor"></i><span>MVZ</span></button>
+    <button class="nav-button" data-vista="estadisticas"><i class="fa-solid fa-chart-pie"></i><span>Estadísticas</span></button>
+</nav>
+
+<nav id="nav-mvz" class="bottom-nav hidden">
     <button class="nav-button active" data-vista="inicio-mvz"><i class="fa-solid fa-house-user"></i><span>Inicio</span></button>
     <button class="nav-button" data-vista="actividades-mvz"><i class="fa-solid fa-clipboard-list"></i><span>Actividades</span></button>
     <button class="nav-button" data-vista="calendario-mvz"><i class="fa-solid fa-calendar-alt"></i><span>Calendario</span></button>
     <button class="nav-button" data-vista="mis-ranchos-mvz"><i class="fa-solid fa-house-medical"></i><span>Mis Ranchos</span></button>
     <button class="nav-button" data-vista="estadisticas-mvz"><i class="fa-solid fa-chart-pie"></i><span>Estadísticas</span></button>
-    
 </nav>
         <div id="fab-container" class="hidden"></div>
     </div>
@@ -209,7 +208,7 @@
         <input type="text" id="filtro-busqueda-ganado" placeholder="Buscar por Arete o No. de Pierna..." class="w-full p-3 pl-10 border border-gray-300 rounded-lg">
         <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
     </div>
-    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+    <div class="flex flex-wrap gap-3">
         <select id="filtro-sexo" class="w-full p-2 border border-gray-300 rounded-lg bg-white">
             <option value="">Todo Sexo</option>
             <option value="Hembra">Hembra</option>
@@ -235,6 +234,8 @@
                 <header class="p-4 border-b border-gray-200 flex justify-between items-center"><h2 class="text-lg font-bold">Registrar Nuevo Animal</h2><button id="btn-cerrar-modal-vaca" class="text-2xl text-gray-500">&times;</button></header>
                 <main class="p-6 modal-main">
                     <form id="form-agregar-vaca" class="space-y-4" enctype="multipart/form-data">
+                        <form id="form-agregar-vaca" class="space-y-4" enctype="multipart/form-data">
+    <input type="hidden" name="vacaId" id="vaca-id-input">
                         <div><label class="block text-sm font-medium text-gray-700 mb-1">Sexo</label><div class="grid grid-cols-2 gap-2" id="sexo-selector"> <button type="button" data-value="Hembra" class="p-2 border rounded-lg">Hembra</button> <button type="button" data-value="Macho" class="p-2 border rounded-lg">Macho</button></div><input type="hidden" name="sexo" id="vaca-sexo" required></div>
                         <div><label for="vaca-nombre" class="block text-sm font-medium text-gray-700 mb-1">Nombre del Animal</label><input type="text" name="nombre" id="vaca-nombre" class="w-full p-2 border border-gray-300 rounded-lg" required></div>
                         <div class="grid grid-cols-2 gap-4">

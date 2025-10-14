@@ -204,6 +204,32 @@ app.delete('/api/vacas/:vacaId', async (req, res) => {
     res.json({ success: true, message: 'Vaca eliminada.' });
   } catch (err) { handleServerError(res, err); }
 });
+// Ruta para ACTUALIZAR (Editar) una vaca existente
+app.put('/api/vacas/:vacaId', upload.single('fotoVaca'), async (req, res) => {
+    try {
+        const { vacaId } = req.params;
+        const { nombre, siniiga, pierna, sexo, raza, nacimiento, padre, madre, origen, lote } = req.body;
+
+        let updatePayload = {
+            nombre, numero_siniiga: siniiga, numero_pierna: pierna, sexo, raza, fecha_nacimiento: nacimiento, padre, madre, origen, lote
+        };
+
+        // Si se sube una nueva foto, la procesamos
+        if (req.file) {
+            const fotoFile = req.file;
+            const fileName = `vacas/${vacaId}-${Date.now()}`;
+            const { error: uploadError } = await supabase.storage.from('fotos-ganado').upload(fileName, fotoFile.buffer, { contentType: fotoFile.mimetype });
+            if (uploadError) throw uploadError;
+            const { data: urlData } = supabase.storage.from('fotos-ganado').getPublicUrl(fileName);
+            updatePayload.foto_url = urlData ? urlData.publicUrl : null;
+        }
+
+        const { data, error } = await supabase.from('vacas').update(updatePayload).eq('id', vacaId).select().single();
+        if (error) throw error;
+
+        res.json({ success: true, message: 'Vaca actualizada', vaca: data });
+    } catch (err) { handleServerError(res, err); }
+});
 // ================== RUTAS PARA GESTIONAR PERMISOS DE MVZ ==================
 
 // Ruta para ACTUALIZAR el permiso de un MVZ

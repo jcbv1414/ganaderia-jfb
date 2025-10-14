@@ -454,11 +454,11 @@ function abrirModalVaca() {
 }
 
     // Lógica del Propietario (handleGuardarVaca corregido)
-    async function handleGuardarVaca(e) {
+async function handleGuardarVaca(e) {
     e.preventDefault();
     const form = e.target;
-    const btn = document.getElementById('btn-guardar-vaca-fab'); // Apuntamos al nuevo botón
-
+    const btn = document.getElementById('btn-guardar-vaca-fab');
+    
     // Animación de "cargando"
     if (btn) {
         btn.disabled = true;
@@ -466,12 +466,20 @@ function abrirModalVaca() {
     }
 
     const formData = new FormData(form);
-    // Asegúrate de que los campos del propietario y rancho se añadan
-    formData.append('propietarioId', currentUser?.id || '');
-    formData.append('ranchoId', currentUser?.ranchos?.[0]?.id || '');
-    // Añadimos el lote que faltaba
-    formData.append('lote', document.getElementById('vaca-lote')?.value || null);
+    const vacaId = formData.get('vacaId'); // Revisa si estamos editando una vaca existente
 
+    // Decide si es una ACTUALIZACIÓN (PUT) o una CREACIÓN (POST)
+    const isUpdating = vacaId && vacaId !== '';
+    const method = isUpdating ? 'PUT' : 'POST';
+    const url = isUpdating ? `/api/vacas/${vacaId}` : '/api/vacas';
+
+    // Solo añade estos datos si es una vaca NUEVA
+    if (!isUpdating) {
+        formData.append('propietarioId', currentUser?.id || '');
+        formData.append('ranchoId', currentUser?.ranchos?.[0]?.id || '');
+    }
+    
+    // El campo 'lote' ya está en el formData, no hace falta añadirlo de nuevo
 
     if (!formData.get('nombre') || !formData.get('siniiga')) {
         mostrarMensaje('vaca-mensaje', 'Nombre y SINIIGA son obligatorios.');
@@ -483,14 +491,13 @@ function abrirModalVaca() {
     }
 
     try {
-        const res = await fetch('/api/vacas', { method: 'POST', body: formData });
+        const res = await fetch(url, { method: method, body: formData });
         const respuesta = await res.json();
-        if (!res.ok) throw new Error(respuesta.message || 'Error al guardar vaca');
-
-        // Mostramos el mensaje de éxito
-        mostrarMensaje('vaca-mensaje', '¡Animal guardado con éxito!', false);
-
-        // Cambiamos el ícono a una palomita de confirmación
+        if (!res.ok) throw new Error(respuesta.message || 'Error al procesar la solicitud');
+        
+        // Muestra un mensaje diferente si se está actualizando o guardando
+        mostrarMensaje('vaca-mensaje', `¡Animal ${isUpdating ? 'actualizado' : 'guardado'} con éxito!`, false);
+        
         if (btn) {
             btn.innerHTML = '<i class="fa-solid fa-check"></i>';
         }
@@ -498,12 +505,12 @@ function abrirModalVaca() {
         setTimeout(() => {
             const modal = document.getElementById('modal-agregar-vaca');
             if (modal) modal.classList.add('hidden');
-            renderizarVistaMisVacas(); // Recarga la lista
+            renderizarVistaMisVacas(); // Recarga la lista para ver los cambios
             if (btn) { // Restaura el botón para la próxima vez
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fa-solid fa-save"></i>';
             }
-        }, 1500); // Damos 1.5 segundos para que se vea la confirmación
+        }, 1500);
     } catch (error) {
         mostrarMensaje('vaca-mensaje', error.message || 'Error inesperado');
         if (btn) { // Restaura el botón si hay error
@@ -1659,7 +1666,13 @@ function renderizarListaDeVacas(vacas) {
         <div class="bg-white rounded-xl shadow-md overflow-hidden mb-4">
             <img src="${vaca.foto_url || 'https://via.placeholder.com/300x200'}" alt="Foto de ${vaca.nombre}" class="w-full h-40 object-cover">
             <div class="p-4">
-                <h3 class="text-xl font-bold text-gray-900">${vaca.nombre}</h3>
+                <div class="flex justify-between items-start">
+                    <h3 class="text-xl font-bold text-gray-900">${vaca.nombre}</h3>
+                    <div class="flex items-center space-x-3">
+                        <button onclick='handleEditarVaca(${JSON.stringify(vaca)})' class="text-gray-500 hover:text-blue-600" title="Editar"><i class="fa-solid fa-pencil"></i></button>
+                        <button onclick='handleEliminarVaca(${vaca.id})' class="text-gray-500 hover:text-red-600" title="Eliminar"><i class="fa-solid fa-trash-can"></i></button>
+                    </div>
+                </div>
                 <div class="text-sm text-gray-600 mt-2 space-y-1">
                     <p><strong>Raza:</strong> ${vaca.raza || 'N/A'}</p>
                     <p><strong>Lote:</strong> ${vaca.lote || 'N/A'}</p>
@@ -1671,6 +1684,50 @@ function renderizarListaDeVacas(vacas) {
             </div>
         </div>
     `).join('');
+}
+// =================================================================
+// FUNCIONES PARA EDITAR Y ELIMINAR VACAS
+// =================================================================
+window.handleEditarVaca = function(vaca) {
+    const modal = document.getElementById('modal-agregar-vaca');
+    const form = document.getElementById('form-agregar-vaca');
+    form.reset();
+
+    // Rellenar el formulario con los datos de la vaca
+    form.querySelector('#vaca-id-input').value = vaca.id;
+    form.querySelector('#vaca-nombre').value = vaca.nombre || '';
+    form.querySelector('#vaca-siniiga').value = vaca.numero_siniiga || '';
+    form.querySelector('#vaca-pierna').value = vaca.numero_pierna || '';
+    form.querySelector('#vaca-lote').value = vaca.lote || '';
+    form.querySelector('#vaca-raza').value = vaca.raza || '';
+    form.querySelector('#vaca-nacimiento').value = vaca.fecha_nacimiento || '';
+    form.querySelector('#vaca-padre').value = vaca.padre || '';
+    form.querySelector('#vaca-madre').value = vaca.madre || '';
+    form.querySelector('#vaca-origen').value = vaca.origen || 'Natural';
+    // Simular selección de sexo
+    const sexo = vaca.sexo || 'Hembra';
+    document.getElementById('vaca-sexo').value = sexo;
+    const sexoSelector = document.getElementById('sexo-selector');
+    sexoSelector.querySelector('.bg-brand-green')?.classList.remove('bg-brand-green', 'text-white');
+    sexoSelector.querySelector(`[data-value="${sexo}"]`)?.classList.add('bg-brand-green', 'text-white');
+
+
+    // Cambiar el título del modal
+    modal.querySelector('h2').textContent = 'Editar Animal';
+    modal.classList.remove('hidden');
+}
+
+window.handleEliminarVaca = async function(vacaId) {
+    if (!confirm('¿Estás seguro de que quieres eliminar este animal? Esta acción no se puede deshacer.')) return;
+    try {
+        const res = await fetch(`/api/vacas/${vacaId}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('No se pudo eliminar la vaca.');
+
+        // Recarga la lista de vacas para que desaparezca la eliminada
+        renderizarVistaMisVacas(); 
+    } catch (error) {
+        alert(error.message || 'Error inesperado');
+    }
 }
     initApp();
 });
