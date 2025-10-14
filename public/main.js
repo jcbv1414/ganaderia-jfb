@@ -476,41 +476,43 @@ async function handleGuardarVaca(cerrarAlFinalizar) {
     const btnSiguiente = document.getElementById('btn-guardar-siguiente-vaca');
     const btnFinalizar = document.getElementById('btn-finalizar-registro-vaca');
 
-    if(btnSiguiente) btnSiguiente.disabled = true;
-    if(btnFinalizar) btnFinalizar.disabled = true;
+    if (btnSiguiente) btnSiguiente.disabled = true;
+    if (btnFinalizar) btnFinalizar.disabled = true;
 
     // --- INICIO DE LA CORRECCIÓN CLAVE ---
-    // Verificación de datos antes de hacer nada
+    // Verificación de datos del formulario y de la sesión del usuario ANTES de hacer nada.
     const nombre = form.querySelector('#vaca-nombre').value;
     const siniiga = form.querySelector('#vaca-siniiga').value;
+    const vacaId = form.querySelector('#vaca-id-input').value; // Obtenemos el ID para saber si es edición
+    const isUpdating = vacaId && vacaId !== '';
 
     if (!nombre || !siniiga) {
         mostrarMensaje('vaca-mensaje', 'Nombre y SINIIGA son obligatorios.');
-        if(btnSiguiente) btnSiguiente.disabled = false;
-        if(btnFinalizar) btnFinalizar.disabled = false;
+        if (btnSiguiente) btnSiguiente.disabled = false;
+        if (btnFinalizar) btnFinalizar.disabled = false;
+        return;
+    }
+
+    // Verificación explícita de que tenemos los datos del usuario y del rancho
+    if (!isUpdating && (!currentUser?.id || !currentUser.ranchos?.[0]?.id)) {
+        mostrarMensaje('vaca-mensaje', 'Error: Sesión de usuario no encontrada. Recarga la página.');
+        if (btnSiguiente) btnSiguiente.disabled = false;
+        if (btnFinalizar) btnFinalizar.disabled = false;
         return;
     }
 
     const formData = new FormData(form);
-    const vacaId = formData.get('vacaId');
-    const isUpdating = vacaId && vacaId !== '';
+    const method = isUpdating ? 'PUT' : 'POST';
+    const url = isUpdating ? `/api/vacas/${vacaId}` : '/api/vacas';
 
-    // Verificación explícita de que tenemos los datos del usuario y del rancho
+    // Añadimos los datos faltantes al formData solo si es una vaca NUEVA
     if (!isUpdating) {
-        if (!currentUser?.id || !currentUser.ranchos?.[0]?.id) {
-            mostrarMensaje('vaca-mensaje', 'Error: No se encontró la sesión del propietario o del rancho. Intenta recargar la página.');
-            if(btnSiguiente) btnSiguiente.disabled = false;
-            if(btnFinalizar) btnFinalizar.disabled = false;
-            return;
-        }
         formData.append('propietarioId', currentUser.id);
         formData.append('ranchoId', currentUser.ranchos[0].id);
     }
     // --- FIN DE LA CORRECCIÓN CLAVE ---
 
     const debeCerrar = isUpdating || cerrarAlFinalizar;
-    const method = isUpdating ? 'PUT' : 'POST';
-    const url = isUpdating ? `/api/vacas/${vacaId}` : '/api/vacas';
 
     try {
         const res = await fetch(url, { method: method, body: formData });
@@ -528,15 +530,13 @@ async function handleGuardarVaca(cerrarAlFinalizar) {
         } else {
             setTimeout(() => {
                 form.reset();
-                // Limpia manualmente los campos que 'reset' no siempre maneja bien
                 const fileNameDisplay = document.getElementById('file-name-display');
                 if (fileNameDisplay) fileNameDisplay.textContent = '';
                 const edadInput = document.getElementById('vaca-edad');
                 if (edadInput) edadInput.value = '';
                 const sexoSelector = document.getElementById('sexo-selector');
                 sexoSelector.querySelector('.bg-brand-green')?.classList.remove('bg-brand-green', 'text-white');
-                
-                document.getElementById('vaca-nombre').focus();
+                form.querySelector('#vaca-nombre').focus();
                 mostrarMensaje('vaca-mensaje', 'Listo para el siguiente animal.', false);
             }, 1200);
         }
@@ -545,8 +545,8 @@ async function handleGuardarVaca(cerrarAlFinalizar) {
         mostrarMensaje('vaca-mensaje', error.message || 'Error inesperado', true);
     } finally {
         setTimeout(() => {
-            if(btnSiguiente) btnSiguiente.disabled = false;
-            if(btnFinalizar) btnFinalizar.disabled = false;
+            if (btnSiguiente) btnSiguiente.disabled = false;
+            if (btnFinalizar) btnFinalizar.disabled = false;
         }, 1200);
     }
 }
