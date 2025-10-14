@@ -204,6 +204,40 @@ app.delete('/api/vacas/:vacaId', async (req, res) => {
     res.json({ success: true, message: 'Vaca eliminada.' });
   } catch (err) { handleServerError(res, err); }
 });
+// ================== RUTAS PARA GESTIONAR PERMISOS DE MVZ ==================
+
+// Ruta para ACTUALIZAR el permiso de un MVZ
+app.patch('/api/rancho/mvz/:permisoId', async (req, res) => {
+    try {
+        const { permisoId } = req.params;
+        const { permisos } = req.body;
+        if (!permisos) return res.status(400).json({ message: 'Se requiere un nuevo permiso.' });
+
+        const { data, error } = await supabase
+            .from('rancho_mvz_permisos')
+            .update({ permisos })
+            .eq('id', permisoId)
+            .select()
+            .single();
+
+        if (error) throw error;
+        res.json({ success: true, message: 'Permiso actualizado', permiso: data });
+    } catch (err) { handleServerError(res, err); }
+});
+
+// Ruta para REVOCAR ACCESO (Eliminar) a un MVZ
+app.delete('/api/rancho/mvz/:permisoId', async (req, res) => {
+    try {
+        const { permisoId } = req.params;
+        const { error } = await supabase
+            .from('rancho_mvz_permisos')
+            .delete()
+            .eq('id', permisoId);
+
+        if (error) throw error;
+        res.json({ success: true, message: 'Acceso revocado correctamente.' });
+    } catch (err) { handleServerError(res, err); }
+});
 
 // ================== ACTIVIDADES, HISTORIAL Y REPORTES ==================
 app.post('/api/actividades', async (req, res) => {

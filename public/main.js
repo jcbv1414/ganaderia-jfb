@@ -297,26 +297,36 @@ document.addEventListener('DOMContentLoaded', () => {
 }
 
 async function renderizarVistaMiMvz() {
-    const ranchoId = currentUser.ranchos?.[0]?.id;
-    if (!ranchoId) return;
+    // --- Muestra el código de acceso ---
+    const ranchoPrincipal = currentUser.ranchos?.[0];
+    const codigoContainer = document.getElementById('codigo-acceso-container');
+    if (ranchoPrincipal && codigoContainer) {
+        codigoContainer.innerHTML = `
+            <h3 class="text-lg font-semibold mb-2">Código de Acceso</h3>
+            <p class="text-sm text-gray-600 mb-2">Comparte este código con tu veterinario para que pueda acceder a los datos de tu rancho.</p>
+            <p class="text-2xl font-mono font-bold text-gray-800 tracking-widest bg-gray-100 p-3 rounded-lg inline-block">${ranchoPrincipal.codigo}</p>
+        `;
+    }
 
+    // --- Carga y muestra la lista de veterinarios ---
     const container = document.getElementById('lista-mvz-container');
-    const form = document.getElementById('form-invitar-mvz');
+    container.innerHTML = '<p class="text-gray-500">Cargando...</p>';
 
-    // Función para cargar y mostrar la lista de veterinarios
-    async function cargarMvz() {
-        try {
-            const res = await fetch(`/api/rancho/${ranchoId}/mvz`);
-            if (!res.ok) throw new Error('Error al cargar veterinarios');
-            const mvzList = await res.json();
+    try {
+        const res = await fetch(`/api/rancho/${ranchoPrincipal.id}/mvz`);
+        if (!res.ok) throw new Error('Error al cargar veterinarios');
+        const mvzList = await res.json();
 
-            if (!mvzList || mvzList.length === 0) {
-                container.innerHTML = '<p class="text-gray-500 text-center">Aún no has invitado a ningún veterinario.</p>';
-                return;
-            }
+        if (!mvzList || mvzList.length === 0) {
+            container.innerHTML = '<p class="text-gray-500 text-center">Aún no tienes veterinarios asociados a tu rancho.</p>';
+            return;
+        }
 
-            container.innerHTML = mvzList.map(item => `
-                <div class="bg-white p-4 rounded-xl shadow-md flex items-center justify-between">
+        container.innerHTML = mvzList.map(item => {
+            const permisoActual = item.permisos || 'basico';
+            return `
+            <div class="bg-white p-4 rounded-xl shadow-md">
+                <div class="flex items-center justify-between">
                     <div class="flex items-center space-x-3">
                         <div class="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
                             <i class="fa-solid fa-user-doctor text-xl text-gray-500"></i>
@@ -326,147 +336,74 @@ async function renderizarVistaMiMvz() {
                             <p class="text-sm text-gray-500">${item.usuarios.email}</p>
                         </div>
                     </div>
-                    <button class="text-red-500 hover:text-red-700" title="Revocar acceso">
+                    <button onclick="handleRevocarAccesoMvz(${item.id})" class="text-red-500 hover:text-red-700" title="Revocar acceso">
                         <i class="fa-solid fa-trash-can"></i>
                     </button>
                 </div>
-            `).join('');
-        } catch (error) {
-            container.innerHTML = '<p class="text-red-500 text-center">No se pudo cargar la lista de veterinarios.</p>';
-        }
+                <div class="mt-3 pt-3 border-t border-gray-100">
+                    <label class="block text-sm font-medium text-gray-700">Permisos:</label>
+                    <select onchange="handleCambiarPermisoMvz(${item.id}, this.value)" class="mt-1 w-full p-2 border border-gray-300 rounded-lg bg-white">
+                        <option value="basico" ${permisoActual === 'basico' ? 'selected' : ''}>Solo registrar actividades</option>
+                        <option value="admin" ${permisoActual === 'admin' ? 'selected' : ''}>Registrar actividades y agregar ganado</option>
+                    </select>
+                </div>
+            </div>`;
+        }).join('');
+    } catch (error) {
+        container.innerHTML = '<p class="text-red-500 text-center">No se pudo cargar la lista de veterinarios.</p>';
     }
-
-    // Lógica para el formulario de invitación
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const emailInput = document.getElementById('email-mvz');
-        const email = emailInput.value.trim();
-        if (!email) return;
-
-        try {
-            const res = await fetch('/api/rancho/invitar-mvz', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    ranchoId: ranchoId,
-                    mvzEmail: email,
-                    permisos: 'editor' // Permiso por defecto
-                })
-            });
-            const respuesta = await res.json();
-            if (!res.ok) throw new Error(respuesta.message || 'Error al invitar');
-            mostrarMensaje('mvz-mensaje', '¡Invitación enviada con éxito!', false);
-            emailInput.value = '';
-            cargarMvz(); // Recargar la lista para mostrar al nuevo veterinario
-        } catch (error) {
-            mostrarMensaje('mvz-mensaje', error.message || 'Error inesperado', true);
-        }
-    });
-
-    // Carga inicial de la lista
-    cargarMvz();
 }
 
     async function renderizarVistaMisVacas() {
-        // En main.js, dentro de renderizarVistaMisVacas
-container.querySelectorAll('.btn-ver-historial').forEach(btn => {
-    btn.onclick = () => verHistorialVaca(btn.dataset.vacaId, btn.dataset.vacaNombre);
-});
+    const ranchoId = currentUser.ranchos?.[0]?.id;
+    if (!ranchoId) return;
 
-// Y agrega estas funciones de forma global o dentro del DOMContentLoaded
-const modalHistorial = document.getElementById('modal-historial-vaca');
-const btnCerrarModalHistorial = document.getElementById('btn-cerrar-modal-historial');
-if(btnCerrarModalHistorial) btnCerrarModalHistorial.onclick = () => modalHistorial.classList.add('hidden');
+    const container = document.getElementById('lista-vacas-container');
+    container.innerHTML = '<p class="text-center text-gray-500 mt-8">Cargando ganado...</p>';
 
-async function verHistorialVaca(vacaId, vacaNombre) {
-    if (!modalHistorial) return;
-
-    document.getElementById('modal-historial-nombre-vaca').textContent = vacaNombre;
-    const contenidoEl = document.getElementById('modal-historial-contenido');
-    contenidoEl.innerHTML = '<p class="text-gray-500">Cargando...</p>';
-    modalHistorial.classList.remove('hidden');
+    const fab = document.getElementById('btn-abrir-modal-vaca');
+    if (fab) fab.onclick = () => abrirModalVaca();
 
     try {
-        const res = await fetch(`/api/actividades/vaca/${vacaId}`);
-        if (!res.ok) throw new Error('No se pudo cargar el historial.');
-        const historial = await res.json();
+        const res = await fetch(`/api/vacas/rancho/${ranchoId}`);
+        if (!res.ok) throw new Error('Error al obtener vacas');
+        const vacas = await res.json();
 
-        if (historial.length === 0) {
-            contenidoEl.innerHTML = '<p class="text-gray-500">No hay actividades registradas para este animal.</p>';
+        const totalVacasEl = document.getElementById('total-vacas-header');
+        if(totalVacasEl) totalVacasEl.textContent = (vacas && vacas.length) || 0;
+
+        if (!vacas || vacas.length === 0) {
+            container.innerHTML = '<p class="text-center text-gray-500 mt-8">Aún no has registrado ningún animal.</p>';
             return;
         }
 
-        contenidoEl.innerHTML = historial.map(item => {
-            const detallesHtml = Object.entries(item.descripcion || {})
-                .map(([key, value]) => `<p><strong class="font-medium text-gray-600">${prettyLabel(key)}:</strong> ${value}</p>`)
-                .join('');
-
-            return `
-                <div class="bg-gray-50 p-3 rounded-lg border">
-                    <p class="font-bold text-brand-green">${item.tipo_actividad}</p>
-                    <p class="text-xs text-gray-500 mb-2">
-                        ${new Date(item.fecha_actividad).toLocaleDateString('es-MX')} por ${item.nombreMvz}
-                    </p>
-                    <div class="text-sm space-y-1">${detallesHtml}</div>
-                </div>
-            `;
-        }).join('');
-    } catch (error) {
-        contenidoEl.innerHTML = '<p class="text-red-500">Error al cargar el historial.</p>';
-    }
-}
-        const ranchoId = currentUser.ranchos?.[0]?.id;
-        if (!ranchoId) return;
-
-        const container = document.getElementById('lista-vacas-container');
-        const fab = document.getElementById('btn-abrir-modal-vaca');
-        
-        if (fab) fab.onclick = () => abrirModalVaca();
-
-        try {
-            const res = await fetch(`/api/vacas/rancho/${ranchoId}`);
-            if (!res.ok) throw new Error('Error al obtener vacas');
-            const vacas = await res.json();
-            document.getElementById('total-vacas-header').textContent = (vacas && vacas.length) || 0;
-            
-            if (!vacas || vacas.length === 0) {
-                container.innerHTML = '<p class="text-center text-gray-500 mt-8">Aún no has registrado ningún animal.</p>';
-                return;
-            }
-
-            container.innerHTML = vacas.map(vaca => `
-                <div class="bg-white p-4 rounded-xl shadow-md">
-                    <div class="flex items-center space-x-4">
-                        <img src="${vaca.foto_url || 'https://via.placeholder.com/80'}" alt="Foto de ${vaca.nombre}" class="w-20 h-20 rounded-lg object-cover bg-gray-200">
-                        <div class="flex-grow">
-                            <div class="flex justify-between items-start">
-                                <div>
-                                    <h3 class="text-lg font-bold text-gray-800">${vaca.nombre}</h3>
-                                    <p class="text-sm text-gray-500">ID: #${vaca.numero_siniiga}</p>
-                                </div>
-                                <button data-vaca-id="${vaca.id}" data-vaca-nombre="${vaca.nombre}" class="btn-ver-historial mt-2 text-sm font-semibold text-brand-green">
-    Ver Historial
-</button>
-                                <button data-vaca-id="${vaca.id}" class="btn-eliminar-vaca text-red-500 hover:text-red-700"><i class="fa-solid fa-trash-can"></i></button>
+        container.innerHTML = vacas.map(vaca => `
+            <div class="bg-white p-4 rounded-xl shadow-md">
+                <div class="flex items-center space-x-4">
+                    <img src="${vaca.foto_url || 'https://via.placeholder.com/80'}" alt="Foto de ${vaca.nombre}" class="w-20 h-20 rounded-lg object-cover bg-gray-200">
+                    <div class="flex-grow">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="text-lg font-bold text-gray-800">${vaca.nombre}</h3>
+                                <p class="text-sm text-gray-500">Arete: #${vaca.numero_siniiga}</p>
                             </div>
-                            <div class="text-xs text-gray-600 mt-2">
-                                <span>Raza: <strong>${vaca.raza || 'N/A'}</strong></span> | 
-                                <span>Nacimiento: <strong>${vaca.fecha_nacimiento ? new Date(vaca.fecha_nacimiento).toLocaleDateString('es-MX') : 'N/A'}</strong></span>
+                            <div>
+                                <button onclick="handleEliminarVaca(${vaca.id})" class="text-red-500 hover:text-red-700 ml-4" title="Eliminar Vaca"><i class="fa-solid fa-trash-can"></i></button>
                             </div>
+                        </div>
+                        <div class="text-xs text-gray-600 mt-2 flex justify-between items-center">
+                            <span>Raza: <strong>${vaca.raza || 'N/A'}</strong></span>
+                            <button onclick="verHistorialVaca(${vaca.id}, '${vaca.nombre}')" class="btn-ver-historial text-sm font-semibold text-brand-green">Ver Historial</button>
                         </div>
                     </div>
                 </div>
-            `).join('');
+            </div>
+        `).join('');
 
-            container.querySelectorAll('.btn-eliminar-vaca').forEach(btn => {
-                btn.onclick = () => handleEliminarVaca(btn.dataset.vacaId);
-            });
-
-        } catch (error) {
-            container.innerHTML = '<p class="text-center text-red-500 mt-8">Error al cargar el ganado.</p>';
-        }
+    } catch (error) {
+        container.innerHTML = '<p class="text-center text-red-500 mt-8">Error al cargar el ganado.</p>';
     }
-    
+}    
 // REEMPLAZA TU FUNCIÓN 'abrirModalVaca' CON ESTA VERSIÓN FINAL
 function abrirModalVaca() {
     const modal = document.getElementById('modal-agregar-vaca');
@@ -572,55 +509,96 @@ function abrirModalVaca() {
             alert(error.message || 'Error inesperado');
         }
     }
+    async function verHistorialVaca(vacaId, vacaNombre) {
+    const modalHistorial = document.getElementById('modal-historial-vaca');
+    if (!modalHistorial) return;
+
+    // Cierra el modal al hacer clic en el botón de cerrar
+    const btnCerrarModalHistorial = document.getElementById('btn-cerrar-modal-historial');
+    if(btnCerrarModalHistorial) btnCerrarModalHistorial.onclick = () => modalHistorial.classList.add('hidden');
+
+    document.getElementById('modal-historial-nombre-vaca').textContent = vacaNombre;
+    const contenidoEl = document.getElementById('modal-historial-contenido');
+    contenidoEl.innerHTML = '<p class="text-gray-500">Cargando...</p>';
+    modalHistorial.classList.remove('hidden');
+
+    try {
+        const res = await fetch(`/api/actividades/vaca/${vacaId}`);
+        if (!res.ok) throw new Error('No se pudo cargar el historial.');
+        const historial = await res.json();
+
+        if (historial.length === 0) {
+            contenidoEl.innerHTML = '<p class="text-gray-500">No hay actividades registradas para este animal.</p>';
+            return;
+        }
+
+        contenidoEl.innerHTML = historial.map(item => {
+            // Lógica para formatear los detalles (ya la tienes, es correcta)
+            const detallesHtml = Object.entries(item.descripcion || {})
+                .map(([key, value]) => `<p><strong class="font-medium text-gray-600">${prettyLabel(key)}:</strong> ${value}</p>`)
+                .join('');
+
+            return `
+            <div class="bg-gray-50 p-3 rounded-lg border mb-2">
+                <p class="font-bold text-brand-green">${item.tipo_actividad}</p>
+                <p class="text-xs text-gray-500 mb-2">
+                    ${new Date(item.fecha_actividad + 'T00:00:00Z').toLocaleDateString('es-MX', { timeZone: 'UTC' })} por ${item.usuarios?.nombre || 'Desconocido'}
+                </p>
+                <div class="text-sm space-y-1">${detallesHtml}</div>
+            </div>
+            `;
+        }).join('');
+    } catch (error) {
+        contenidoEl.innerHTML = `<p class="text-red-500">Error al cargar el historial: ${error.message}</p>`;
+    }
+}
 
     async function renderizarVistaEstadisticas() {
-        const ranchoId = currentUser?.ranchos?.[0]?.id;
-        if (!ranchoId) return;
+    const ranchoId = currentUser?.ranchos?.[0]?.id;
+    if (!ranchoId) return;
 
-        const contenidoContainer = document.getElementById('contenido-estadisticas');
-        if (!contenidoContainer) return;
-        contenidoContainer.innerHTML = '<p class="text-center text-gray-500">Cargando datos...</p>';
+    const contenidoContainer = document.getElementById('contenido-estadisticas');
+    contenidoContainer.innerHTML = '<p class="text-center text-gray-500">Cargando datos...</p>';
 
-        try {
-            const res = await fetch(`/api/rancho/${ranchoId}/estadisticas`);
-            if (!res.ok) throw new Error('No se pudieron cargar las estadísticas del servidor.');
-            
-            datosEstadisticasCompletos = await res.json();
-            const lotes = Object.keys(datosEstadisticasCompletos);
+    try {
+        const res = await fetch(`/api/rancho/${ranchoId}/estadisticas`);
+        if (!res.ok) throw new Error('No se pudieron cargar las estadísticas del servidor.');
 
-            if (lotes.length === 0) {
-                contenidoContainer.innerHTML = '<p class="text-center text-gray-500">No hay datos suficientes para mostrar estadísticas.</p>';
-                return;
-            }
+        datosEstadisticasCompletos = await res.json();
+        const lotes = Object.keys(datosEstadisticasCompletos);
 
-            const tabsContainer = document.getElementById('tabs-lotes-container');
-            if (!tabsContainer) return;
-            tabsContainer.innerHTML = ''; // Limpiar tabs
-            
-            lotes.forEach(lote => {
-                const tabButton = document.createElement('button');
-                tabButton.className = 'py-2 px-4 text-gray-500 font-semibold border-b-2 border-transparent';
-                tabButton.textContent = lote === 'Sin Lote' ? 'Sin Asignar' : `Lote ${lote}`;
-                tabButton.dataset.loteId = lote;
-                tabsContainer.appendChild(tabButton);
-            });
-
-            tabsContainer.querySelectorAll('button').forEach(tab => {
-                tab.addEventListener('click', (e) => {
-                    tabsContainer.querySelector('.text-brand-green.border-brand-green')?.classList.remove('text-brand-green', 'border-brand-green');
-                    e.currentTarget.classList.add('text-brand-green', 'border-brand-green');
-                    renderizarGraficoLote(e.currentTarget.dataset.loteId);
-                });
-            });
-
-            if (tabsContainer.firstChild) {
-                tabsContainer.firstChild.click();
-            }
-
-        } catch (error) {
-            contenidoContainer.innerHTML = `<p class="text-center text-red-500">${error.message || 'Error'}</p>`;
+        if (lotes.length === 0) {
+            contenidoContainer.innerHTML = '<p class="text-center text-gray-500">No hay datos suficientes para mostrar estadísticas.</p>';
+            return;
         }
+
+        const tabsContainer = document.getElementById('tabs-lotes-container');
+        tabsContainer.innerHTML = '';
+
+        lotes.forEach(lote => {
+            const tabButton = document.createElement('button');
+            tabButton.className = 'py-2 px-4 text-gray-500 font-semibold border-b-2 border-transparent';
+            tabButton.textContent = lote === 'Sin Lote' ? 'Sin Asignar' : `Lote ${lote}`;
+            tabButton.dataset.loteId = lote;
+            tabsContainer.appendChild(tabButton);
+        });
+
+        tabsContainer.querySelectorAll('button').forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                tabsContainer.querySelector('.text-brand-green.border-brand-green')?.classList.remove('text-brand-green', 'border-brand-green');
+                e.currentTarget.classList.add('text-brand-green', 'border-brand-green');
+                renderizarGraficoLote(e.currentTarget.dataset.loteId);
+            });
+        });
+
+        if (tabsContainer.firstChild) {
+            tabsContainer.firstChild.click();
+        }
+
+    } catch (error) {
+        contenidoContainer.innerHTML = `<p class="text-center text-red-500">${error.message || 'Error'}</p>`;
     }
+}
     
     function renderizarGraficoLote(loteId) {
         const datosLote = datosEstadisticasCompletos[loteId];
@@ -1578,6 +1556,27 @@ async function inicializarCalendarioVisual() {
         console.error("Error al inicializar el calendario visual:", error);
         container.innerHTML = '<p class="text-center text-red-500 text-xs p-2">No se pudo cargar el calendario.</p>';
     }
+}
+// --- PEGA ESTAS DOS NUEVAS FUNCIONES al final de tu main.js, antes de initApp() ---
+window.handleRevocarAccesoMvz = async function(permisoId) {
+    if (!confirm('¿Estás seguro de que quieres revocar el acceso a este veterinario?')) return;
+    try {
+        const res = await fetch(`/api/rancho/mvz/${permisoId}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('No se pudo revocar el acceso.');
+        renderizarVistaMiMvz(); // Recarga la lista
+    } catch (error) { alert(error.message); }
+}
+
+window.handleCambiarPermisoMvz = async function(permisoId, nuevoPermiso) {
+    try {
+        const res = await fetch(`/api/rancho/mvz/${permisoId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ permisos: nuevoPermiso })
+        });
+        if (!res.ok) throw new Error('No se pudo actualizar el permiso.');
+        // Opcional: mostrar un mensaje de éxito
+    } catch (error) { alert(error.message); }
 }
     initApp();
 });
