@@ -402,17 +402,20 @@ function abrirModalVaca() {
     const form = document.getElementById('form-agregar-vaca');
     if (!modal || !form) return;
 
-    // --- CORRECCIONES PRINCIPALES ---
-    // 1. Reinicia el formulario para asegurar que esté limpio.
     form.reset();
-    // 2. Limpia el campo oculto para que la función de guardar sepa que es un animal NUEVO.
     document.getElementById('vaca-id-input').value = '';
-    // 3. Conecta el botón 'X' para cerrar CADA VEZ que se abre el modal.
-    const btnCerrar = modal.querySelector('#btn-cerrar-modal-vaca'); // Usamos el ID correcto
+    const btnCerrar = modal.querySelector('#btn-cerrar-modal-vaca');
     if (btnCerrar) btnCerrar.onclick = () => modal.classList.add('hidden');
-    // 4. Asegura que el título siempre sea "Registrar" cuando se usa este botón.
     modal.querySelector('h2').textContent = 'Registrar Nuevo Animal';
-    // ------------------------------------
+
+    // --- CONECTA LOS NUEVOS BOTONES ---
+    const btnGuardarSiguiente = document.getElementById('btn-guardar-siguiente-vaca');
+    const btnFinalizar = document.getElementById('btn-finalizar-registro-vaca');
+
+    if (btnGuardarSiguiente) btnGuardarSiguiente.onclick = () => handleGuardarVaca(false); // false = no cerrar modal
+    if (btnFinalizar) btnFinalizar.onclick = () => handleGuardarVaca(true); // true = sí cerrar modal
+
+    
 
     // --- TODA TU LÓGICA ANTERIOR (INTACTA) ---
     const fileNameDisplay = document.getElementById('file-name-display');
@@ -468,32 +471,31 @@ function abrirModalVaca() {
     modal.classList.remove('hidden');
 }
     // Lógica del Propietario (handleGuardarVaca corregido)
-async function handleGuardarVaca(e) {
-    e.preventDefault();
-    const form = e.target;
-    const btn = document.getElementById('btn-guardar-vaca-fab');
-    if (btn) {
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i>';
-    }
+async function handleGuardarVaca(cerrarAlFinalizar) {
+    const form = document.getElementById('form-agregar-vaca');
+    const btnSiguiente = document.getElementById('btn-guardar-siguiente-vaca');
+    const btnFinalizar = document.getElementById('btn-finalizar-registro-vaca');
+
+    // Deshabilita ambos botones
+    if(btnSiguiente) btnSiguiente.disabled = true;
+    if(btnFinalizar) btnFinalizar.disabled = true;
 
     const formData = new FormData(form);
     const vacaId = formData.get('vacaId');
-
-    // CORRECCIÓN: Leemos los valores directamente del formulario para la validación
     const nombre = form.querySelector('#vaca-nombre').value;
     const siniiga = form.querySelector('#vaca-siniiga').value;
 
     if (!nombre || !siniiga) {
         mostrarMensaje('vaca-mensaje', 'Nombre y SINIIGA son obligatorios.');
-        if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fa-solid fa-save"></i>';
-        }
+        if(btnSiguiente) btnSiguiente.disabled = false;
+        if(btnFinalizar) btnFinalizar.disabled = false;
         return;
     }
 
     const isUpdating = vacaId && vacaId !== '';
+    // Si es una actualización, siempre cerramos el modal
+    const debeCerrar = isUpdating || cerrarAlFinalizar;
+
     const method = isUpdating ? 'PUT' : 'POST';
     const url = isUpdating ? `/api/vacas/${vacaId}` : '/api/vacas';
 
@@ -507,27 +509,31 @@ async function handleGuardarVaca(e) {
         const respuesta = await res.json();
         if (!res.ok) throw new Error(respuesta.message);
 
-        mostrarMensaje('vaca-mensaje', `¡Animal ${isUpdating ? 'actualizado' : 'guardado'} con éxito!`, false);
+        mostrarMensaje('vaca-mensaje', `¡Animal ${isUpdating ? 'actualizado' : 'guardado'}!`, false);
 
-        if (btn) {
-            btn.innerHTML = '<i class="fa-solid fa-check"></i>';
+        if (debeCerrar) {
+            setTimeout(() => {
+                const modal = document.getElementById('modal-agregar-vaca');
+                if (modal) modal.classList.add('hidden');
+                renderizarVistaMisVacas();
+            }, 1200);
+        } else {
+            // Si no se cierra, simplemente limpia el formulario para el siguiente animal
+            setTimeout(() => {
+                form.reset();
+                document.getElementById('vaca-nombre').focus();
+                mostrarMensaje('vaca-mensaje', 'Listo para el siguiente animal.', false);
+            }, 1200);
         }
 
-        setTimeout(() => {
-            const modal = document.getElementById('modal-agregar-vaca');
-            if (modal) modal.classList.add('hidden');
-            renderizarVistaMisVacas();
-            if (btn) {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fa-solid fa-save"></i>';
-            }
-        }, 1500);
     } catch (error) {
-        mostrarMensaje('vaca-mensaje', error.message || 'Error inesperado');
-        if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fa-solid fa-save"></i>';
-        }
+        mostrarMensaje('vaca-mensaje', error.message || 'Error inesperado', true);
+    } finally {
+        // Vuelve a habilitar los botones después de un momento
+        setTimeout(() => {
+            if(btnSiguiente) btnSiguiente.disabled = false;
+            if(btnFinalizar) btnFinalizar.disabled = false;
+        }, 1200);
     }
 }
     async function handleEliminarVaca(vacaId) {
