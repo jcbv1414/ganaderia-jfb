@@ -368,6 +368,7 @@ async function renderizarVistaMiMvz() {
 
     const container = document.getElementById('lista-vacas-container');
     container.innerHTML = '<p class="text-center text-gray-500 mt-8">Cargando ganado...</p>';
+    
     const fab = document.getElementById('btn-abrir-modal-vaca');
     if (fab) fab.onclick = () => abrirModalVaca();
 
@@ -478,16 +479,8 @@ async function handleGuardarVaca(e) {
 
     const formData = new FormData(form);
     const vacaId = formData.get('vacaId');
-    const isUpdating = vacaId && vacaId !== '';
-    const method = isUpdating ? 'PUT' : 'POST';
-    const url = isUpdating ? `/api/vacas/${vacaId}` : '/api/vacas';
 
-    if (!isUpdating) {
-        formData.append('propietarioId', currentUser?.id || '');
-        formData.append('ranchoId', currentUser?.ranchos?.[0]?.id || '');
-    }
-
-    // CORRECCIÓN: Nos aseguramos de que los campos obligatorios se lean directamente
+    // CORRECCIÓN: Leemos los valores directamente del formulario para la validación
     const nombre = form.querySelector('#vaca-nombre').value;
     const siniiga = form.querySelector('#vaca-siniiga').value;
 
@@ -500,16 +493,22 @@ async function handleGuardarVaca(e) {
         return;
     }
 
+    const isUpdating = vacaId && vacaId !== '';
+    const method = isUpdating ? 'PUT' : 'POST';
+    const url = isUpdating ? `/api/vacas/${vacaId}` : '/api/vacas';
+
+    if (!isUpdating) {
+        formData.append('propietarioId', currentUser?.id || '');
+        formData.append('ranchoId', currentUser?.ranchos?.[0]?.id || '');
+    }
+
     try {
         const res = await fetch(url, { method: method, body: formData });
         const respuesta = await res.json();
         if (!res.ok) throw new Error(respuesta.message);
 
         mostrarMensaje('vaca-mensaje', `¡Animal ${isUpdating ? 'actualizado' : 'guardado'} con éxito!`, false);
-        
-        // Muestra un mensaje diferente si se está actualizando o guardando
-        mostrarMensaje('vaca-mensaje', `¡Animal ${isUpdating ? 'actualizado' : 'guardado'} con éxito!`, false);
-        
+
         if (btn) {
             btn.innerHTML = '<i class="fa-solid fa-check"></i>';
         }
@@ -517,21 +516,20 @@ async function handleGuardarVaca(e) {
         setTimeout(() => {
             const modal = document.getElementById('modal-agregar-vaca');
             if (modal) modal.classList.add('hidden');
-            renderizarVistaMisVacas(); // Recarga la lista para ver los cambios
-            if (btn) { // Restaura el botón para la próxima vez
+            renderizarVistaMisVacas();
+            if (btn) {
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fa-solid fa-save"></i>';
             }
         }, 1500);
     } catch (error) {
         mostrarMensaje('vaca-mensaje', error.message || 'Error inesperado');
-        if (btn) { // Restaura el botón si hay error
+        if (btn) {
             btn.disabled = false;
             btn.innerHTML = '<i class="fa-solid fa-save"></i>';
         }
     }
 }
-
     async function handleEliminarVaca(vacaId) {
         if (!confirm('¿Estás seguro de que quieres eliminar este animal? Esta acción no se puede deshacer.')) return;
         
