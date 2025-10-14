@@ -199,6 +199,32 @@
                 <h1 class="text-2xl font-bold text-gray-800">Mi Ganado</h1>
                 <p class="text-gray-500"><span id="total-vacas-header">0</span> animales</p>
             </header>
+            <header class="flex justify-between items-center mb-4">
+    <h1 class="text-2xl font-bold text-gray-800">Mi Ganado</h1>
+    <p class="text-gray-500"><span id="total-vacas-header">0</span> animales</p>
+</header>
+
+<section id="filtros-ganado-container" class="bg-white p-4 rounded-xl shadow-md mb-6 space-y-4">
+    <div class="relative">
+        <input type="text" id="filtro-busqueda-ganado" placeholder="Buscar por Arete o No. de Pierna..." class="w-full p-3 pl-10 border border-gray-300 rounded-lg">
+        <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+    </div>
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <select id="filtro-sexo" class="w-full p-2 border border-gray-300 rounded-lg bg-white">
+            <option value="">Todo Sexo</option>
+            <option value="Hembra">Hembra</option>
+            <option value="Macho">Macho</option>
+        </select>
+        <select id="filtro-lote" class="w-full p-2 border border-gray-300 rounded-lg bg-white">
+            <option value="">Todo Lote</option>
+            </select>
+        <select id="filtro-raza" class="w-full p-2 border border-gray-300 rounded-lg bg-white">
+            <option value="">Toda Raza</option>
+            </select>
+    </div>
+</section>
+<div id="lista-vacas-container" class="space-y-4">
+    </div>
             <div id="lista-vacas-container" class="space-y-4">
                 <p class="text-center text-gray-500 mt-8">Cargando ganado...</p>
             </div>

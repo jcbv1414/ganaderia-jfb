@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // =================================================================
     let currentUser = null;
     let currentRancho = null;
+    let listaCompletaDeVacas = [];
     let loteActividadActual = [];
     let vacasIndex = new Map();
     let datosEstadisticasCompletos = null;
@@ -354,47 +355,34 @@ async function renderizarVistaMiMvz() {
     }
 }
 
-    async function renderizarVistaMisVacas() {
+   async function renderizarVistaMisVacas() {
     const ranchoId = currentUser.ranchos?.[0]?.id;
     if (!ranchoId) return;
 
     const container = document.getElementById('lista-vacas-container');
     container.innerHTML = '<p class="text-center text-gray-500 mt-8">Cargando ganado...</p>';
-
     const fab = document.getElementById('btn-abrir-modal-vaca');
     if (fab) fab.onclick = () => abrirModalVaca();
 
     try {
         const res = await fetch(`/api/vacas/rancho/${ranchoId}`);
         if (!res.ok) throw new Error('Error al obtener vacas');
-        const vacas = await res.json();
+        listaCompletaDeVacas = await res.json(); // Guardamos la lista completa
 
         const totalVacasEl = document.getElementById('total-vacas-header');
-        if(totalVacasEl) totalVacasEl.textContent = (vacas && vacas.length) || 0;
+        if(totalVacasEl) totalVacasEl.textContent = (listaCompletaDeVacas && listaCompletaDeVacas.length) || 0;
 
-        if (!vacas || vacas.length === 0) {
-            container.innerHTML = '<p class="text-center text-gray-500 mt-8">Aún no has registrado ningún animal.</p>';
-            return;
-        }
+        // Preparamos los menús de filtros con los datos reales
+        popularFiltrosDeGanado(listaCompletaDeVacas);
 
-        // ... dentro de renderizarVistaMisVacas ...
-container.innerHTML = vacas.map(vaca => `
-    <div class="bg-white rounded-xl shadow-md overflow-hidden mb-4">
-        <img src="${vaca.foto_url || 'https://via.placeholder.com/300x200'}" alt="Foto de ${vaca.nombre}" class="w-full h-40 object-cover">
-        <div class="p-4">
-            <h3 class="text-xl font-bold text-gray-900">${vaca.nombre}</h3>
-            <div class="text-sm text-gray-600 mt-2 space-y-1">
-                <p><strong>Raza:</strong> ${vaca.raza || 'N/A'}</p>
-                <p><strong>Nacimiento:</strong> ${vaca.fecha_nacimiento ? new Date(vaca.fecha_nacimiento + 'T00:00:00Z').toLocaleDateString('es-MX', { timeZone: 'UTC' }) : 'N/A'}</p>
-                <p><strong>ID:</strong> #${vaca.numero_siniiga}</p>
-            </div>
-            <button onclick="verHistorialVaca(${vaca.id}, '${vaca.nombre}')" class="w-full bg-green-100 text-green-800 font-semibold p-2 rounded-lg mt-4 hover:bg-green-200 transition">
-                Ver Detalles
-            </button>
-        </div>
-    </div>
-`).join('');
-// ... el resto de la función sigue igual ...
+        // Conectamos los controles a la función de filtrado
+        document.getElementById('filtro-busqueda-ganado').addEventListener('input', aplicarFiltrosDeGanado);
+        document.getElementById('filtro-sexo').addEventListener('change', aplicarFiltrosDeGanado);
+        document.getElementById('filtro-lote').addEventListener('change', aplicarFiltrosDeGanado);
+        document.getElementById('filtro-raza').addEventListener('change', aplicarFiltrosDeGanado);
+
+        // Mostramos la lista inicial (sin filtrar)
+        aplicarFiltrosDeGanado();
 
     } catch (error) {
         container.innerHTML = '<p class="text-center text-red-500 mt-8">Error al cargar el ganado.</p>';
@@ -1605,6 +1593,84 @@ window.handleCambiarPermisoMvz = async function(permisoId, nuevoPermiso) {
         if (!res.ok) throw new Error('No se pudo actualizar el permiso.');
         // Opcional: mostrar un mensaje de éxito
     } catch (error) { alert(error.message); }
+}
+// =================================================================
+// FUNCIONES PARA FILTRAR LA LISTA DE GANADO
+// =================================================================
+
+function popularFiltrosDeGanado(vacas) {
+    const loteSelect = document.getElementById('filtro-lote');
+    const razaSelect = document.getElementById('filtro-raza');
+
+    // Extraemos lotes y razas únicas, y las ordenamos
+    const lotesUnicos = [...new Set(vacas.map(v => v.lote).filter(Boolean))].sort((a,b) => a - b);
+    const razasUnicas = [...new Set(vacas.map(v => v.raza).filter(Boolean))].sort();
+
+    loteSelect.innerHTML = '<option value="">Todo Lote</option>'; // Reseteamos
+    lotesUnicos.forEach(lote => {
+        loteSelect.innerHTML += `<option value="${lote}">Lote ${lote}</option>`;
+    });
+
+    razaSelect.innerHTML = '<option value="">Toda Raza</option>'; // Reseteamos
+    razasUnicas.forEach(raza => {
+        razaSelect.innerHTML += `<option value="${raza}">${raza}</option>`;
+    });
+}
+
+function aplicarFiltrosDeGanado() {
+    const busqueda = document.getElementById('filtro-busqueda-ganado').value.toLowerCase();
+    const sexo = document.getElementById('filtro-sexo').value;
+    const lote = document.getElementById('filtro-lote').value;
+    const raza = document.getElementById('filtro-raza').value;
+
+    let vacasFiltradas = [...listaCompletaDeVacas];
+
+    // 1. Filtrar por término de búsqueda (Arete o Pierna)
+    if (busqueda) {
+        vacasFiltradas = vacasFiltradas.filter(v => 
+            v.numero_siniiga?.toLowerCase().includes(busqueda) ||
+            v.numero_pierna?.toLowerCase().includes(busqueda)
+        );
+    }
+    // 2. Filtrar por sexo
+    if (sexo) {
+        vacasFiltradas = vacasFiltradas.filter(v => v.sexo === sexo);
+    }
+    // 3. Filtrar por lote
+    if (lote) {
+        vacasFiltradas = vacasFiltradas.filter(v => v.lote == lote);
+    }
+    // 4. Filtrar por raza
+    if (raza) {
+        vacasFiltradas = vacasFiltradas.filter(v => v.raza === raza);
+    }
+
+    renderizarListaDeVacas(vacasFiltradas);
+}
+
+function renderizarListaDeVacas(vacas) {
+    const container = document.getElementById('lista-vacas-container');
+    if (!vacas || vacas.length === 0) {
+        container.innerHTML = '<p class="text-center text-gray-500 mt-8">No se encontraron animales con esos filtros.</p>';
+        return;
+    }
+
+    container.innerHTML = vacas.map(vaca => `
+        <div class="bg-white rounded-xl shadow-md overflow-hidden mb-4">
+            <img src="${vaca.foto_url || 'https://via.placeholder.com/300x200'}" alt="Foto de ${vaca.nombre}" class="w-full h-40 object-cover">
+            <div class="p-4">
+                <h3 class="text-xl font-bold text-gray-900">${vaca.nombre}</h3>
+                <div class="text-sm text-gray-600 mt-2 space-y-1">
+                    <p><strong>Raza:</strong> ${vaca.raza || 'N/A'}</p>
+                    <p><strong>Lote:</strong> ${vaca.lote || 'N/A'}</p>
+                    <p><strong>ID (Arete):</strong> #${vaca.numero_siniiga}</p>
+                </div>
+                <button onclick="verHistorialVaca(${vaca.id}, '${vaca.nombre}')" class="w-full bg-green-100 text-green-800 font-semibold p-2 rounded-lg mt-4 hover:bg-green-200 transition">
+                    Ver Detalles
+                </button>
+            </div>
+        </div>
+    `).join('');
 }
     initApp();
 });
