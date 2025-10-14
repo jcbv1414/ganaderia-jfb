@@ -467,31 +467,63 @@ function abrirModalVaca() {
 
     // Lógica del Propietario (handleGuardarVaca corregido)
     async function handleGuardarVaca(e) {
-        e.preventDefault();
-        const form = e.target;
-        const formData = new FormData(form);
-        formData.append('propietarioId', currentUser?.id || '');
-        formData.append('ranchoId', currentUser?.ranchos?.[0]?.id || '');
+    e.preventDefault();
+    const form = e.target;
+    const btn = document.getElementById('btn-guardar-vaca-fab'); // Apuntamos al nuevo botón
 
-        if (!formData.get('nombre') || !formData.get('siniiga')) {
-            mostrarMensaje('vaca-mensaje', 'Nombre y SINIIGA son obligatorios.');
-            return;
+    // Animación de "cargando"
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i>';
+    }
+
+    const formData = new FormData(form);
+    // Asegúrate de que los campos del propietario y rancho se añadan
+    formData.append('propietarioId', currentUser?.id || '');
+    formData.append('ranchoId', currentUser?.ranchos?.[0]?.id || '');
+    // Añadimos el lote que faltaba
+    formData.append('lote', document.getElementById('vaca-lote')?.value || null);
+
+
+    if (!formData.get('nombre') || !formData.get('siniiga')) {
+        mostrarMensaje('vaca-mensaje', 'Nombre y SINIIGA son obligatorios.');
+        if (btn) { // Restaura el botón si hay error
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-save"></i>';
         }
-        try {
-            const res = await fetch('/api/vacas', { method: 'POST', body: formData });
-            const respuesta = await res.json();
-            if (!res.ok) throw new Error(respuesta.message || 'Error al guardar vaca');
-            
-            mostrarMensaje('vaca-mensaje', 'Animal guardado con éxito', false);
-            setTimeout(() => {
-                const modal = document.getElementById('modal-agregar-vaca');
-                if (modal) modal.classList.add('hidden');
-                renderizarVistaMisVacas();
-            }, 1500);
-        } catch (error) {
-            mostrarMensaje('vaca-mensaje', error.message || 'Error inesperado');
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/vacas', { method: 'POST', body: formData });
+        const respuesta = await res.json();
+        if (!res.ok) throw new Error(respuesta.message || 'Error al guardar vaca');
+
+        // Mostramos el mensaje de éxito
+        mostrarMensaje('vaca-mensaje', '¡Animal guardado con éxito!', false);
+
+        // Cambiamos el ícono a una palomita de confirmación
+        if (btn) {
+            btn.innerHTML = '<i class="fa-solid fa-check"></i>';
+        }
+
+        setTimeout(() => {
+            const modal = document.getElementById('modal-agregar-vaca');
+            if (modal) modal.classList.add('hidden');
+            renderizarVistaMisVacas(); // Recarga la lista
+            if (btn) { // Restaura el botón para la próxima vez
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-save"></i>';
+            }
+        }, 1500); // Damos 1.5 segundos para que se vea la confirmación
+    } catch (error) {
+        mostrarMensaje('vaca-mensaje', error.message || 'Error inesperado');
+        if (btn) { // Restaura el botón si hay error
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-save"></i>';
         }
     }
+}
 
     async function handleEliminarVaca(vacaId) {
         if (!confirm('¿Estás seguro de que quieres eliminar este animal? Esta acción no se puede deshacer.')) return;
