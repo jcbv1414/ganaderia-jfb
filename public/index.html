@@ -88,6 +88,11 @@
   width: 100%; /* Cada botón ocupa todo el ancho */
   margin-bottom: 12px; /* Espacio entre los botones */
 }
+/* ----- PEGA ESTE BLOQUE ----- */
+    .filtro-btn.activo {
+        background-color: #166534; /* Verde de tu marca */
+        color: white;
+    }
 
 </style>
           </head>
@@ -194,32 +199,20 @@
     <!-- Mi ganado -->
     <template id="template-mis-vacas">
         <div class="p-5">
-            <header class="flex justify-between items-center mb-4">
-                <h1 class="text-2xl font-bold text-gray-800">Mi Ganado</h1>
-                <p class="text-gray-500"><span id="total-vacas-header">0</span> animales</p>
-            </header>
-            <header class="flex justify-between items-center mb-4">
+            <header class="flex justify-between items-center mb-4 p-5">
     <h1 class="text-2xl font-bold text-gray-800">Mi Ganado</h1>
     <p class="text-gray-500"><span id="total-vacas-header">0</span> animales</p>
 </header>
-
-<section id="filtros-ganado-container" class="bg-white p-4 rounded-xl shadow-md mb-6 space-y-4">
-    <div class="relative">
-        <input type="text" id="filtro-busqueda-ganado" placeholder="Buscar por Arete o No. de Pierna..." class="w-full p-3 pl-10 border border-gray-300 rounded-lg">
+            <section id="filtros-ganado-container" class="bg-white p-4 rounded-xl shadow-md mb-6 space-y-4">
+    <section class="p-5">
+    <div class="relative mb-4">
+        <input type="text" id="filtro-busqueda-ganado" placeholder="Buscar por Arete o No. de Pierna..." class="w-full p-3 pl-10 border border-gray-200 rounded-lg bg-white">
         <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
     </div>
-    <div class="flex flex-wrap gap-3">
-        <select id="filtro-sexo" class="w-full p-2 border border-gray-300 rounded-lg bg-white">
-            <option value="">Todo Sexo</option>
-            <option value="Hembra">Hembra</option>
-            <option value="Macho">Macho</option>
-        </select>
-        <select id="filtro-lote" class="w-full p-2 border border-gray-300 rounded-lg bg-white">
-            <option value="">Todo Lote</option>
-            </select>
-        <select id="filtro-raza" class="w-full p-2 border border-gray-300 rounded-lg bg-white">
-            <option value="">Toda Raza</option>
-            </select>
+    <div class="flex items-center justify-around bg-gray-100 p-2 rounded-lg">
+        <button id="filtro-btn-sexo" class="filtro-btn flex-1 text-gray-700 font-semibold py-2 rounded-lg">Sexo</button>
+        <button id="filtro-btn-lote" class="filtro-btn flex-1 text-gray-700 font-semibold py-2 rounded-lg">Lote</button>
+        <button id="filtro-btn-raza" class="filtro-btn flex-1 text-gray-700 font-semibold py-2 rounded-lg">Raza</button>
     </div>
 </section>
 <div id="lista-vacas-container" class="space-y-4">

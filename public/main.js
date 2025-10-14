@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentUser = null;
     let currentRancho = null;
     let listaCompletaDeVacas = [];
+    let filtrosActivos = { sexo: '', lote: '', raza: '' };
     let loteActividadActual = [];
     let vacasIndex = new Map();
     let datosEstadisticasCompletos = null;
@@ -144,7 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Conecta el nuevo botón de perfil a la vista de ajustes del MVZ
     document.getElementById('btn-perfil-mvz').onclick = () => navigateTo('ajustes-mvz');
     cargarDashboardMVZ();
-}else if (viewId === 'actividades-mvz') {
+        }else if (viewId === 'actividades-mvz') {
             initActividadesMvzListeners();
         } else if (viewId === 'calendario-mvz') { // <-- Aquí se añade la nueva vista
             renderizarVistaCalendario();
@@ -241,8 +242,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Si no hay rancho, no continuamos a buscar estadísticas
-    const ranchoId = ranchoPrincipal?.id;
-    if (!ranchoId) return;
+     const ranchoId = currentUser.ranchos?.[0]?.id;
+    if (!ranchoId) {
+        document.getElementById('lotes-container').innerHTML = '<p class="text-red-500">No se encontró un rancho asociado.</p>';
+        return;
+    }
 
     // --- PARTE 2: Carga las estadísticas y los lotes ---
     try {
@@ -250,17 +254,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!res.ok) throw new Error('No se pudieron cargar las estadísticas.');
         const stats = await res.json();
 
-        let totalVacas = 0, totalGestantes = 0;
+        let totalVacas = 0, totalGestantes = 0, totalAlertas = 0; // totalAlertas es placeholder
         Object.values(stats).forEach(lote => {
             totalVacas += lote.totalVacas || 0;
             totalGestantes += lote.estados?.Gestante || 0;
         });
 
-        // Verificamos que los elementos existan antes de modificarlos
-        const totalVacasEl = document.getElementById('resumen-total-vacas');
-        const gestantesEl = document.getElementById('resumen-vacas-gestantes');
-        if (totalVacasEl) totalVacasEl.textContent = totalVacas;
-        if (gestantesEl) gestantesEl.textContent = totalGestantes;
+        document.getElementById('resumen-total-vacas').textContent = totalVacas;
+        document.getElementById('resumen-vacas-gestantes').textContent = totalGestantes;
+        document.getElementById('resumen-alertas').textContent = totalAlertas;
         
         // ... (el resto del código para mostrar los lotes sigue igual) ...
         const lotesContainer = document.getElementById('lotes-container');
@@ -392,19 +394,27 @@ async function renderizarVistaMiMvz() {
 function abrirModalVaca() {
     const modal = document.getElementById('modal-agregar-vaca');
     const form = document.getElementById('form-agregar-vaca');
-    
     if (!modal || !form) return;
-    
-    modal.classList.remove('hidden');
+
+    // --- CORRECCIONES PRINCIPALES ---
+    // 1. Reinicia el formulario para asegurar que esté limpio.
     form.reset();
+    // 2. Limpia el campo oculto para que la función de guardar sepa que es un animal NUEVO.
+    document.getElementById('vaca-id-input').value = '';
+    // 3. Conecta el botón 'X' para cerrar CADA VEZ que se abre el modal.
+    const btnCerrar = modal.querySelector('#btn-cerrar-modal-vaca'); // Usamos el ID correcto
+    if (btnCerrar) btnCerrar.onclick = () => modal.classList.add('hidden');
+    // 4. Asegura que el título siempre sea "Registrar" cuando se usa este botón.
+    modal.querySelector('h2').textContent = 'Registrar Nuevo Animal';
+    // ------------------------------------
+
+    // --- TODA TU LÓGICA ANTERIOR (INTACTA) ---
     const fileNameDisplay = document.getElementById('file-name-display');
     if (fileNameDisplay) fileNameDisplay.textContent = '';
 
-    // Configura la lista de razas
     const datalistRazas = document.getElementById('lista-razas');
     if (datalistRazas) datalistRazas.innerHTML = RAZAS_BOVINAS.map(r => `<option value="${r}"></option>`).join('');
 
-    // Configura el cálculo de edad
     const nacimientoInput = document.getElementById('vaca-nacimiento');
     const edadInput = document.getElementById('vaca-edad');
     if (nacimientoInput && edadInput) {
@@ -415,28 +425,27 @@ function abrirModalVaca() {
             let years = today.getFullYear() - birthDate.getFullYear();
             let months = today.getMonth() - birthDate.getMonth();
             if (months < 0 || (months === 0 && today.getDate() < birthDate.getDate())) {
-                years--; 
+                years--;
                 months = (months + 12) % 12;
             }
             edadInput.value = `${years} años, ${months} meses`;
         };
     }
 
-    // Configura el selector de sexo
     const sexoSelector = document.getElementById('sexo-selector');
     const sexoInput = document.getElementById('vaca-sexo');
     if (sexoSelector && sexoInput) {
+        // Limpia la selección anterior del botón de sexo
+        sexoSelector.querySelector('.bg-brand-green')?.classList.remove('bg-brand-green', 'text-white');
         sexoSelector.querySelectorAll('button').forEach(btn => {
             btn.onclick = () => {
-                const prev = sexoSelector.querySelector('.bg-brand-green');
-                if (prev) prev.classList.remove('bg-brand-green', 'text-white');
+                sexoSelector.querySelector('.bg-brand-green')?.classList.remove('bg-brand-green', 'text-white');
                 btn.classList.add('bg-brand-green', 'text-white');
                 sexoInput.value = btn.dataset.value;
             };
         });
     }
-    
-    // Configura el input de la foto
+
     const fotoInput = document.getElementById('vaca-foto');
     if (fotoInput) {
         fotoInput.onchange = () => {
@@ -446,13 +455,12 @@ function abrirModalVaca() {
             }
         };
     }
-    
-    // Asigna los eventos de cerrar y enviar DESPUÉS de que el modal es visible.
-    const btnCerrar = document.getElementById('btn-cerrar-modal-vaca');
-    if (btnCerrar) btnCerrar.onclick = () => modal.classList.add('hidden');
-    form.onsubmit = handleGuardarVaca;
-}
 
+    form.onsubmit = handleGuardarVaca;
+
+    // Muestra el modal al final de todo
+    modal.classList.remove('hidden');
+}
     // Lógica del Propietario (handleGuardarVaca corregido)
 async function handleGuardarVaca(e) {
     e.preventDefault();
@@ -532,7 +540,7 @@ async function handleGuardarVaca(e) {
             alert(error.message || 'Error inesperado');
         }
     }
-    async function verHistorialVaca(vacaId, vacaNombre) {
+    window.verHistorialVaca = async function(vacaId, vacaNombre) {
     const modalHistorial = document.getElementById('modal-historial-vaca');
     if (!modalHistorial) return;
 
@@ -1605,85 +1613,133 @@ window.handleCambiarPermisoMvz = async function(permisoId, nuevoPermiso) {
 // FUNCIONES PARA FILTRAR LA LISTA DE GANADO
 // =================================================================
 
-function popularFiltrosDeGanado(vacas) {
-    const loteSelect = document.getElementById('filtro-lote');
-    const razaSelect = document.getElementById('filtro-raza');
+// Esta función se llama cuando se carga la vista "Mi Ganado"
+function setupFiltrosDeGanado() {
+    const btnSexo = document.getElementById('filtro-btn-sexo');
+    const btnLote = document.getElementById('filtro-btn-lote');
+    const btnRaza = document.getElementById('filtro-btn-raza');
 
-    // Extraemos lotes y razas únicas, y las ordenamos
-    const lotesUnicos = [...new Set(vacas.map(v => v.lote).filter(Boolean))].sort((a,b) => a - b);
-    const razasUnicas = [...new Set(vacas.map(v => v.raza).filter(Boolean))].sort();
+    // Opciones para el filtro de Sexo
+    btnSexo.onclick = () => {
+        const opciones = ['Hembra', 'Macho'];
+        abrirModalDeFiltro('sexo', opciones, 'Selecciona un Sexo');
+    };
 
-    loteSelect.innerHTML = '<option value="">Todo Lote</option>'; // Reseteamos
-    lotesUnicos.forEach(lote => {
-        loteSelect.innerHTML += `<option value="${lote}">Lote ${lote}</option>`;
-    });
+    // Opciones para el filtro de Lote
+    btnLote.onclick = () => {
+        const lotesUnicos = [...new Set(listaCompletaDeVacas.map(v => v.lote).filter(Boolean))].sort((a,b) => a - b);
+        abrirModalDeFiltro('lote', lotesUnicos.map(l => `Lote ${l}`), 'Selecciona un Lote');
+    };
 
-    razaSelect.innerHTML = '<option value="">Toda Raza</option>'; // Reseteamos
-    razasUnicas.forEach(raza => {
-        razaSelect.innerHTML += `<option value="${raza}">${raza}</option>`;
-    });
+    // Opciones para el filtro de Raza
+    btnRaza.onclick = () => {
+        const razasUnicas = [...new Set(listaCompletaDeVacas.map(v => v.raza).filter(Boolean))].sort();
+        abrirModalDeFiltro('raza', razasUnicas, 'Selecciona una Raza');
+    };
+
+    // El buscador de texto sigue funcionando igual
+    document.getElementById('filtro-busqueda-ganado').addEventListener('input', aplicarFiltrosDeGanado);
 }
 
+// Abre un menú de opciones simple para seleccionar un filtro
+function abrirModalDeFiltro(tipoFiltro, opciones, titulo) {
+    // Crea un contenedor flotante para las opciones
+    const modal = document.createElement('div'); // <-- ¡AQUÍ ESTÁ LA CORRECCIÓN!
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[1002]';
+    modal.onclick = (e) => {
+        if (e.target === modal) modal.remove(); // Se cierra solo al tocar el fondo oscuro
+    };
+
+    const contenido = document.createElement('div');
+    contenido.className = 'bg-white rounded-xl shadow-lg p-4 w-11/12 max-w-xs';
+    contenido.innerHTML = `<h3 class="font-bold text-lg mb-4">${titulo}</h3>`;
+
+    // Añade un botón para "Quitar Filtro"
+    const btnQuitar = document.createElement('div');
+    btnQuitar.className = 'p-2 text-center text-red-600 font-semibold cursor-pointer border rounded-lg mb-2';
+    btnQuitar.textContent = 'Quitar Filtro';
+    btnQuitar.onclick = () => {
+        filtrosActivos[tipoFiltro] = '';
+        aplicarFiltrosDeGanado();
+        modal.remove();
+    };
+    contenido.appendChild(btnQuitar);
+
+    // Crea un botón por cada opción
+    opciones.forEach(opcion => {
+        const btnOpcion = document.createElement('div');
+        btnOpcion.className = 'p-3 cursor-pointer hover:bg-gray-100 border-b';
+        btnOpcion.textContent = opcion;
+        btnOpcion.onclick = (e) => {
+            e.stopPropagation(); // Evita que el modal se cierre al tocar una opción
+            filtrosActivos[tipoFiltro] = tipoFiltro === 'lote' ? opcion.replace('Lote ', '') : opcion;
+            aplicarFiltrosDeGanado();
+            modal.remove();
+        };
+        contenido.appendChild(btnOpcion);
+    });
+
+    modal.appendChild(contenido);
+    document.body.appendChild(modal);
+}
+
+// Esta función ahora lee los filtros del objeto 'filtrosActivos'
 function aplicarFiltrosDeGanado() {
     const busqueda = document.getElementById('filtro-busqueda-ganado').value.toLowerCase();
-    const sexo = document.getElementById('filtro-sexo').value;
-    const lote = document.getElementById('filtro-lote').value;
-    const raza = document.getElementById('filtro-raza').value;
+    const { sexo, lote, raza } = filtrosActivos;
 
     let vacasFiltradas = [...listaCompletaDeVacas];
 
-    // 1. Filtrar por término de búsqueda (Arete o Pierna)
     if (busqueda) {
         vacasFiltradas = vacasFiltradas.filter(v => 
             v.numero_siniiga?.toLowerCase().includes(busqueda) ||
             v.numero_pierna?.toLowerCase().includes(busqueda)
         );
     }
-    // 2. Filtrar por sexo
     if (sexo) {
         vacasFiltradas = vacasFiltradas.filter(v => v.sexo === sexo);
     }
-    // 3. Filtrar por lote
     if (lote) {
         vacasFiltradas = vacasFiltradas.filter(v => v.lote == lote);
     }
-    // 4. Filtrar por raza
     if (raza) {
         vacasFiltradas = vacasFiltradas.filter(v => v.raza === raza);
     }
 
+    // Actualiza el estilo de los botones para mostrar cuáles están activos
+    document.getElementById('filtro-btn-sexo').classList.toggle('activo', !!sexo);
+    document.getElementById('filtro-btn-lote').classList.toggle('activo', !!lote);
+    document.getElementById('filtro-btn-raza').classList.toggle('activo', !!raza);
+
     renderizarListaDeVacas(vacasFiltradas);
 }
 
-function renderizarListaDeVacas(vacas) {
-    const container = document.getElementById('lista-vacas-container');
-    if (!vacas || vacas.length === 0) {
-        container.innerHTML = '<p class="text-center text-gray-500 mt-8">No se encontraron animales con esos filtros.</p>';
-        return;
-    }
+async function renderizarVistaMisVacas() {
+    const ranchoId = currentUser.ranchos?.[0]?.id;
+    if (!ranchoId) return;
 
-    container.innerHTML = vacas.map(vaca => `
-        <div class="bg-white rounded-xl shadow-md overflow-hidden mb-4">
-            <img src="${vaca.foto_url || 'https://via.placeholder.com/300x200'}" alt="Foto de ${vaca.nombre}" class="w-full h-40 object-cover">
-            <div class="p-4">
-                <div class="flex justify-between items-start">
-                    <h3 class="text-xl font-bold text-gray-900">${vaca.nombre}</h3>
-                    <div class="flex items-center space-x-3">
-                        <button onclick='handleEditarVaca(${JSON.stringify(vaca)})' class="text-gray-500 hover:text-blue-600" title="Editar"><i class="fa-solid fa-pencil"></i></button>
-                        <button onclick='handleEliminarVaca(${vaca.id})' class="text-gray-500 hover:text-red-600" title="Eliminar"><i class="fa-solid fa-trash-can"></i></button>
-                    </div>
-                </div>
-                <div class="text-sm text-gray-600 mt-2 space-y-1">
-                    <p><strong>Raza:</strong> ${vaca.raza || 'N/A'}</p>
-                    <p><strong>Lote:</strong> ${vaca.lote || 'N/A'}</p>
-                    <p><strong>ID (Arete):</strong> #${vaca.numero_siniiga}</p>
-                </div>
-                <button onclick="verHistorialVaca(${vaca.id}, '${vaca.nombre}')" class="w-full bg-green-100 text-green-800 font-semibold p-2 rounded-lg mt-4 hover:bg-green-200 transition">
-                    Ver Detalles
-                </button>
-            </div>
-        </div>
-    `).join('');
+    const container = document.getElementById('lista-vacas-container');
+    container.innerHTML = '<p class="text-center text-gray-500 mt-8">Cargando ganado...</p>';
+    const fab = document.getElementById('btn-abrir-modal-vaca');
+    if (fab) fab.onclick = () => abrirModalVaca();
+
+    try {
+        const res = await fetch(`/api/vacas/rancho/${ranchoId}`);
+        if (!res.ok) throw new Error('Error al obtener vacas');
+        listaCompletaDeVacas = await res.json();
+
+        const totalVacasEl = document.getElementById('total-vacas-header');
+        if(totalVacasEl) totalVacasEl.textContent = (listaCompletaDeVacas && listaCompletaDeVacas.length) || 0;
+
+        // Llama a la nueva función que prepara los botones de filtro
+        setupFiltrosDeGanado();
+
+        // Muestra la lista inicial
+        aplicarFiltrosDeGanado();
+
+    } catch (error) {
+        container.innerHTML = '<p class="text-center text-red-500 mt-8">Error al cargar el ganado.</p>';
+    }
 }
 // =================================================================
 // FUNCIONES PARA EDITAR Y ELIMINAR VACAS
