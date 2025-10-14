@@ -488,18 +488,33 @@ async function handleGuardarVaca(cerrarAlFinalizar) {
         if (btnFinalizar) btnFinalizar.disabled = false;
         return;
     }
-    
+
     const vacaId = form.querySelector('#vaca-id-input').value;
     const isUpdating = vacaId && vacaId !== '';
-    const method = isUpdating ? 'PUT' : 'POST';
-    const url = isUpdating ? `/api/vacas/${vacaId}` : '/api/vacas';
 
-    // --- CORRECCIÓN DEFINITIVA ---
-    // Recolectamos TODOS los datos del formulario en un objeto FormData.
-    const formData = new FormData(form);
+    // --- CORRECCIÓN DEFINITIVA: "EMPAQUETAR A MANO" ---
+    // 1. Creamos un paquete de envío (FormData) vacío.
+    const formData = new FormData();
 
-    // Nos aseguramos de que los IDs del propietario y rancho estén correctamente nombrados.
-    // El servidor los espera como 'propietarioId' y 'ranchoId'.
+    // 2. Metemos cada dato en el paquete, uno por uno.
+    formData.append('nombre', nombre);
+    formData.append('siniiga', siniiga);
+    formData.append('pierna', form.querySelector('#vaca-pierna').value);
+    formData.append('lote', form.querySelector('#vaca-lote').value);
+    formData.append('raza', form.querySelector('#vaca-raza').value);
+    formData.append('nacimiento', form.querySelector('#vaca-nacimiento').value);
+    formData.append('padre', form.querySelector('#vaca-padre').value);
+    formData.append('madre', form.querySelector('#vaca-madre').value);
+    formData.append('origen', form.querySelector('#vaca-origen').value);
+    formData.append('sexo', form.querySelector('#vaca-sexo').value);
+    
+    // Añadimos la foto, si es que hay una seleccionada
+    const fotoInput = form.querySelector('#vaca-foto');
+    if (fotoInput.files[0]) {
+        formData.append('fotoVaca', fotoInput.files[0]);
+    }
+
+    // 3. Añadimos los datos de sesión, que ya sabíamos que funcionaban.
     if (!isUpdating) {
         if (!currentUser?.id || !currentUser.ranchos?.[0]?.id) {
             mostrarMensaje('vaca-mensaje', 'Error: Sesión de usuario no encontrada. Recarga la página.');
@@ -510,8 +525,10 @@ async function handleGuardarVaca(cerrarAlFinalizar) {
         formData.append('propietarioId', currentUser.id);
         formData.append('ranchoId', currentUser.ranchos[0].id);
     }
-    // --- FIN DE LA CORRECCIÓN CLAVE ---
+    // --- FIN DE LA CORRECCIÓN ---
 
+    const method = isUpdating ? 'PUT' : 'POST';
+    const url = isUpdating ? `/api/vacas/${vacaId}` : '/api/vacas';
     const debeCerrar = isUpdating || cerrarAlFinalizar;
 
     try {
@@ -523,8 +540,7 @@ async function handleGuardarVaca(cerrarAlFinalizar) {
 
         if (debeCerrar) {
             setTimeout(() => {
-                const modal = document.getElementById('modal-agregar-vaca');
-                if (modal) modal.classList.add('hidden');
+                document.getElementById('modal-agregar-vaca')?.classList.add('hidden');
                 renderizarVistaMisVacas();
             }, 1200);
         } else {
