@@ -582,6 +582,8 @@ async function handleGuardarVaca(cerrarAlFinalizar) {
     const modalHistorial = document.getElementById('modal-historial-vaca');
     if (!modalHistorial) return;
 
+    const prettyLabel = (k) => String(k || '').replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+    
     // Cierra el modal al hacer clic en el botón de cerrar
     const btnCerrarModalHistorial = document.getElementById('btn-cerrar-modal-historial');
     if(btnCerrarModalHistorial) btnCerrarModalHistorial.onclick = () => modalHistorial.classList.add('hidden');
