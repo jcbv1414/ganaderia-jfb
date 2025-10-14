@@ -479,12 +479,8 @@ async function handleGuardarVaca(cerrarAlFinalizar) {
     if (btnSiguiente) btnSiguiente.disabled = true;
     if (btnFinalizar) btnFinalizar.disabled = true;
 
-    // --- INICIO DE LA CORRECCIÓN CLAVE ---
-    // Verificación de datos del formulario y de la sesión del usuario ANTES de hacer nada.
     const nombre = form.querySelector('#vaca-nombre').value;
     const siniiga = form.querySelector('#vaca-siniiga').value;
-    const vacaId = form.querySelector('#vaca-id-input').value; // Obtenemos el ID para saber si es edición
-    const isUpdating = vacaId && vacaId !== '';
 
     if (!nombre || !siniiga) {
         mostrarMensaje('vaca-mensaje', 'Nombre y SINIIGA son obligatorios.');
@@ -492,21 +488,25 @@ async function handleGuardarVaca(cerrarAlFinalizar) {
         if (btnFinalizar) btnFinalizar.disabled = false;
         return;
     }
-
-    // Verificación explícita de que tenemos los datos del usuario y del rancho
-    if (!isUpdating && (!currentUser?.id || !currentUser.ranchos?.[0]?.id)) {
-        mostrarMensaje('vaca-mensaje', 'Error: Sesión de usuario no encontrada. Recarga la página.');
-        if (btnSiguiente) btnSiguiente.disabled = false;
-        if (btnFinalizar) btnFinalizar.disabled = false;
-        return;
-    }
-
-    const formData = new FormData(form);
+    
+    const vacaId = form.querySelector('#vaca-id-input').value;
+    const isUpdating = vacaId && vacaId !== '';
     const method = isUpdating ? 'PUT' : 'POST';
     const url = isUpdating ? `/api/vacas/${vacaId}` : '/api/vacas';
 
-    // Añadimos los datos faltantes al formData solo si es una vaca NUEVA
+    // --- CORRECCIÓN DEFINITIVA ---
+    // Recolectamos TODOS los datos del formulario en un objeto FormData.
+    const formData = new FormData(form);
+
+    // Nos aseguramos de que los IDs del propietario y rancho estén correctamente nombrados.
+    // El servidor los espera como 'propietarioId' y 'ranchoId'.
     if (!isUpdating) {
+        if (!currentUser?.id || !currentUser.ranchos?.[0]?.id) {
+            mostrarMensaje('vaca-mensaje', 'Error: Sesión de usuario no encontrada. Recarga la página.');
+            if (btnSiguiente) btnSiguiente.disabled = false;
+            if (btnFinalizar) btnFinalizar.disabled = false;
+            return;
+        }
         formData.append('propietarioId', currentUser.id);
         formData.append('ranchoId', currentUser.ranchos[0].id);
     }
