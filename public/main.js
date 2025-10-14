@@ -1030,10 +1030,16 @@ if (actividadLoteEl) {
         await handleFinalizarYReportar();
         modal.classList.add('hidden');
     };
-    // ... al final de abrirModalActividad, antes del cierre "}"
-    // Llena la lista de razas para el autocompletado
-    //...dentro de abrirModalActividad, al final
-    // Activa el nuevo sistema de autocompletado personalizado
+      const areteInput = document.getElementById('actividad-arete');
+    const razaInput = document.getElementById('actividad-raza');
+    if (areteInput && razaInput) {
+        areteInput.oninput = () => {
+            const vacaEncontrada = vacasIndex.get(areteInput.value.trim());
+            if (vacaEncontrada) {
+                razaInput.value = vacaEncontrada.raza || '';
+            }
+        };
+    }
     crearAutocompletado('actividad-raza', 'sugerencias-raza-container', RAZAS_BOVINAS);
 
 
@@ -1272,6 +1278,9 @@ const fecha = fechaUTC.toLocaleDateString('es-MX', {day: 'numeric', month: 'long
             mostrarMensaje('mensaje-vaca', 'El número de arete es obligatorio.');
             return;
         }
+        const vacaEncontrada = vacasIndex.get(arete);
+    // 2. Extrae el ID numérico de la vaca. Si no se encuentra, será 'null'.
+    const idDeLaVaca = vacaEncontrada ? vacaEncontrada.id : null;
 
         const formData = new FormData(form);
         const detalles = {};
@@ -1282,6 +1291,7 @@ const fecha = fechaUTC.toLocaleDateString('es-MX', {day: 'numeric', month: 'long
         }
         
          loteActividadActual.push({
+        vacaId: idDeLaVaca,
         areteVaca: arete,
         raza: form.querySelector('#actividad-raza').value.trim() || 'N/A',
         loteNumero: loteNumero,
