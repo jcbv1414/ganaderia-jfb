@@ -1610,51 +1610,44 @@ window.handleCambiarPermisoMvz = async function(permisoId, nuevoPermiso) {
     } catch (error) { alert(error.message); }
 }
 // =================================================================
-// FUNCIONES PARA FILTRAR LA LISTA DE GANADO
+// FUNCIONES PARA FILTRAR LA LISTA DE GANADO (VERSIÓN CORREGIDA)
 // =================================================================
 
-// Esta función se llama cuando se carga la vista "Mi Ganado"
 function setupFiltrosDeGanado() {
     const btnSexo = document.getElementById('filtro-btn-sexo');
     const btnLote = document.getElementById('filtro-btn-lote');
     const btnRaza = document.getElementById('filtro-btn-raza');
 
-    // Opciones para el filtro de Sexo
-    btnSexo.onclick = () => {
+    if (btnSexo) btnSexo.onclick = () => {
         const opciones = ['Hembra', 'Macho'];
         abrirModalDeFiltro('sexo', opciones, 'Selecciona un Sexo');
     };
 
-    // Opciones para el filtro de Lote
-    btnLote.onclick = () => {
+    if (btnLote) btnLote.onclick = () => {
         const lotesUnicos = [...new Set(listaCompletaDeVacas.map(v => v.lote).filter(Boolean))].sort((a,b) => a - b);
         abrirModalDeFiltro('lote', lotesUnicos.map(l => `Lote ${l}`), 'Selecciona un Lote');
     };
 
-    // Opciones para el filtro de Raza
-    btnRaza.onclick = () => {
+    if (btnRaza) btnRaza.onclick = () => {
         const razasUnicas = [...new Set(listaCompletaDeVacas.map(v => v.raza).filter(Boolean))].sort();
         abrirModalDeFiltro('raza', razasUnicas, 'Selecciona una Raza');
     };
 
-    // El buscador de texto sigue funcionando igual
-    document.getElementById('filtro-busqueda-ganado').addEventListener('input', aplicarFiltrosDeGanado);
+    const busquedaInput = document.getElementById('filtro-busqueda-ganado');
+    if (busquedaInput) busquedaInput.addEventListener('input', aplicarFiltrosDeGanado);
 }
 
-// Abre un menú de opciones simple para seleccionar un filtro
 function abrirModalDeFiltro(tipoFiltro, opciones, titulo) {
-    // Crea un contenedor flotante para las opciones
-    const modal = document.createElement('div'); // <-- ¡AQUÍ ESTÁ LA CORRECCIÓN!
+    const modal = document.createElement('div');
     modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[1002]';
     modal.onclick = (e) => {
-        if (e.target === modal) modal.remove(); // Se cierra solo al tocar el fondo oscuro
+        if (e.target === modal) modal.remove();
     };
 
     const contenido = document.createElement('div');
     contenido.className = 'bg-white rounded-xl shadow-lg p-4 w-11/12 max-w-xs';
     contenido.innerHTML = `<h3 class="font-bold text-lg mb-4">${titulo}</h3>`;
 
-    // Añade un botón para "Quitar Filtro"
     const btnQuitar = document.createElement('div');
     btnQuitar.className = 'p-2 text-center text-red-600 font-semibold cursor-pointer border rounded-lg mb-2';
     btnQuitar.textContent = 'Quitar Filtro';
@@ -1665,13 +1658,12 @@ function abrirModalDeFiltro(tipoFiltro, opciones, titulo) {
     };
     contenido.appendChild(btnQuitar);
 
-    // Crea un botón por cada opción
     opciones.forEach(opcion => {
         const btnOpcion = document.createElement('div');
         btnOpcion.className = 'p-3 cursor-pointer hover:bg-gray-100 border-b';
         btnOpcion.textContent = opcion;
         btnOpcion.onclick = (e) => {
-            e.stopPropagation(); // Evita que el modal se cierre al tocar una opción
+            e.stopPropagation();
             filtrosActivos[tipoFiltro] = tipoFiltro === 'lote' ? opcion.replace('Lote ', '') : opcion;
             aplicarFiltrosDeGanado();
             modal.remove();
@@ -1683,7 +1675,6 @@ function abrirModalDeFiltro(tipoFiltro, opciones, titulo) {
     document.body.appendChild(modal);
 }
 
-// Esta función ahora lee los filtros del objeto 'filtrosActivos'
 function aplicarFiltrosDeGanado() {
     const busqueda = document.getElementById('filtro-busqueda-ganado').value.toLowerCase();
     const { sexo, lote, raza } = filtrosActivos;
@@ -1706,14 +1697,53 @@ function aplicarFiltrosDeGanado() {
         vacasFiltradas = vacasFiltradas.filter(v => v.raza === raza);
     }
 
-    // Actualiza el estilo de los botones para mostrar cuáles están activos
-    document.getElementById('filtro-btn-sexo').classList.toggle('activo', !!sexo);
-    document.getElementById('filtro-btn-lote').classList.toggle('activo', !!lote);
-    document.getElementById('filtro-btn-raza').classList.toggle('activo', !!raza);
+    const btnSexo = document.getElementById('filtro-btn-sexo');
+    const btnLote = document.getElementById('filtro-btn-lote');
+    const btnRaza = document.getElementById('filtro-btn-raza');
 
+    if (btnSexo) btnSexo.classList.toggle('activo', !!sexo);
+    if (btnLote) btnLote.classList.toggle('activo', !!lote);
+    if (btnRaza) btnRaza.classList.toggle('activo', !!raza);
+
+    // ¡¡AQUÍ ESTÁ LA CORRECCIÓN!! El nombre de la función es renderizarListaDeVacas
     renderizarListaDeVacas(vacasFiltradas);
 }
 
+// ESTA FUNCIÓN FALTABA EN TU CÓDIGO ANTERIOR
+function renderizarListaDeVacas(vacas) {
+    const container = document.getElementById('lista-vacas-container');
+    if (!container) return;
+    
+    if (!vacas || vacas.length === 0) {
+        container.innerHTML = '<p class="text-center text-gray-500 mt-8">No se encontraron animales con esos filtros.</p>';
+        return;
+    }
+
+    container.innerHTML = vacas.map(vaca => `
+        <div class="bg-white rounded-xl shadow-md overflow-hidden mb-4">
+            <img src="${vaca.foto_url || 'https://via.placeholder.com/300x200'}" alt="Foto de ${vaca.nombre}" class="w-full h-40 object-cover">
+            <div class="p-4">
+                <div class="flex justify-between items-start">
+                    <h3 class="text-xl font-bold text-gray-900">${vaca.nombre}</h3>
+                    <div class="flex items-center space-x-3">
+                        <button onclick='handleEditarVaca(${JSON.stringify(vaca)})' class="text-gray-500 hover:text-blue-600" title="Editar"><i class="fa-solid fa-pencil"></i></button>
+                        <button onclick='handleEliminarVaca(${vaca.id})' class="text-gray-500 hover:text-red-600" title="Eliminar"><i class="fa-solid fa-trash-can"></i></button>
+                    </div>
+                </div>
+                <div class="text-sm text-gray-600 mt-2 space-y-1">
+                    <p><strong>Raza:</strong> ${vaca.raza || 'N/A'}</p>
+                    <p><strong>Lote:</strong> ${vaca.lote || 'N/A'}</p>
+                    <p><strong>ID (Arete):</strong> #${vaca.numero_siniiga}</p>
+                </div>
+                <button onclick="verHistorialVaca(${vaca.id}, '${vaca.nombre}')" class="w-full bg-green-100 text-green-800 font-semibold p-2 rounded-lg mt-4 hover:bg-green-200 transition">
+                    Ver Detalles
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Reemplaza también renderizarVistaMisVacas para asegurarte de que todo está conectado
 async function renderizarVistaMisVacas() {
     const ranchoId = currentUser.ranchos?.[0]?.id;
     if (!ranchoId) return;
@@ -1730,11 +1760,9 @@ async function renderizarVistaMisVacas() {
 
         const totalVacasEl = document.getElementById('total-vacas-header');
         if(totalVacasEl) totalVacasEl.textContent = (listaCompletaDeVacas && listaCompletaDeVacas.length) || 0;
-
-        // Llama a la nueva función que prepara los botones de filtro
+        
         setupFiltrosDeGanado();
-
-        // Muestra la lista inicial
+        
         aplicarFiltrosDeGanado();
 
     } catch (error) {
