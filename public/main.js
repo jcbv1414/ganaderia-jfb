@@ -377,28 +377,24 @@ async function renderizarVistaMiMvz() {
             return;
         }
 
-        container.innerHTML = vacas.map(vaca => `
-            <div class="bg-white p-4 rounded-xl shadow-md">
-                <div class="flex items-center space-x-4">
-                    <img src="${vaca.foto_url || 'https://via.placeholder.com/80'}" alt="Foto de ${vaca.nombre}" class="w-20 h-20 rounded-lg object-cover bg-gray-200">
-                    <div class="flex-grow">
-                        <div class="flex justify-between items-start">
-                            <div>
-                                <h3 class="text-lg font-bold text-gray-800">${vaca.nombre}</h3>
-                                <p class="text-sm text-gray-500">Arete: #${vaca.numero_siniiga}</p>
-                            </div>
-                            <div>
-                                <button onclick="handleEliminarVaca(${vaca.id})" class="text-red-500 hover:text-red-700 ml-4" title="Eliminar Vaca"><i class="fa-solid fa-trash-can"></i></button>
-                            </div>
-                        </div>
-                        <div class="text-xs text-gray-600 mt-2 flex justify-between items-center">
-                            <span>Raza: <strong>${vaca.raza || 'N/A'}</strong></span>
-                            <button onclick="verHistorialVaca(${vaca.id}, '${vaca.nombre}')" class="btn-ver-historial text-sm font-semibold text-brand-green">Ver Historial</button>
-                        </div>
-                    </div>
-                </div>
+        // ... dentro de renderizarVistaMisVacas ...
+container.innerHTML = vacas.map(vaca => `
+    <div class="bg-white rounded-xl shadow-md overflow-hidden mb-4">
+        <img src="${vaca.foto_url || 'https://via.placeholder.com/300x200'}" alt="Foto de ${vaca.nombre}" class="w-full h-40 object-cover">
+        <div class="p-4">
+            <h3 class="text-xl font-bold text-gray-900">${vaca.nombre}</h3>
+            <div class="text-sm text-gray-600 mt-2 space-y-1">
+                <p><strong>Raza:</strong> ${vaca.raza || 'N/A'}</p>
+                <p><strong>Nacimiento:</strong> ${vaca.fecha_nacimiento ? new Date(vaca.fecha_nacimiento + 'T00:00:00Z').toLocaleDateString('es-MX', { timeZone: 'UTC' }) : 'N/A'}</p>
+                <p><strong>ID:</strong> #${vaca.numero_siniiga}</p>
             </div>
-        `).join('');
+            <button onclick="verHistorialVaca(${vaca.id}, '${vaca.nombre}')" class="w-full bg-green-100 text-green-800 font-semibold p-2 rounded-lg mt-4 hover:bg-green-200 transition">
+                Ver Detalles
+            </button>
+        </div>
+    </div>
+`).join('');
+// ... el resto de la función sigue igual ...
 
     } catch (error) {
         container.innerHTML = '<p class="text-center text-red-500 mt-8">Error al cargar el ganado.</p>';
@@ -491,7 +487,7 @@ function abrirModalVaca() {
                 const modal = document.getElementById('modal-agregar-vaca');
                 if (modal) modal.classList.add('hidden');
                 renderizarVistaMisVacas();
-            }, 900);
+            }, 1500);
         } catch (error) {
             mostrarMensaje('vaca-mensaje', error.message || 'Error inesperado');
         }

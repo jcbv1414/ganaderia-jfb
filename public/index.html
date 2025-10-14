@@ -38,16 +38,16 @@
         .progress-ring { position: relative; width: 60px; height: 60px; border-radius: 50%; display: grid; place-items: center; background: conic-gradient(var(--color, #22c55e) calc(var(--value) * 1%), #e0e0e0 0); }
         .progress-ring::before { content: ""; position: absolute; width: 48px; height: 48px; background: white; border-radius: 50%; }
         .progress-ring-percent { position: relative; font-size: 0.9rem; font-weight: 600; color: #166534; }
-        .modal-content { max-height: 80vh; display: flex; flex-direction: column; }
-        .modal-main { overflow-y: auto; }
-         .modal-content {
-        display: flex;
-        flex-direction: column;
-        max-height: 85vh; /* Limita la altura del modal al 85% de la pantalla */
-    }
-    .modal-main {
-        overflow-y: auto; /* Hace que solo el contenido del formulario se deslice */
-    }
+       .modal-content {
+    display: flex;
+    flex-direction: column;
+    max-height: 85vh; /* Limita la altura del modal al 85% de la pantalla */
+    width: 100%;
+}
+.modal-main {
+    overflow-y: auto; /* Hace que solo el contenido del formulario se deslice */
+    padding-bottom: 1rem; /* Añade un pequeño espacio al final del scroll */
+}
         /* ----- PEGA ESTE BLOQUE ----- */
     #calendario-visual-container .fc-header-toolbar {
     padding: 0 10px;
@@ -171,7 +171,7 @@
     <div class="p-5 transform -translate-y-8">
         
         <section class="mb-6">
-            <h2 class="text-lg font-semibold mb-3 text-gray-800">Resumen del Rancho</h2>
+            <h2 class="text-lg font-semibold mb-3 text-gray-800 mt-8">Resumen del Rancho</h2>
             <div class="grid grid-cols-3 gap-3">
                 <div class="bg-white p-3 rounded-xl shadow-md text-center"><p class="text-3xl font-bold text-brand-green" id="resumen-total-vacas">--</p><p class="text-xs text-gray-500 mt-1">Vacas en Rancho</p></div>
                 <div class="bg-white p-3 rounded-xl shadow-md text-center"><p class="text-3xl font-bold text-brand-green" id="resumen-vacas-gestantes">--</p><p class="text-xs text-gray-500 mt-1">Vacas Gestantes</p></div>
@@ -215,6 +215,11 @@
                             <div><label for="vaca-siniiga" class="block text-sm font-medium text-gray-700 mb-1">No. SINIIGA (Arete)</label><input type="text" name="siniiga" id="vaca-siniiga" class="w-full p-2 border border-gray-300 rounded-lg" required></div>
                             <div><label for="vaca-pierna" class="block text-sm font-medium text-gray-700 mb-1">No. de Pierna</label><input type="text" name="pierna" id="vaca-pierna" class="w-full p-2 border border-gray-300 rounded-lg"></div>
                         </div>
+                        <div class="mt-4">
+    <label for="vaca-lote" class="block text-sm font-medium text-gray-700 mb-1">Lote</label>
+    <input type="number" name="lote" id="vaca-lote" class="w-full p-2 border border-gray-300 rounded-lg" placeholder="Ej: 4">
+</div>
+<div>
                         <div><label for="vaca-raza" class="block text-sm font-medium text-gray-700 mb-1">Raza</label><input type="text" name="raza" id="vaca-raza" list="lista-razas" class="w-full p-2 border border-gray-300 rounded-lg"><datalist id="lista-razas"></datalist></div>
                         <div class="grid grid-cols-2 gap-4">
                             <div><label for="vaca-nacimiento" class="block text-sm font-medium text-gray-700 mb-1">Fecha de Nacimiento</label><input type="date" name="nacimiento" id="vaca-nacimiento" class="w-full p-2 border border-gray-300 rounded-lg"></div>
