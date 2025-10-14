@@ -265,33 +265,38 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('resumen-alertas').textContent = totalAlertas;
         
         // ... (el resto del código para mostrar los lotes sigue igual) ...
-        const lotesContainer = document.getElementById('lotes-container');
+ const lotesContainer = document.getElementById('lotes-container');
         if (!lotesContainer) return;
         lotesContainer.innerHTML = '';
-        
+
         if (Object.keys(stats).length === 0) {
             lotesContainer.innerHTML = '<p class="text-gray-500">No hay lotes con datos para mostrar.</p>';
-        } else {
-            Object.entries(stats).slice(0, 3).forEach(([numeroLote, datosLote]) => {
-                const vacasEnLote = datosLote.totalVacas || 0;
-                const gestantesEnLote = datosLote.estados?.Gestante || 0;
-                const porcentajeGestacion = vacasEnLote > 0 ? Math.round((gestantesEnLote / vacasEnLote) * 100) : 0;
-                const loteCardHTML = `
-                <div class="bg-white p-4 rounded-xl shadow-md flex items-center justify-between">
-                    <div class="flex items-center">
-                        <div class="progress-ring mr-4" style="--value: ${porcentajeGestacion}; --color: #22c55e;">
-                            <span class="progress-ring-percent">${porcentajeGestacion}%</span>
-                        </div>
-                        <div>
-                            <p class="font-semibold">Lote ${numeroLote}</p>
-                            <p class="text-sm text-gray-500">Gestación</p>
-                        </div>
-                    </div>
-                    <i class="fa-solid fa-chevron-right text-gray-400"></i>
-                </div>`;
-                lotesContainer.innerHTML += loteCardHTML;
-            });
+            return;
         }
+
+        Object.entries(stats).forEach(([numeroLote, datosLote]) => {
+            const vacasEnLote = datosLote.totalVacas || 0;
+            const gestantesEnLote = datosLote.estados?.Gestante || 0;
+            const porcentajeGestacion = vacasEnLote > 0 ? Math.round((gestantesEnLote / vacasEnLote) * 100) : 0;
+
+            // CORRECCIÓN: Muestra un nombre amigable para lotes no asignados
+            const nombreLote = numeroLote === 'Sin Lote' ? 'Animales sin Lote' : `Lote ${numeroLote}`;
+
+            const loteCardHTML = `
+            <div class="bg-white p-4 rounded-xl shadow-md flex items-center justify-between">
+                <div class="flex items-center">
+                    <div class="progress-ring mr-4" style="--value: ${porcentajeGestacion}; --color: #22c55e;">
+                        <span class="progress-ring-percent">${porcentajeGestacion}%</span>
+                    </div>
+                    <div>
+                        <p class="font-semibold">${nombreLote}</p>
+                        <p class="text-sm text-gray-500">Gestación</p>
+                    </div>
+                </div>
+                <i class="fa-solid fa-chevron-right text-gray-400"></i>
+            </div>`;
+            lotesContainer.innerHTML += loteCardHTML;
+        });
     } catch (error) {
         const el = document.getElementById('lotes-container');
         if (el) el.innerHTML = '<p class="text-red-500">No se pudieron cargar los datos de los lotes.</p>';
@@ -466,32 +471,29 @@ async function handleGuardarVaca(e) {
     e.preventDefault();
     const form = e.target;
     const btn = document.getElementById('btn-guardar-vaca-fab');
-    
-    // Animación de "cargando"
     if (btn) {
         btn.disabled = true;
         btn.innerHTML = '<i class="fa-solid fa-spinner animate-spin"></i>';
     }
 
     const formData = new FormData(form);
-    const vacaId = formData.get('vacaId'); // Revisa si estamos editando una vaca existente
-
-    // Decide si es una ACTUALIZACIÓN (PUT) o una CREACIÓN (POST)
+    const vacaId = formData.get('vacaId');
     const isUpdating = vacaId && vacaId !== '';
     const method = isUpdating ? 'PUT' : 'POST';
     const url = isUpdating ? `/api/vacas/${vacaId}` : '/api/vacas';
 
-    // Solo añade estos datos si es una vaca NUEVA
     if (!isUpdating) {
         formData.append('propietarioId', currentUser?.id || '');
         formData.append('ranchoId', currentUser?.ranchos?.[0]?.id || '');
     }
-    
-    // El campo 'lote' ya está en el formData, no hace falta añadirlo de nuevo
 
-    if (!formData.get('nombre') || !formData.get('siniiga')) {
+    // CORRECCIÓN: Nos aseguramos de que los campos obligatorios se lean directamente
+    const nombre = form.querySelector('#vaca-nombre').value;
+    const siniiga = form.querySelector('#vaca-siniiga').value;
+
+    if (!nombre || !siniiga) {
         mostrarMensaje('vaca-mensaje', 'Nombre y SINIIGA son obligatorios.');
-        if (btn) { // Restaura el botón si hay error
+        if (btn) {
             btn.disabled = false;
             btn.innerHTML = '<i class="fa-solid fa-save"></i>';
         }
@@ -501,7 +503,9 @@ async function handleGuardarVaca(e) {
     try {
         const res = await fetch(url, { method: method, body: formData });
         const respuesta = await res.json();
-        if (!res.ok) throw new Error(respuesta.message || 'Error al procesar la solicitud');
+        if (!res.ok) throw new Error(respuesta.message);
+
+        mostrarMensaje('vaca-mensaje', `¡Animal ${isUpdating ? 'actualizado' : 'guardado'} con éxito!`, false);
         
         // Muestra un mensaje diferente si se está actualizando o guardando
         mostrarMensaje('vaca-mensaje', `¡Animal ${isUpdating ? 'actualizado' : 'guardado'} con éxito!`, false);
@@ -1719,7 +1723,7 @@ function renderizarListaDeVacas(vacas) {
         return;
     }
 
-    container.innerHTML = vacas.map(vaca => `
+     container.innerHTML = vacas.map(vaca => `
         <div class="bg-white rounded-xl shadow-md overflow-hidden mb-4">
             <img src="${vaca.foto_url || 'https://via.placeholder.com/300x200'}" alt="Foto de ${vaca.nombre}" class="w-full h-40 object-cover">
             <div class="p-4">
@@ -1732,8 +1736,7 @@ function renderizarListaDeVacas(vacas) {
                 </div>
                 <div class="text-sm text-gray-600 mt-2 space-y-1">
                     <p><strong>Raza:</strong> ${vaca.raza || 'N/A'}</p>
-                    <p><strong>Lote:</strong> ${vaca.lote || 'N/A'}</p>
-                    <p><strong>ID (Arete):</strong> #${vaca.numero_siniiga}</p>
+                    <p><strong>Lote:</strong> ${vaca.lote || 'Sin asignar'}</p> <p><strong>ID (Arete):</strong> #${vaca.numero_siniiga}</p>
                 </div>
                 <button onclick="verHistorialVaca(${vaca.id}, '${vaca.nombre}')" class="w-full bg-green-100 text-green-800 font-semibold p-2 rounded-lg mt-4 hover:bg-green-200 transition">
                     Ver Detalles
@@ -1749,7 +1752,7 @@ async function renderizarVistaMisVacas() {
     if (!ranchoId) return;
 
     const container = document.getElementById('lista-vacas-container');
-    container.innerHTML = '<p class="text-center text-gray-500 mt-8">Cargando ganado...</p>';
+    container.innerHTML = '<p class="text-center text-gray-500 mt-8">Ganaderia JFB</p>';
     const fab = document.getElementById('btn-abrir-modal-vaca');
     if (fab) fab.onclick = () => abrirModalVaca();
 

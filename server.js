@@ -226,9 +226,9 @@ app.put('/api/vacas/:vacaId', upload.single('fotoVaca'), async (req, res) => {
 
         const { data, error } = await supabase.from('vacas').update(updatePayload).eq('id', vacaId).select().single();
         if (error) throw error;
-
         res.json({ success: true, message: 'Vaca actualizada', vaca: data });
     } catch (err) { handleServerError(res, err); }
+    
 });
 // ================== RUTAS PARA GESTIONAR PERMISOS DE MVZ ==================
 
