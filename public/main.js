@@ -13,96 +13,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const API_URL = ''; // opcional si quieres prefijar la API
     const appContent = document.getElementById('app-content');
     const navContainer = document.getElementById('nav-container');
-
+  
     // =================================================================
-    // DEFINICIONES DE DATOS (PROCEDIMIENTOS, RAZAS)
-    // =================================================================
-    const PROCEDIMIENTOS = {
-        palpacion: {
-          titulo: "Palpación",
-          campos: [
-            { id: "estatica", label: "Estática", tipo: "select", opciones: ["Sí", "No"] },
-            { id: "ciclando", label: "Ciclando", tipo: "select", opciones: ["Sí", "No"], revela: "ciclando_detalle" },
-            { id: "ciclando_detalle", label: "Detalle Ciclo", tipo: "select", opciones: ["I1","I2","I3","D1","D2","D3"], oculto: true },
-            { id: "gestante", label: "Gestante", tipo: "select", opciones: ["Sí", "No"], revela: "gestante_detalle" },
-            { id: "gestante_detalle", label: "Edad Gestacional", tipo: "select", opciones: ["1 a 3 meses","3 a 6 meses","6 a 9 meses"], oculto: true },
-            { id: "sucia", label: "Sucia", tipo: "checkbox" },
-            { id: "observaciones", label: "Observaciones", tipo: "textarea" }
-          ]
-        },
-        inseminacion: {
-          titulo: "Inseminación",
-          campos: [
-            { id: "tecnica", label: "Técnica", tipo: "select", opciones: ["IATF","IA Convencional"], revela: "fecha_celo" },
-            { id: "fecha_celo", label: "Fecha/Hora de Celo Detectado", tipo: "datetime-local", oculto: true },
-            { id: "pajilla_toro", label: "Pajilla / Toro", tipo: "text", placeholder: "Nombre del toro" },
-            { id: "dosis", label: "Dosis", tipo: "select", opciones: ["1 dosis","2 dosis","3 dosis","4 dosis"] },
-            { id: "observaciones", label: "Observaciones", tipo: "textarea" }
-          ]
-        },
-        transferencia: {
-          titulo: "Transferencia de embrión",
-          campos: [
-            { id: "donadora", label: "Donadora", tipo: "text", placeholder: "ID o nombre" },
-            { id: "receptora", label: "Receptora", tipo: "text", placeholder: "ID o nombre" },
-            { id: "embriologo", label: "Embriólogo", tipo: "text" },
-            { id: "calidad_embrion", label: "Calidad del embrión", tipo: "select", opciones: ["I", "II", "III"] },
-            { id: "estado_embrion", label: "Estado del embrión", tipo: "select", opciones: ["Fresco", "Congelado"] },
-            { id: "lote_pajilla", label: "Lote/Pajilla", tipo: "text" },
-            { id: "ubicacion", label: "Ubicación (cuerno)", tipo: "select", opciones: ["Derecho", "Izquierdo"] },
-            { id: "observaciones", label: "Observaciones", tipo: "textarea" }
-          ]
-        },
-        sincronizacion: {
-          titulo: "Sincronización",
-          campos: [
-            { id: "protocolo", label: "Protocolo", tipo: "select", opciones: ["Ovsynch", "Presynch", "CIDR", "Otro"] },
-            { id: "fecha_inicio", label: "Fecha de inicio", tipo: "date" },
-            { id: "fecha_fin", label: "Fecha de fin", tipo: "date" },
-            { id: "observaciones", label: "Observaciones", tipo: "textarea" }
-          ]
-        },
-        medicamentos: {
-      titulo: "Aplicación de Medicamentos",
-      campos: [
-        { id: "medicamento", label: "Medicamento Aplicado", tipo: "text", placeholder: "Ej: Vitamina B12" },
-        { id: "dosis_aplicada", label: "Dosis", tipo: "text", placeholder: "Ej: 10 ml" },
-        { id: "via_administracion", label: "Vía de Administración", tipo: "select", opciones: ["Intramuscular", "Subcutánea", "Intravenosa", "Oral"] },
-        { id: "proximo_tratamiento", label: "Próximo Tratamiento (opcional)", tipo: "date" },
-        { id: "observaciones", label: "Observaciones", tipo: "textarea" }
-      ]
-    }
-    };
-    const RAZAS_BOVINAS = [
-    'Aberdeen Angus','Ayrshire','Bazadaise','Beefmaster','Belgian Blue', 'Brahman',
-    'Brangus','Charolais','Chianina','Criollo','Galloway','Gelbvieh','Gir',
-    'Guzerá','Gyr Lechero','Guernsey','Hereford','Holstein','Jersey','Limousin',
-    'Maine-Anjou','Marchigiana','Montbéliarde','Normando','Pardo Suizo',
-    'Piemontese','Pinzgauer','Romagnola','Sahiwal','Santa Gertrudis','Sardo Negro',
-    'Shorthorn','Simbrah','Simmental','Sindi','Tarentaise','Wagyu'
-    ].sort((a,b) => a.localeCompare(b));
-
-     // =================================================================
-    // FUNCIONES DE AYUDA (HELPERS)
-    // =================================================================
-    const mostrarMensaje = (elId, texto, esError = true) => {
-        const el = document.getElementById(elId);
-        if (!el) return;
-        el.textContent = texto;
-        const colorClass = esError ? 'text-red-500' : 'text-green-600';
-        el.className = `text-sm h-4 text-center ${colorClass}`;
-        setTimeout(() => { if (el) el.textContent = ''; }, 4000);
-    };
-
-    function logout() {
-    currentUser = null;
-    currentRancho = null;
-    localStorage.removeItem('pinnedRancho'); // Limpia el rancho fijado
-    sessionStorage.clear();
-    navigateTo('login');
-    navContainer.classList.add('hidden');
-}
-  // =================================================================
     // NAVEGACIÓN Y RENDERIZADO DE VISTAS
     // =================================================================
     function navigateTo(viewId) {
@@ -180,48 +92,10 @@ document.addEventListener('DOMContentLoaded', () => {
         navigateTo(isPropietario ? 'inicio-propietario' : 'inicio-mvz');
     };
 
-
     // =================================================================
-    // MANEJADORES DE AUTENTICACIÓN
+    // LÓGICA DEL PROPIETARIO
     // =================================================================
-    async function handleLogin(e) {
-        e.preventDefault();
-        const btn = e.target.querySelector('button[type="submit"]');
-        if (btn) { btn.classList.add('loading'); btn.disabled = true; }
-        
-        const email = document.getElementById('login-email').value;
-        const password = document.getElementById('login-password').value;
-        try {
-            const res = await fetch(`/api/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
-            const respuesta = await res.json();
-            if (!res.ok) throw new Error(respuesta.message || 'Error en login');
-            currentUser = respuesta.user;
-            sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
-            iniciarSesion();
-        } catch (err) {
-            mostrarMensaje('login-mensaje', err.message || 'Error inesperado');
-        } finally {
-            if (btn) { btn.classList.remove('loading'); btn.disabled = false; }
-        }
-    }
-
-    async function handleRegister(e) {
-        e.preventDefault();
-        const form = e.target;
-        const formData = new FormData(form);
-        try {
-            // Enviamos FormData (multipart) para soportar distintos navegadores/inputs
-            const res = await fetch(`/api/register`, { method: 'POST', body: formData });
-            const respuesta = await res.json();
-            if (!res.ok) throw new Error(respuesta.message || 'Error en registro');
-            mostrarMensaje('registro-mensaje', '¡Registro exitoso! Serás redirigido al login.', false);
-            setTimeout(() => navigateTo('login'), 1200);
-        } catch (err) {
-            mostrarMensaje('registro-mensaje', err.message || 'Error inesperado');
-        }
-    }
-    
-async function cargarDatosDashboardPropietario() {
+    async function cargarDatosDashboardPropietario() {
     if (!currentUser || currentUser.rol !== 'propietario') return;
 
     // Actualiza el saludo y la fecha
@@ -318,6 +192,225 @@ async function cargarDatosDashboardPropietario() {
         }
     }
 }
+
+    // =================================================================
+    // LÓGICA DEL MVZ
+    // =================================================================
+   async function cargarDashboardMVZ() {
+    // Verificamos si los elementos del encabezado existen antes de modificarlos
+    const nombreEl = document.getElementById('dash-nombre-mvz');
+    if (nombreEl) nombreEl.textContent = currentUser?.nombre?.split(' ')[0] || '';
+    
+    const fechaEl = document.getElementById('dash-fecha-actual-mvz');
+    if (fechaEl) fechaEl.textContent = new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
+
+    try {
+        // Cargar datos del resumen diario desde el servidor
+        const resDash = await fetch(`/api/dashboard/mvz/${currentUser.id}`);
+        if (resDash.ok) {
+            const dataDash = await resDash.json();
+            const resumenVisitasEl = document.getElementById('resumen-visitas');
+            const detalleVisitasEl = document.getElementById('detalle-visitas');
+            const resumenAlertasEl = document.getElementById('resumen-alertas-mvz');
+            const detalleAlertasEl = document.getElementById('detalle-alertas');
+
+            if (resumenVisitasEl) resumenVisitasEl.textContent = dataDash.actividadesHoy || 0;
+            if (detalleVisitasEl) detalleVisitasEl.textContent = "Actividades de Hoy";
+            if (resumenAlertasEl) resumenAlertasEl.textContent = dataDash.alertas || 0;
+            if (detalleAlertasEl) detalleAlertasEl.textContent = "Alertas Críticas";
+        }
+
+        // Cargar eventos del calendario
+        const resEventos = await fetch(`/api/eventos/mvz/${currentUser.id}`);
+        const eventos = (await resEventos.json()).filter(e => !e.completado);
+        
+        const eventosContainer = document.getElementById('lista-eventos');
+        const pendientesContainer = document.getElementById('lista-pendientes');
+
+        // Lógica precisa para determinar qué es "hoy"
+        const hoy = new Date();
+        const hoyAnio = hoy.getFullYear();
+        const hoyMes = hoy.getMonth();
+        const hoyDia = hoy.getDate();
+
+        const eventosHoy = eventos.filter(e => {
+            const fechaEvento = new Date(e.fecha_evento);
+            return fechaEvento.getFullYear() === hoyAnio &&
+                   fechaEvento.getMonth() === hoyMes &&
+                   fechaEvento.getDate() === hoyDia;
+        });
+
+        const eventosProximos = eventos.filter(e => !eventosHoy.includes(e));
+
+        // Llenar "Pendientes Hoy" solo si el contenedor existe
+        if (pendientesContainer) {
+             if (eventosHoy.length > 0) {
+                pendientesContainer.innerHTML = eventosHoy.map((e, i) => {
+                     const rancho = e.nombre_rancho_texto || e.ranchos?.nombre || 'General';
+                    return `
+                    <div class="bg-white p-3 rounded-lg shadow-sm mb-3">
+                        <p><strong>${i+1}.</strong> ${e.titulo} <em class="text-gray-500">(${rancho})</em></p>
+                        <div class="flex justify-end space-x-2 mt-2">
+                            <button onclick="handleCancelarEvento(${e.id})" class="text-xs text-red-600 font-semibold px-2 py-1">Cancelar</button>
+                            <button onclick="handleCompletarEvento(${e.id})" class="text-xs bg-green-600 text-white font-semibold px-3 py-1 rounded-full">Completar</button>
+                        </div>
+                    </div>`;
+                }).join('');
+            } else {
+                 pendientesContainer.innerHTML = '<div class="bg-white p-4 rounded-xl shadow-md"><p class="text-sm text-gray-500">No hay pendientes para hoy.</p></div>';
+            }
+        }
+
+        // Llenar "Próximos Eventos" solo si el contenedor existe
+        if (eventosContainer) {
+            if (eventosProximos.length > 0) {
+                 eventosContainer.innerHTML = eventosProximos.slice(0, 3).map(e => {
+                    const fecha = new Date(e.fecha_evento);
+                    const manana = new Date(); manana.setDate(new Date().getDate() + 1);
+                    
+                    let textoFecha = fecha.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
+                    if (fecha.toDateString() === manana.toDateString()) textoFecha = 'Mañana';
+                    
+                    const rancho = e.nombre_rancho_texto || e.ranchos?.nombre || 'General';
+                    return `<div class="bg-white p-4 rounded-xl shadow-md mb-3"><div class="flex justify-between items-center"><p><i class="fa-solid fa-calendar-alt text-brand-green mr-2"></i><strong>${textoFecha}:</strong> ${e.titulo} <em>(${rancho})</em></p><i class="fa-solid fa-chevron-right text-gray-400"></i></div></div>`;
+                }).join('');
+            } else {
+                eventosContainer.innerHTML = '<div class="bg-white p-4 rounded-xl shadow-md"><p class="text-sm text-gray-500">No hay más eventos programados.</p></div>';
+            }
+        }
+    } catch (error) { 
+        console.error("Error cargando dashboard MVZ:", error); 
+    }
+}
+    // =================================================================
+    // DEFINICIONES DE DATOS (PROCEDIMIENTOS, RAZAS)
+    // =================================================================
+    const PROCEDIMIENTOS = {
+        palpacion: {
+          titulo: "Palpación",
+          campos: [
+            { id: "estatica", label: "Estática", tipo: "select", opciones: ["Sí", "No"] },
+            { id: "ciclando", label: "Ciclando", tipo: "select", opciones: ["Sí", "No"], revela: "ciclando_detalle" },
+            { id: "ciclando_detalle", label: "Detalle Ciclo", tipo: "select", opciones: ["I1","I2","I3","D1","D2","D3"], oculto: true },
+            { id: "gestante", label: "Gestante", tipo: "select", opciones: ["Sí", "No"], revela: "gestante_detalle" },
+            { id: "gestante_detalle", label: "Edad Gestacional", tipo: "select", opciones: ["1 a 3 meses","3 a 6 meses","6 a 9 meses"], oculto: true },
+            { id: "sucia", label: "Sucia", tipo: "checkbox" },
+            { id: "observaciones", label: "Observaciones", tipo: "textarea" }
+          ]
+        },
+        inseminacion: {
+          titulo: "Inseminación",
+          campos: [
+            { id: "tecnica", label: "Técnica", tipo: "select", opciones: ["IATF","IA Convencional"], revela: "fecha_celo" },
+            { id: "fecha_celo", label: "Fecha/Hora de Celo Detectado", tipo: "datetime-local", oculto: true },
+            { id: "pajilla_toro", label: "Pajilla / Toro", tipo: "text", placeholder: "Nombre del toro" },
+            { id: "dosis", label: "Dosis", tipo: "select", opciones: ["1 dosis","2 dosis","3 dosis","4 dosis"] },
+            { id: "observaciones", label: "Observaciones", tipo: "textarea" }
+          ]
+        },
+        transferencia: {
+          titulo: "Transferencia de embrión",
+          campos: [
+            { id: "donadora", label: "Donadora", tipo: "text", placeholder: "ID o nombre" },
+            { id: "receptora", label: "Receptora", tipo: "text", placeholder: "ID o nombre" },
+            { id: "embriologo", label: "Embriólogo", tipo: "text" },
+            { id: "calidad_embrion", label: "Calidad del embrión", tipo: "select", opciones: ["I", "II", "III"] },
+            { id: "estado_embrion", label: "Estado del embrión", tipo: "select", opciones: ["Fresco", "Congelado"] },
+            { id: "lote_pajilla", label: "Lote/Pajilla", tipo: "text" },
+            { id: "ubicacion", label: "Ubicación (cuerno)", tipo: "select", opciones: ["Derecho", "Izquierdo"] },
+            { id: "observaciones", label: "Observaciones", tipo: "textarea" }
+          ]
+        },
+        sincronizacion: {
+          titulo: "Sincronización",
+          campos: [
+            { id: "protocolo", label: "Protocolo", tipo: "select", opciones: ["Ovsynch", "Presynch", "CIDR", "Otro"] },
+            { id: "fecha_inicio", label: "Fecha de inicio", tipo: "date" },
+            { id: "fecha_fin", label: "Fecha de fin", tipo: "date" },
+            { id: "observaciones", label: "Observaciones", tipo: "textarea" }
+          ]
+        },
+        medicamentos: {
+      titulo: "Aplicación de Medicamentos",
+      campos: [
+        { id: "medicamento", label: "Medicamento Aplicado", tipo: "text", placeholder: "Ej: Vitamina B12" },
+        { id: "dosis_aplicada", label: "Dosis", tipo: "text", placeholder: "Ej: 10 ml" },
+        { id: "via_administracion", label: "Vía de Administración", tipo: "select", opciones: ["Intramuscular", "Subcutánea", "Intravenosa", "Oral"] },
+        { id: "proximo_tratamiento", label: "Próximo Tratamiento (opcional)", tipo: "date" },
+        { id: "observaciones", label: "Observaciones", tipo: "textarea" }
+      ]
+    }
+    };
+    const RAZAS_BOVINAS = [
+    'Aberdeen Angus','Ayrshire','Bazadaise','Beefmaster','Belgian Blue', 'Brahman',
+    'Brangus','Charolais','Chianina','Criollo','Galloway','Gelbvieh','Gir',
+    'Guzerá','Gyr Lechero','Guernsey','Hereford','Holstein','Jersey','Limousin',
+    'Maine-Anjou','Marchigiana','Montbéliarde','Normando','Pardo Suizo',
+    'Piemontese','Pinzgauer','Romagnola','Sahiwal','Santa Gertrudis','Sardo Negro',
+    'Shorthorn','Simbrah','Simmental','Sindi','Tarentaise','Wagyu'
+    ].sort((a,b) => a.localeCompare(b));
+
+     // =================================================================
+    // FUNCIONES DE AYUDA (HELPERS)
+    // =================================================================
+    const mostrarMensaje = (elId, texto, esError = true) => {
+        const el = document.getElementById(elId);
+        if (!el) return;
+        el.textContent = texto;
+        const colorClass = esError ? 'text-red-500' : 'text-green-600';
+        el.className = `text-sm h-4 text-center ${colorClass}`;
+        setTimeout(() => { if (el) el.textContent = ''; }, 4000);
+    };
+
+    function logout() {
+    currentUser = null;
+    currentRancho = null;
+    localStorage.removeItem('pinnedRancho'); // Limpia el rancho fijado
+    sessionStorage.clear();
+    navigateTo('login');
+    navContainer.classList.add('hidden');
+}
+    // =================================================================
+    // MANEJADORES DE AUTENTICACIÓN
+    // =================================================================
+    async function handleLogin(e) {
+        e.preventDefault();
+        const btn = e.target.querySelector('button[type="submit"]');
+        if (btn) { btn.classList.add('loading'); btn.disabled = true; }
+        
+        const email = document.getElementById('login-email').value;
+        const password = document.getElementById('login-password').value;
+        try {
+            const res = await fetch(`/api/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+            const respuesta = await res.json();
+            if (!res.ok) throw new Error(respuesta.message || 'Error en login');
+            currentUser = respuesta.user;
+            sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
+            iniciarSesion();
+        } catch (err) {
+            mostrarMensaje('login-mensaje', err.message || 'Error inesperado');
+        } finally {
+            if (btn) { btn.classList.remove('loading'); btn.disabled = false; }
+        }
+    }
+
+    async function handleRegister(e) {
+        e.preventDefault();
+        const form = e.target;
+        const formData = new FormData(form);
+        try {
+            // Enviamos FormData (multipart) para soportar distintos navegadores/inputs
+            const res = await fetch(`/api/register`, { method: 'POST', body: formData });
+            const respuesta = await res.json();
+            if (!res.ok) throw new Error(respuesta.message || 'Error en registro');
+            mostrarMensaje('registro-mensaje', '¡Registro exitoso! Serás redirigido al login.', false);
+            setTimeout(() => navigateTo('login'), 1200);
+        } catch (err) {
+            mostrarMensaje('registro-mensaje', err.message || 'Error inesperado');
+        }
+    }
+    
+
 
 async function renderizarVistaMiMvz() {
     // --- Muestra el código de acceso ---
@@ -756,93 +849,7 @@ async function handleGuardarVaca(cerrarAlFinalizar) {
         `;
     }
 
-    // LÓGICA DEL MVZ (mantengo la estructura; eliminé duplicados de handleValidarRancho)
-   async function cargarDashboardMVZ() {
-    // Verificamos si los elementos del encabezado existen antes de modificarlos
-    const nombreEl = document.getElementById('dash-nombre-mvz');
-    if (nombreEl) nombreEl.textContent = currentUser?.nombre?.split(' ')[0] || '';
-    
-    const fechaEl = document.getElementById('dash-fecha-actual-mvz');
-    if (fechaEl) fechaEl.textContent = new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
 
-    try {
-        // Cargar datos del resumen diario desde el servidor
-        const resDash = await fetch(`/api/dashboard/mvz/${currentUser.id}`);
-        if (resDash.ok) {
-            const dataDash = await resDash.json();
-            const resumenVisitasEl = document.getElementById('resumen-visitas');
-            const detalleVisitasEl = document.getElementById('detalle-visitas');
-            const resumenAlertasEl = document.getElementById('resumen-alertas-mvz');
-            const detalleAlertasEl = document.getElementById('detalle-alertas');
-
-            if (resumenVisitasEl) resumenVisitasEl.textContent = dataDash.actividadesHoy || 0;
-            if (detalleVisitasEl) detalleVisitasEl.textContent = "Actividades de Hoy";
-            if (resumenAlertasEl) resumenAlertasEl.textContent = dataDash.alertas || 0;
-            if (detalleAlertasEl) detalleAlertasEl.textContent = "Alertas Críticas";
-        }
-
-        // Cargar eventos del calendario
-        const resEventos = await fetch(`/api/eventos/mvz/${currentUser.id}`);
-        const eventos = (await resEventos.json()).filter(e => !e.completado);
-        
-        const eventosContainer = document.getElementById('lista-eventos');
-        const pendientesContainer = document.getElementById('lista-pendientes');
-
-        // Lógica precisa para determinar qué es "hoy"
-        const hoy = new Date();
-        const hoyAnio = hoy.getFullYear();
-        const hoyMes = hoy.getMonth();
-        const hoyDia = hoy.getDate();
-
-        const eventosHoy = eventos.filter(e => {
-            const fechaEvento = new Date(e.fecha_evento);
-            return fechaEvento.getFullYear() === hoyAnio &&
-                   fechaEvento.getMonth() === hoyMes &&
-                   fechaEvento.getDate() === hoyDia;
-        });
-
-        const eventosProximos = eventos.filter(e => !eventosHoy.includes(e));
-
-        // Llenar "Pendientes Hoy" solo si el contenedor existe
-        if (pendientesContainer) {
-             if (eventosHoy.length > 0) {
-                pendientesContainer.innerHTML = eventosHoy.map((e, i) => {
-                     const rancho = e.nombre_rancho_texto || e.ranchos?.nombre || 'General';
-                    return `
-                    <div class="bg-white p-3 rounded-lg shadow-sm mb-3">
-                        <p><strong>${i+1}.</strong> ${e.titulo} <em class="text-gray-500">(${rancho})</em></p>
-                        <div class="flex justify-end space-x-2 mt-2">
-                            <button onclick="handleCancelarEvento(${e.id})" class="text-xs text-red-600 font-semibold px-2 py-1">Cancelar</button>
-                            <button onclick="handleCompletarEvento(${e.id})" class="text-xs bg-green-600 text-white font-semibold px-3 py-1 rounded-full">Completar</button>
-                        </div>
-                    </div>`;
-                }).join('');
-            } else {
-                 pendientesContainer.innerHTML = '<div class="bg-white p-4 rounded-xl shadow-md"><p class="text-sm text-gray-500">No hay pendientes para hoy.</p></div>';
-            }
-        }
-
-        // Llenar "Próximos Eventos" solo si el contenedor existe
-        if (eventosContainer) {
-            if (eventosProximos.length > 0) {
-                 eventosContainer.innerHTML = eventosProximos.slice(0, 3).map(e => {
-                    const fecha = new Date(e.fecha_evento);
-                    const manana = new Date(); manana.setDate(new Date().getDate() + 1);
-                    
-                    let textoFecha = fecha.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
-                    if (fecha.toDateString() === manana.toDateString()) textoFecha = 'Mañana';
-                    
-                    const rancho = e.nombre_rancho_texto || e.ranchos?.nombre || 'General';
-                    return `<div class="bg-white p-4 rounded-xl shadow-md mb-3"><div class="flex justify-between items-center"><p><i class="fa-solid fa-calendar-alt text-brand-green mr-2"></i><strong>${textoFecha}:</strong> ${e.titulo} <em>(${rancho})</em></p><i class="fa-solid fa-chevron-right text-gray-400"></i></div></div>`;
-                }).join('');
-            } else {
-                eventosContainer.innerHTML = '<div class="bg-white p-4 rounded-xl shadow-md"><p class="text-sm text-gray-500">No hay más eventos programados.</p></div>';
-            }
-        }
-    } catch (error) { 
-        console.error("Error cargando dashboard MVZ:", error); 
-    }
-}
     const accionesContainerTop = document.getElementById('acciones-rapidas-container');
     if (accionesContainerTop) accionesContainerTop.innerHTML = ''; // safe init
 

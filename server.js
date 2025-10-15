@@ -1,6 +1,4 @@
-// server.fixed.js - Versión revisada y más segura de tu server.js
-// Recomendaciones: coloca SUPABASE_URL y SUPABASE_KEY en variables de entorno.
-
+// server.js - Versión Limpia
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -101,49 +99,6 @@ app.post('/api/login', async (req, res) => {
     handleServerError(res, err);
   }
 });
-
-// ================== RANCHOS / MVZ ==================
-app.post('/api/rancho/validate', async (req, res) => {
-  try {
-    const { codigo = '' } = req.body || {};
-    if (!codigo) return res.status(400).json({ message: 'Código requerido.' });
-    const { data: rancho, error } = await supabase.from('ranchos').select('*').eq('codigo', String(codigo).toUpperCase()).maybeSingle();
-    if (error) throw error;
-    if (!rancho) return res.status(404).json({ message: 'Código de rancho no válido.' });
-    res.json(rancho);
-  } catch (err) { handleServerError(res, err); }
-});
-
-app.get('/api/rancho/:ranchoId/mvz', async (req, res) => {
-  try {
-    const { ranchoId } = req.params;
-    if (!ranchoId) return res.status(400).json({ message: 'ranchoId requerido.' });
-
-    const { data, error } = await supabase
-      .from('rancho_mvz_permisos')
-      .select(`id, permisos, usuarios ( id, nombre, email )`)
-      .eq('rancho_id', ranchoId);
-
-    if (error) throw error;
-    res.json(data || []);
-  } catch (err) { handleServerError(res, err); }
-});
-
-// Endpoint para que un MVZ obtenga la lista de sus ranchos asociados
-app.get('/api/ranchos/mvz/:mvzId', async (req, res) => {
-    try {
-        const { mvzId } = req.params;
-        const { data, error } = await supabase
-            .from('rancho_mvz_permisos')
-            .select('ranchos (*)')
-            .eq('mvz_id', mvzId);
-        if (error) throw error;
-        // Filtramos por si algún rancho es nulo y devolvemos solo la lista de ranchos
-        const ranchos = data.map(item => item.ranchos).filter(Boolean);
-        res.json(ranchos || []);
-    } catch (err) { handleServerError(res, err); }
-});
-
 // ================== VACAS ==================
 app.get('/api/vacas/rancho/:ranchoId', async (req, res) => {
   try {
@@ -207,16 +162,6 @@ app.post('/api/vacas', upload.single('fotoVaca'), async (req, res) => {
         handleServerError(res, err); 
     }
 });
-
-app.delete('/api/vacas/:vacaId', async (req, res) => {
-  try {
-    const { vacaId } = req.params;
-    if (!vacaId) return res.status(400).json({ message: 'vacaId requerido.' });
-    const { error } = await supabase.from('vacas').delete().eq('id', vacaId);
-    if (error) throw error;
-    res.json({ success: true, message: 'Vaca eliminada.' });
-  } catch (err) { handleServerError(res, err); }
-});
 // Ruta para ACTUALIZAR (Editar) una vaca existente
 app.put('/api/vacas/:vacaId', upload.single('fotoVaca'), async (req, res) => {
     try {
@@ -243,6 +188,62 @@ app.put('/api/vacas/:vacaId', upload.single('fotoVaca'), async (req, res) => {
     } catch (err) { handleServerError(res, err); }
     
 });
+app.delete('/api/vacas/:vacaId', async (req, res) => {
+  try {
+    const { vacaId } = req.params;
+    if (!vacaId) return res.status(400).json({ message: 'vacaId requerido.' });
+    const { error } = await supabase.from('vacas').delete().eq('id', vacaId);
+    if (error) throw error;
+    res.json({ success: true, message: 'Vaca eliminada.' });
+  } catch (err) { handleServerError(res, err); }
+});
+
+// ================== RANCHOS / MVZ ==================
+app.post('/api/rancho/validate', async (req, res) => {
+  try {
+    const { codigo = '' } = req.body || {};
+    if (!codigo) return res.status(400).json({ message: 'Código requerido.' });
+    const { data: rancho, error } = await supabase.from('ranchos').select('*').eq('codigo', String(codigo).toUpperCase()).maybeSingle();
+    if (error) throw error;
+    if (!rancho) return res.status(404).json({ message: 'Código de rancho no válido.' });
+    res.json(rancho);
+  } catch (err) { handleServerError(res, err); }
+});
+
+app.get('/api/rancho/:ranchoId/mvz', async (req, res) => {
+  try {
+    const { ranchoId } = req.params;
+    if (!ranchoId) return res.status(400).json({ message: 'ranchoId requerido.' });
+
+    const { data, error } = await supabase
+      .from('rancho_mvz_permisos')
+      .select(`id, permisos, usuarios ( id, nombre, email )`)
+      .eq('rancho_id', ranchoId);
+
+    if (error) throw error;
+    res.json(data || []);
+  } catch (err) { handleServerError(res, err); }
+});
+
+// Endpoint para que un MVZ obtenga la lista de sus ranchos asociados
+app.get('/api/ranchos/mvz/:mvzId', async (req, res) => {
+    try {
+        const { mvzId } = req.params;
+        const { data, error } = await supabase
+            .from('rancho_mvz_permisos')
+            .select('ranchos (*)')
+            .eq('mvz_id', mvzId);
+        if (error) throw error;
+        // Filtramos por si algún rancho es nulo y devolvemos solo la lista de ranchos
+        const ranchos = data.map(item => item.ranchos).filter(Boolean);
+        res.json(ranchos || []);
+    } catch (err) { handleServerError(res, err); }
+});
+
+
+
+
+
 // ================== RUTAS PARA GESTIONAR PERMISOS DE MVZ ==================
 
 // Ruta para ACTUALIZAR el permiso de un MVZ
