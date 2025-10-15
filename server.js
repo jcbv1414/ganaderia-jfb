@@ -293,6 +293,7 @@ app.post('/api/actividades', async (req, res) => {
         id_vaca: item.vacaId || null,
         id_usuario: mvzId,
         sesion_id: sesionId,
+        rancho_id: ranchoId,
         extra_data: { arete: item.areteVaca, raza: item.raza, lote: item.loteNumero, rancho_id: item.ranchoId, rancho_nombre: ranchoNombre }
     }));
     const { error } = await supabase.from('actividades').insert(actividadesParaInsertar);
@@ -629,12 +630,14 @@ app.get('/api/rancho/:ranchoId/estadisticas', async (req, res) => {
 app.get('/api/rancho/:ranchoId/actividades-recientes', async (req, res) => {
     try {
         const { ranchoId } = req.params;
+
+        // CORRECCIÓN: Ahora busca usando la nueva columna 'rancho_id'
         const { data, error } = await supabase
             .from('actividades')
-            .select('*, usuarios (nombre)') // Pedimos también el nombre del MVZ
-            .eq('extra_data->>rancho_id', ranchoId) // Busca dentro del campo JSON
-            .order('created_at', { ascending: false }) // Las más nuevas primero
-            .limit(3); // Solo trae las últimas 3
+            .select('*, usuarios (nombre)')
+            .eq('rancho_id', ranchoId) // <-- ¡LA BÚSQUEDA EFICIENTE!
+            .order('created_at', { ascending: false })
+            .limit(3);
 
         if (error) throw error;
         res.json(data || []);
