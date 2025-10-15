@@ -280,31 +280,42 @@ app.delete('/api/rancho/mvz/:permisoId', async (req, res) => {
 
 // ================== ACTIVIDADES, HISTORIAL Y REPORTES ==================
 app.post('/api/actividades', async (req, res) => {
-  try {
-    const { mvzId, loteActividad, mvzNombre, ranchoNombre } = req.body;
-    if (!mvzId || !Array.isArray(loteActividad) || loteActividad.length === 0) {
-      return res.status(400).json({ message: 'Faltan datos para procesar la actividad.' });
-    }
-    const sesionId = crypto.randomUUID();
-    const actividadesParaInsertar = loteActividad.map(item => ({
-        tipo_actividad: item.tipoLabel,
-        descripcion: item.detalles || {},
-        fecha_actividad: item.fecha,
-        id_vaca: item.vacaId || null,
-        id_usuario: mvzId,
-        sesion_id: sesionId,
-        rancho_id: ranchoId,
-        extra_data: { arete: item.areteVaca, raza: item.raza, lote: item.loteNumero, rancho_id: item.ranchoId, rancho_nombre: ranchoNombre }
-    }));
-    const { error } = await supabase.from('actividades').insert(actividadesParaInsertar);
-    if (error) throw error;
-    
-  // --- LÓGICA DE PDF INTEGRADA ---
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="reporte_${Date.now()}.pdf"`);
-    
-    const doc = new PDFDocument({ size: 'LETTER', margin: 40 });
-    doc.pipe(res);
+    console.log('---[INSPECTOR] Recibida nueva solicitud de actividad---');
+    try {
+        const { mvzId, ranchoId, loteActividad, mvzNombre, ranchoNombre } = req.body;
+        console.log('[INSPECTOR] Datos iniciales recibidos:', { mvzId, ranchoId, mvzNombre, ranchoNombre });
+
+        if (!mvzId || !Array.isArray(loteActividad) || loteActividad.length === 0) {
+            console.error('[INSPECTOR] Faltan datos críticos. Abortando.');
+            return res.status(400).json({ message: 'Faltan datos para procesar la actividad.' });
+        }
+        console.log(`[INSPECTOR] Lote de actividad tiene ${loteActividad.length} registros.`);
+
+        const sesionId = crypto.randomUUID();
+        const actividadesParaInsertar = loteActividad.map(item => ({
+            tipo_actividad: item.tipoLabel,
+            descripcion: item.detalles || {},
+            fecha_actividad: item.fecha,
+            id_vaca: item.vacaId || null,
+            id_usuario: mvzId,
+            sesion_id: sesionId,
+            rancho_id: ranchoId,
+            extra_data: { arete: item.areteVaca, raza: item.raza, lote: item.loteNumero, rancho_nombre: ranchoNombre }
+        }));
+        console.log('[INSPECTOR] Datos listos para insertar en la base de datos.');
+
+        const { error } = await supabase.from('actividades').insert(actividadesParaInsertar);
+        if (error) {
+            console.error('[INSPECTOR] ¡ERROR DE SUPABASE AL INSERTAR!', error);
+            throw error;
+        }
+        console.log('[INSPECTOR] Datos guardados en Supabase correctamente.');
+        console.log('[INSPECTOR] Iniciando la creación del PDF...');
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="reporte_${Date.now()}.pdf"`);
+        const doc = new PDFDocument({ size: 'LETTER', margin: 40 });
+        doc.pipe(res);
 
     // CORRECCIÓN: Añadir el logo al PDF
     try {
@@ -353,9 +364,14 @@ app.post('/api/actividades', async (req, res) => {
         doc.moveDown(0.5);
     });
 
-    doc.end();
+     console.log('[INSPECTOR] PDF creado y enviado. ¡Proceso completado con éxito!');
+        doc.end();
 
-  } catch (err) { handleServerError(res, err); }
+    } catch (err) {
+        console.error('---[INSPECTOR] ¡CRASH! El proceso falló. Causa del error: ---');
+        console.error(err); // Imprime el error completo en los logs del servidor
+        handleServerError(res, err);
+    }
 });
 // En server.js, agrega este nuevo endpoint
 app.delete('/api/sesiones/:sesionId', async (req, res) => {
