@@ -1377,11 +1377,11 @@ const fecha = fechaUTC.toLocaleDateString('es-MX', {day: 'numeric', month: 'long
     }
 }
 // =================================================================
-// LÓGICA DEL CALENDARIO DEL MVZ (VERSIÓN FINAL)
+// LÓGICA COMPLETA DEL CALENDARIO MVZ
 // =================================================================
 
 async function renderizarVistaCalendario() {
-    // Primero, conectamos los botones del modal para que siempre funcionen
+    // 1. Conecta los botones del modal de "Crear Evento"
     const modal = document.getElementById('modal-agregar-evento');
     const btnAbrirModal = document.getElementById('btn-abrir-modal-evento');
     const btnCerrarModal = document.getElementById('btn-cerrar-modal-evento');
@@ -1398,22 +1398,22 @@ async function renderizarVistaCalendario() {
     if (btnCerrarModal) btnCerrarModal.onclick = () => modal.classList.add('hidden');
     if (form) form.onsubmit = handleGuardarEvento;
 
-    // Ahora, vamos a buscar los datos y a dibujar todo
+    // 2. Elementos donde se dibujará todo
     const containerCalendario = document.getElementById('calendario-visual-container');
     const containerLista = document.getElementById('lista-eventos-calendario');
 
     if (!containerCalendario || !containerLista) return;
     
-    containerCalendario.innerHTML = '<p class="text-center text-gray-500 p-4">Cargando calendario...</p>';
-    containerLista.innerHTML = '<p class="text-center text-gray-500">Cargando eventos...</p>';
+    containerCalendario.innerHTML = '<p class="text-center p-4">Cargando calendario...</p>';
+    containerLista.innerHTML = '<p class="text-center">Cargando eventos...</p>';
 
     try {
-        // 1. Obtenemos los eventos UNA SOLA VEZ
+        // 3. Obtiene los eventos del servidor
         const res = await fetch(`/api/eventos/mvz/${currentUser.id}`);
         if (!res.ok) throw new Error('No se pudieron cargar los eventos.');
         const eventos = await res.json();
 
-        // 2. Dibujamos la lista de "Próximos Eventos"
+        // 4. Dibuja la lista de eventos de abajo
         if (eventos.length === 0) {
             containerLista.innerHTML = '<p class="text-center text-gray-500">No tienes eventos próximos agendados.</p>';
         } else {
@@ -1436,16 +1436,8 @@ async function renderizarVistaCalendario() {
             }).join('');
         }
 
-        // 3. Dibujamos el calendario visual
-        if (typeof FullCalendar === 'undefined') {
-            throw new Error("La librería FullCalendar no está cargada.");
-        }
-        
-        const eventosParaCalendario = eventos.map(e => ({
-            id: e.id,
-            title: e.titulo,
-            start: e.fecha_evento,
-        }));
+        // 5. Dibuja el calendario visual
+        if (typeof FullCalendar === 'undefined') throw new Error("La librería FullCalendar no está cargada.");
         
         containerCalendario.innerHTML = '';
         const calendario = new FullCalendar.Calendar(containerCalendario, {
@@ -1453,17 +1445,13 @@ async function renderizarVistaCalendario() {
             locale: 'es',
             height: 'auto',
             headerToolbar: { left: 'prev', center: 'title', right: 'next' },
-            events: eventosParaCalendario,
-            // ----- INICIO DE LA CORRECCIÓN CLAVE -----
+            events: eventos.map(e => ({ id: e.id, title: e.titulo, start: e.fecha_evento })),
             eventClick: function(info) {
-                // Al hacer clic, busca el evento original completo
                 const eventoOriginal = eventos.find(e => e.id == info.event.id);
                 if (eventoOriginal) {
-                    // Y llama a la función que muestra la NUEVA tarjeta de detalles
-                    mostrarDetalleEvento(eventoOriginal);
+                    mostrarDetalleEvento(eventoOriginal); // Llama a la función de la tarjeta flotante
                 }
             }
-            // ----- FIN DE LA CORRECCIÓN CLAVE -----
         });
         
         calendario.render();
@@ -1473,6 +1461,39 @@ async function renderizarVistaCalendario() {
         containerCalendario.innerHTML = `<p class="text-center text-red-500 p-4">${error.message}</p>`;
         containerLista.innerHTML = `<p class="text-center text-red-500">${error.message}</p>`;
     }
+}
+
+function mostrarDetalleEvento(evento) {
+    const modal = document.getElementById('modal-detalle-evento');
+    if (!modal) return;
+
+    document.getElementById('detalle-evento-titulo').textContent = evento.titulo;
+    
+    const fecha = new Date(evento.fecha_evento);
+    document.getElementById('detalle-evento-fecha').innerHTML = `<i class="fa-solid fa-clock w-5 text-center mr-1 text-gray-400"></i> ${fecha.toLocaleString('es-MX', { dateStyle: 'full', timeStyle: 'short' })}`;
+    
+    const rancho = evento.nombre_rancho_texto || evento.ranchos?.nombre || 'General';
+    document.getElementById('detalle-evento-rancho').innerHTML = `<i class="fa-solid fa-house-medical w-5 text-center mr-1 text-gray-400"></i> Rancho: ${rancho}`;
+    
+    const descripcionEl = document.getElementById('detalle-evento-descripcion');
+    if (evento.descripcion) {
+        descripcionEl.textContent = evento.descripcion;
+        descripcionEl.classList.remove('hidden');
+    } else {
+        descripcionEl.classList.add('hidden');
+    }
+
+    document.getElementById('btn-cerrar-detalle-evento').onclick = () => modal.classList.add('hidden');
+    document.getElementById('btn-eliminar-detalle-evento').onclick = () => {
+        modal.classList.add('hidden');
+        handleEliminarEvento(evento.id);
+    };
+    document.getElementById('btn-editar-detalle-evento').onclick = () => {
+        modal.classList.add('hidden');
+        handleEditarEvento(evento); 
+    };
+
+    modal.classList.remove('hidden');
 }
 
 async function inicializarCalendarioVisual() {
