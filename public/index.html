@@ -37,42 +37,100 @@
         .progress-ring { position: relative; width: 60px; height: 60px; border-radius: 50%; display: grid; place-items: center; background: conic-gradient(var(--color, #22c55e) calc(var(--value) * 1%), #e0e0e0 0); }
         .progress-ring::before { content: ""; position: absolute; width: 48px; height: 48px; background: white; border-radius: 50%; }
         .progress-ring-percent { position: relative; font-size: 0.9rem; font-weight: 600; color: #166534; }
-        .modal-content { display: flex; flex-direction: column; max-height: 85vh; width: 100%; }
-        .modal-main { overflow-y: auto; padding-bottom: 1rem; }
-        #calendario-visual-container { min-height: 400px; }
-        #calendario-visual-container .fc-toolbar-title { font-size: 1.25em; }
-        #calendario-visual-container .fc-daygrid-day-number { font-size: 0.8em; padding: 4px; }
-        #calendario-visual-container .fc-event { font-size: 0.75em; padding: 2px 4px; white-space: normal; border: none; background-color: #166534; color: white; }
-        .filtro-btn.activo { background-color: #166534; color: white; }
-    </style>
+       .modal-content {
+    display: flex;
+    flex-direction: column;
+    max-height: 85vh; /* Limita la altura del modal al 85% de la pantalla */
+    width: 100%;
+}
+.modal-main {
+    overflow-y: auto; /* Hace que solo el contenido del formulario se deslice */
+    padding-bottom: 1rem; /* Añade un pequeño espacio al final del scroll */
+}
+        /* ----- PEGA ESTE BLOQUE ----- */
+    #calendario-visual-container .fc-header-toolbar {
+    padding: 0 10px;
+    margin-bottom: 10px !important;
+  }
+  #calendario-visual-container .fc-toolbar-title {
+    font-size: 1.25em;
+    font-weight: 600;
+  }
+  #calendario-visual-container .fc-daygrid-day-number {
+    font-size: 0.8em;
+    padding: 4px;
+  }
+  #calendario-visual-container .fc-event {
+    font-size: 0.75em;
+    padding: 2px 4px;
+    white-space: normal;
+    border: none;
+    background-color: #166534; /* Verde de tu marca */
+    color: white;
+  }
+  #calendario-visual-container {
+    min-height: 400px; /* Altura mínima para que se dibuje */
+  }
+        
+    #acciones-rapidas-container {
+  display: block; /* Hacemos que sea un contenedor normal */
+  max-height: 280px; /* Altura máxima para mostrar aprox. 3-4 items */
+  overflow-y: auto; /* Habilita el scroll VERTICAL cuando hay más items */
+  padding-right: 8px; /* Espacio para la barra de scroll */
+}
+
+    #acciones-rapidas-container::-webkit-scrollbar {
+      display: none;
+    }
+
+    #acciones-rapidas-container > button {
+  width: 100%; /* Cada botón ocupa todo el ancho */
+  margin-bottom: 12px; /* Espacio entre los botones */
+}
+/* ----- PEGA ESTE BLOQUE ----- */
+    .filtro-btn.activo {
+        background-color: #166534; /* Verde de tu marca */
+        color: white;
+    }
+
+</style>
 </head>
+          <head>
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
+    <title>JFB Ganadería Inteligente</title>
+    </head>
 <body>
     <main id="app-content" class="relative z-10"></main>
-
     <div id="nav-container" class="hidden">
         <nav id="nav-propietario" class="bottom-nav hidden">
-            <button class="nav-button active" data-vista="inicio-propietario"><i class="fa-solid fa-house"></i><span>Inicio</span></button>
-            <button class="nav-button" data-vista="mis-vacas"><i class="fa-solid fa-cow"></i><span>Mi Ganado</span></button>
-            <button class="nav-button" data-vista="calendario-propietario"><i class="fa-solid fa-calendar-days"></i><span>Calendario</span></button>
-            <button class="nav-button" data-vista="mi-mvz"><i class="fa-solid fa-user-doctor"></i><span>MVZ</span></button>
-            <button class="nav-button" data-vista="estadisticas"><i class="fa-solid fa-chart-pie"></i><span>Estadísticas</span></button>
-        </nav>
-        <nav id="nav-mvz" class="bottom-nav hidden">
-            <button class="nav-button active" data-vista="inicio-mvz"><i class="fa-solid fa-house-user"></i><span>Inicio</span></button>
-            <button class="nav-button" data-vista="actividades-mvz"><i class="fa-solid fa-clipboard-list"></i><span>Actividades</span></button>
-            <button class="nav-button" data-vista="calendario-mvz"><i class="fa-solid fa-calendar-alt"></i><span>Calendario</span></button>
-            <button class="nav-button" data-vista="mis-ranchos-mvz"><i class="fa-solid fa-house-medical"></i><span>Mis Ranchos</span></button>
-            <button class="nav-button" data-vista="estadisticas-mvz"><i class="fa-solid fa-chart-pie"></i><span>Estadísticas</span></button>
-        </nav>
-    </div>
+    <button class="nav-button active" data-vista="inicio-propietario"><i class="fa-solid fa-house"></i><span>Inicio</span></button>
+    <button class="nav-button" data-vista="mis-vacas"><i class="fa-solid fa-cow"></i><span>Mi Ganado</span></button>
+    <button class="nav-button" data-vista="calendario-propietario"><i class="fa-solid fa-calendar-days"></i><span>Calendario</span></button>
+    <button class="nav-button" data-vista="mi-mvz"><i class="fa-solid fa-user-doctor"></i><span>MVZ</span></button>
+    <button class="nav-button" data-vista="estadisticas"><i class="fa-solid fa-chart-pie"></i><span>Estadísticas</span></button>
+</nav>
 
+<nav id="nav-mvz" class="bottom-nav hidden">
+    <button class="nav-button active" data-vista="inicio-mvz"><i class="fa-solid fa-house-user"></i><span>Inicio</span></button>
+    <button class="nav-button" data-vista="actividades-mvz"><i class="fa-solid fa-clipboard-list"></i><span>Actividades</span></button>
+    <button class="nav-button" data-vista="calendario-mvz"><i class="fa-solid fa-calendar-alt"></i><span>Calendario</span></button>
+    <button class="nav-button" data-vista="mis-ranchos-mvz"><i class="fa-solid fa-house-medical"></i><span>Mis Ranchos</span></button>
+    <button class="nav-button" data-vista="estadisticas-mvz"><i class="fa-solid fa-chart-pie"></i><span>Estadísticas</span></button>
+</nav>
+        <div id="fab-container" class="hidden"></div>
+    </div>
+    
     <template id="template-login">
         <div class="auth-container flex items-center justify-center p-4">
             <div class="w-full max-w-md bg-black bg-opacity-20 backdrop-blur-sm p-8 rounded-2xl">
-                <div class="text-center mb-8"><img src="assets/logo.png" alt="Logo JFB" class="w-40 h-40 mx-auto mb-4"><h1 class="text-3xl font-bold">Bienvenido</h1><p class="text-gray-400">Inicia sesión para gestionar tu ganado</p></div>
+                <div class="text-center mb-8"><img src="assets/logo.png" alt="Logo JFB" class="w-36 h-36 mx-auto mb-4"><h1 class="text-3xl font-bold">Bienvenido</h1><p class="text-gray-400">Inicia sesión para gestionar tu ganado</p></div>
                 <form id="form-login" novalidate>
                     <div class="mb-4"><input type="email" id="login-email" placeholder="Correo Electrónico" required></div>
                     <div class="mb-4"><input type="password" id="login-password" placeholder="Contraseña" required></div>
+                    <div class="flex items-center justify-between text-sm text-gray-400 mb-6">
+                        <label class="flex items-center"><input type="checkbox" id="remember-me" class="mr-2 h-4 w-4 rounded">Recuérdame</label>
+                        <a href="#" class="text-cyan-400 hover:underline">¿Olvidaste tu contraseña?</a>
+                    </div>
                     <button type="submit" class="btn-primary">Ingresar</button>
                     <div id="login-mensaje" class="text-center mt-2 text-sm h-4"></div>
                 </form>
@@ -80,10 +138,11 @@
             </div>
         </div>
     </template>
+    
     <template id="template-registro">
         <div class="auth-container flex items-center justify-center p-4">
             <div class="w-full max-w-md bg-black bg-opacity-20 backdrop-blur-sm p-8 rounded-2xl">
-                <div class="text-center mb-8"><h1 class="text-3xl font-bold">Crear Cuenta</h1><p class="text-gray-400">Completa tus datos para empezar</p></div>
+                 <div class="text-center mb-8"><h1 class="text-3xl font-bold">Crear Cuenta</h1><p class="text-gray-400">Completa tus datos para empezar</p></div>
                 <form id="form-registro" novalidate>
                     <div class="mb-4"><input type="text" name="nombre" placeholder="Nombre Completo" required></div>
                     <div class="mb-4"><input type="email" name="email" placeholder="Correo Electrónico" required></div>
@@ -97,45 +156,368 @@
             </div>
         </div>
     </template>
-    
+
     <template id="template-inicio-propietario">
-        </template>
+    <div class="p-5" style="background-color: #3A5A40; color: white;">
+        <header class="flex justify-between items-center mb-6">
+            <div>
+                <h1 class="text-2xl font-bold">¡Bienvenido, <span id="dash-nombre-propietario"></span>!</h1>
+                <p class="text-sm text-gray-300" id="dash-fecha-actual"></p>
+            </div>
+            <div class="flex items-center space-x-4">
+                <button id="btn-perfil-propietario" class="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center"><i class="fa-solid fa-user text-2xl text-gray-500"></i></button>
+                <button id="btn-logout-propietario" title="Salir" class="text-2xl text-white hover:text-red-300">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </button>
+            </div>
+        </header>
+    </div>
+    <div class="p-5 transform -translate-y-8">
+        
+        <section class="mb-6">
+            <h2 class="text-lg font-semibold mb-3 text-gray-800 mt-8">Resumen del Rancho</h2>
+            <div class="grid grid-cols-3 gap-3">
+                <div class="bg-white p-3 rounded-xl shadow-md text-center"><p class="text-3xl font-bold text-brand-green" id="resumen-total-vacas">--</p><p class="text-xs text-gray-500 mt-1">Vacas en Rancho</p></div>
+                <div class="bg-white p-3 rounded-xl shadow-md text-center"><p class="text-3xl font-bold text-brand-green" id="resumen-vacas-gestantes">--</p><p class="text-xs text-gray-500 mt-1">Vacas Gestantes</p></div>
+                <div class="bg-white p-3 rounded-xl shadow-md text-center"><p class="text-3xl font-bold text-red-500" id="resumen-alertas">--</p><p class="text-xs text-gray-500 mt-1">Alertas de Salud</p></div>
+            </div>
+        </section>
+        <section class="mb-6">
+            <div class="flex justify-between items-center mb-3"><h2 class="text-lg font-semibold text-gray-800">Estado de Lotes</h2><button class="text-sm font-medium text-brand-green">Ver Todos los Lotes</button></div>
+            <div id="lotes-container" class="grid grid-cols-1 sm:grid-cols-2 gap-4"><p class="text-gray-500">Cargando lotes...</p></div>
+        </section>
+        <section>
+            <h2 class="text-lg font-semibold mb-3 text-gray-800">Actividad y Eventos</h2>
+            <div class="bg-white p-4 rounded-xl shadow-md">
+                <div>
+    <h3 class="font-semibold text-gray-800 mb-2"><i class="fa-solid fa-newspaper text-brand-green mr-2"></i>Últimas Noticias</h3>
+    <div id="ultimas-noticias-container" class="max-h-28 overflow-y-auto pr-2">
+         <div id="ultimas-noticias">
+            <p class="text-sm text-gray-600 ml-6">Cargando noticias...</p>
+        </div>
+    </div>
+</div>
+                <div class="mt-3"><h3 class="font-semibold text-gray-800 mb-2"><i class="fa-solid fa-calendar-days text-brand-green mr-2"></i>Próximos Eventos</h3><div id="proximos-eventos"><p class="text-sm text-gray-600 ml-6">No hay eventos programados.</p></div></div>
+            </div>
+        </section>
+    </div>
+</template>
+<template id="template-calendario-propietario">
+    <div class="p-5">
+        <header class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold text-gray-800">Mi Calendario</h1>
+            </header>
+        <div id="calendario-propietario-container" class="bg-white p-2 rounded-xl shadow-md mb-6 min-h-[450px]"></div>
+        <section>
+            <h2 class="text-lg font-semibold mb-3 text-gray-700">Próximos Eventos del Rancho</h2>
+            <div id="lista-eventos-propietario" class="space-y-3">
+                <p class="text-center text-gray-500">Cargando eventos...</p>
+            </div>
+        </section>
+    </div>
+</template>
+    
+    <!-- Mi ganado -->
     <template id="template-mis-vacas">
-        </template>
+        <div class="p-5">
+            <header class="flex justify-between items-center mb-4 p-5">
+    <h1 class="text-2xl font-bold text-gray-800">Mi Ganado</h1>
+    <p class="text-gray-500"><span id="total-vacas-header">0</span> animales</p>
+</header>
+            <section id="filtros-ganado-container" class="bg-white p-4 rounded-xl shadow-md mb-6 space-y-4">
+    <section class="p-5">
+    <div class="relative mb-4">
+        <input type="text" id="filtro-busqueda-ganado" placeholder="Buscar por Arete o No. de Pierna..." class="w-full p-3 pl-10 border border-gray-200 rounded-lg bg-white">
+        <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+    </div>
+    <div class="flex items-center justify-around bg-gray-100 p-2 rounded-lg">
+        <button id="filtro-btn-sexo" class="filtro-btn flex-1 text-gray-700 font-semibold py-2 rounded-lg">Sexo</button>
+        <button id="filtro-btn-lote" class="filtro-btn flex-1 text-gray-700 font-semibold py-2 rounded-lg">Lote</button>
+        <button id="filtro-btn-raza" class="filtro-btn flex-1 text-gray-700 font-semibold py-2 rounded-lg">Raza</button>
+    </div>
+</section>
+<div id="lista-vacas-container" class="space-y-4">
+    </div>
+            <div id="lista-vacas-container" class="space-y-4">
+                <p class="text-center text-gray-500 mt-8">Ganaderia JFB</p>
+            </div>
+        </div>
+        <button id="btn-abrir-modal-vaca" class="fab">+</button>
+        <div id="modal-agregar-vaca" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md modal-content">
+                <header class="p-4 border-b border-gray-200 flex justify-between items-center"><h2 class="text-lg font-bold">Registrar Nuevo Animal</h2><button id="btn-cerrar-modal-vaca" class="text-2xl text-gray-500">&times;</button></header>
+                <main class="p-6 modal-main">
+                    <form id="form-agregar-vaca" class="space-y-4" enctype="multipart/form-data">
+                        <form id="form-agregar-vaca" class="space-y-4" enctype="multipart/form-data">
+    <input type="hidden" name="vacaId" id="vaca-id-input">
+                        <div><label class="block text-sm font-medium text-gray-700 mb-1">Sexo</label><div class="grid grid-cols-2 gap-2" id="sexo-selector"> <button type="button" data-value="Hembra" class="p-2 border rounded-lg">Hembra</button> <button type="button" data-value="Macho" class="p-2 border rounded-lg">Macho</button></div><input type="hidden" name="sexo" id="vaca-sexo" required></div>
+                        <div><label for="vaca-nombre" class="block text-sm font-medium text-gray-700 mb-1">Nombre del Animal</label><input type="text" name="nombre" id="vaca-nombre" class="w-full p-2 border border-gray-300 rounded-lg" required></div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div><label for="vaca-siniiga" class="block text-sm font-medium text-gray-700 mb-1">No. SINIIGA (Arete)</label><input type="text" name="siniiga" id="vaca-siniiga" class="w-full p-2 border border-gray-300 rounded-lg" required></div>
+                            <div><label for="vaca-pierna" class="block text-sm font-medium text-gray-700 mb-1">No. de Pierna</label><input type="text" name="pierna" id="vaca-pierna" class="w-full p-2 border border-gray-300 rounded-lg"></div>
+                        </div>
+                        <div class="mt-4">
+    <label for="vaca-lote" class="block text-sm font-medium text-gray-700 mb-1">Lote</label>
+    <input type="number" name="lote" id="vaca-lote" class="w-full p-2 border border-gray-300 rounded-lg" placeholder="Ej: 4">
+</div>
+<div>
+                        <div><label for="vaca-raza" class="block text-sm font-medium text-gray-700 mb-1">Raza</label><input type="text" name="raza" id="vaca-raza" list="lista-razas" class="w-full p-2 border border-gray-300 rounded-lg"><datalist id="lista-razas"></datalist></div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div><label for="vaca-nacimiento" class="block text-sm font-medium text-gray-700 mb-1">Fecha de Nacimiento</label><input type="date" name="nacimiento" id="vaca-nacimiento" class="w-full p-2 border border-gray-300 rounded-lg"></div>
+                            <div><label for="vaca-edad" class="block text-sm font-medium text-gray-700 mb-1">Edad</label><input type="text" id="vaca-edad" class="w-full p-2 border border-gray-200 rounded-lg bg-gray-100" readonly></div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div><label for="vaca-padre" class="block text-sm font-medium text-gray-700 mb-1">Padre</label><input type="text" name="padre" id="vaca-padre" class="w-full p-2 border border-gray-300 rounded-lg"></div>
+                            <div><label for="vaca-madre" class="block text-sm font-medium text-gray-700 mb-1">Madre</label><input type="text" name="madre" id="vaca-madre" class="w-full p-2 border border-gray-300 rounded-lg"></div>
+                        </div>
+                        <div><label for="vaca-origen" class="block text-sm font-medium text-gray-700 mb-1">Método de Origen</label><select name="origen" id="vaca-origen" class="w-full p-2 border border-gray-300 rounded-lg bg-white"><option>Natural</option><option>Inseminación Artificial (IA)</option><option>Transferencia de Embrión (TE)</option><option>FIV</option></select></div>
+
+                        <!-- INPUT FOTO: se agregó name="fotoVaca" para que el servidor la reciba -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Foto (opcional)</label>
+                            <input type="file" id="vaca-foto" name="fotoVaca" accept="image/*" class="w-full">
+                            <div id="file-name-display" class="text-sm text-gray-500 mt-1"></div>
+                        </div>
+
+                        <div id="vaca-mensaje" class="text-sm h-4 text-center"></div>
+                    </form>
+                </main>
+                 </main>
+
+      <footer class="p-4 bg-gray-50 rounded-b-2xl grid grid-cols-2 gap-3">
+          <button id="btn-guardar-siguiente-vaca" class="w-full bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold flex items-center justify-center">
+              <i class="fa-solid fa-plus mr-2"></i>Guardar y Siguiente
+          </button>
+          <button id="btn-finalizar-registro-vaca" class="w-full bg-brand-green text-white px-4 py-3 rounded-lg font-semibold flex items-center justify-center">
+              <i class="fa-solid fa-check-circle mr-2"></i>Finalizar
+          </button>
+      </footer>
+      </div>
+</div>
+</template>   
+
+    
+    <!-- Mi MVZ -->
     <template id="template-mi-mvz">
-        </template>
-    <template id="template-calendario-propietario">
-        </template>
+    <div class="p-5">
+        <header class="mb-6">
+            <h1 class="text-2xl font-bold text-gray-800">Mis Veterinarios (MVZ)</h1>
+            <p class="text-sm text-gray-500">Gestiona los accesos a la información de tu rancho.</p>
+        </header>
+
+        <section id="codigo-acceso-container" class="mb-8 bg-white p-4 rounded-xl shadow-md">
+            </section>
+
+        <section>
+            <h2 class="text-lg font-semibold mb-3">Veterinarios con Acceso</h2>
+            <div id="lista-mvz-container" class="space-y-3">
+                <p class="text-gray-500">Cargando veterinarios...</p>
+            </div>
+        </section>
+    </div>
+</template>
+    
+    <!-- Estadísticas propietario -->
     <template id="template-estadisticas">
-        </template>
-    <template id="template-ajustes">
-        <h1 class="text-center p-8 text-2xl">Ajustes Propietario (en construcción)</h1>
+        <div class="p-5">
+            <header class="flex items-center mb-4"><button onclick="navigateTo('inicio-propietario')" class="text-2xl mr-4"><i class="fa-solid fa-arrow-left"></i></button><h1 class="text-xl font-bold text-gray-800">Estadísticas de Lotes</h1></header>
+            <div id="tabs-lotes-container" class="flex items-center border-b border-gray-200 mb-4"></div>
+            <div id="contenido-estadisticas">
+                </div>
+        </div>
     </template>
+    <template id="template-ajustes"><h1 class="text-center p-8 text-2xl">Ajustes (en construcción)</h1></template>
 
+    <!-- Inicio MVZ -->
     <template id="template-inicio-mvz">
-        </template>
+         <div class="p-5">
+            <header class="flex justify-between items-center mb-6">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-800">¡Hola MVZ,<span id="dash-nombre-mvz"></span>!</h1>
+        <p class="text-sm text-gray-500" id="dash-fecha-actual-mvz"></p>
+    </div>
+    <div class="flex items-center space-x-4">
+        <button id="btn-perfil-mvz" class="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center"><i class="fa-solid fa-user-doctor text-2xl text-gray-500"></i></button>
+        <button id="btn-logout-mvz" title="Salir" class="text-2xl text-gray-500 hover:text-red-500">
+            <i class="fa-solid fa-right-from-bracket"></i>
+        </button>
+    </div>
+</header>
+            <section class="mb-8">
+                <h2 class="text-lg font-semibold mb-3">Resumen Diario</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-white p-4 rounded-xl shadow-md text-center"><p class="text-4xl font-bold text-brand-green" id="resumen-visitas">--</p><h3 class="text-sm text-gray-600 mt-1" id="detalle-visitas"></h3></div>
+                    <div class="bg-white p-4 rounded-xl shadow-md text-center"><p class="text-4xl font-bold text-red-500" id="resumen-alertas-mvz">--</p><h3 class="text-sm text-gray-600 mt-1" id="detalle-alertas"></h3></div>
+                </div>
+            </section>
+            <section class="mb-8">
+                <h2 class="text-lg font-semibold mb-3">Pendientes Hoy</h2><div id="lista-pendientes" class="bg-white p-4 rounded-xl shadow-md space-y-4"></div>
+            </section>
+            <section>
+                <h2 class="text-lg font-semibold mb-3">Próximos Eventos</h2><div id="lista-eventos" class="bg-white p-4 rounded-xl shadow-md space-y-3"></div>
+            </section>
+        </div>
+    </template>
+    
+    <!-- Actividades MVZ -->
     <template id="template-actividades-mvz">
-        </template>
-    <template id="template-calendario-mvz">
-        </template>
-    <template id="template-mis-ranchos-mvz">
-        <h1 class="text-center p-8 text-2xl">Mis Ranchos (en construcción)</h1>
-    </template>
-    <template id="template-estadisticas-mvz">
-        <h1 class="text-center p-8 text-2xl">Estadísticas MVZ (en construcción)</h1>
-    </template>
-    <template id="template-ajustes-mvz">
-        <h1 class="text-center p-8 text-2xl">Ajustes MVZ (en construcción)</h1>
-    </template>
+        <div class="p-5">
+            <div id="modo-seleccion-container">
+                <header class="mb-6 text-center"><h1 class="text-2xl font-bold text-gray-800">Control Reproductivo</h1><p class="text-sm text-gray-500">¿Cómo quieres trabajar hoy?</p></header>
+                <div class="space-y-4"><button id="btn-show-rancho-registrado" class="w-full bg-brand-green text-white p-4 rounded-lg font-bold flex items-center justify-center text-lg"><i class="fa-solid fa-key mr-3"></i>Rancho Registrado</button><button id="btn-iniciar-independiente" class="w-full bg-gray-600 text-white p-4 rounded-lg font-bold flex items-center justify-center text-lg"><i class="fa-solid fa-user-ninja mr-3"></i>Modo Independiente</button></div>
+                <div id="rancho-access-container" class="hidden mt-4 bg-white p-4 rounded-xl shadow-md">
+                     <label for="codigo-rancho" class="block text-sm font-medium text-gray-700 mb-1">Código del Rancho</label>
+                    <div class="flex items-center space-x-2"><input type="text" id="codigo-rancho" placeholder="Ej: A1B2C3" class="w-full p-2 border border-gray-300 rounded-lg"><button id="btn-validar-rancho" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold">Acceder</button></div>
+                    <div id="mensaje-rancho" class="text-sm mt-2 h-4"></div>
+                </div>
+            </div>
+            <div id="rancho-actions-container" class="hidden">
+                <header class="mb-6">
+    <div class="flex justify-between items-center">
+        <div class="flex items-center space-x-3">
+             <img id="rancho-logo" src="assets/logo.png" class="w-12 h-12 rounded-lg object-cover bg-gray-200">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800" id="rancho-nombre-activo"></h1>
+                <p class="text-sm text-gray-500">Lote actual: <span id="lote-info" class="font-semibold">0 vacas</span></p>
+            </div>
+        </div>
+        <button id="btn-fijar-rancho" title="Fijar este rancho como predeterminado" class="text-2xl text-gray-400 hover:text-brand-green"><i class="fa-solid fa-thumbtack"></i></button>
+    </div>
+</header>
+                <div id="rancho-independiente-input-container" class="relative hidden">
+    <label for="rancho-independiente-nombre" class="block text-sm font-medium text-gray-700">Nombre del Rancho Atendido:</label>
+    <div class="relative mt-1">
+        <input type="text" id="rancho-independiente-nombre" placeholder="Ej: Rancho 'El Amanecer'" class="w-full p-3 pr-10 border border-gray-300 rounded-lg">
+        <button id="btn-fijar-rancho-independiente" class="absolute inset-y-0 right-0 pr-3 flex items-center hidden" title="Fijar este rancho">
+            <i class="fa-solid fa-thumbtack text-gray-400"></i>
+        </button>
+    </div>
+</div>
 
-    <div id="modal-agregar-vaca" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[1001] hidden">
+                <!-- contenedor de acciones rápidas (se agregó id esperado por main.js) -->
+                <div id="acciones-rapidas-container" class="space-y-3">
+                    <h3 class="font-semibold text-gray-600">Acciones Rápidas</h3>
+                    <!-- botones se crean dinámicamente desde main.js -->
+                </div>
+
+                <div class="mt-8">
+                    <h3 class="font-semibold text-gray-600 mb-3">Documentos y Reportes</h3>
+                    <div id="historial-actividades-mvz" class="bg-white p-4 rounded-lg shadow-inner max-h-60 overflow-y-auto space-y-2">
+                         <p class="text-gray-500 text-center">No hay actividades recientes.</p>
+                    </div>
+                    <button id="btn-generar-pdf-historial" class="mt-4 w-full bg-green-700 text-white p-3 rounded-lg font-bold flex items-center justify-center"><i class="fa-solid fa-file-pdf mr-3"></i>Generar Reporte PDF</button>
+                </div>
+            </div>
         </div>
-    <div id="modal-actividad" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[1001] hidden">
-        </div>
-    <div id="modal-historial-vaca" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[1001] hidden">
-        </div>
+    </template>
+    
+    <template id="template-mis-ranchos-mvz"><h1 class="text-center p-8 text-2xl">Mis Ranchos (en construcción)</h1></template>
+    <template id="template-estadisticas-mvz"><h1 class="text-center p-8 text-2xl">Estadísticas MVZ (en construcción)</h1></template>
+    <template id="template-ajustes-mvz"><h1 class="text-center p-8 text-2xl">Ajustes (en construcción)</h1></template>
+    <template id="template-calendario-mvz">
+    <div class="p-5">
+        <header class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold text-gray-800">Mi Calendario</h1>
+            <button id="btn-abrir-modal-evento" class="bg-brand-green text-white px-4 py-2 rounded-lg font-semibold text-sm">
+                <i class="fa-solid fa-plus mr-2"></i>Nuevo Evento
+            </button>
+        </header>
+<div id="calendario-visual-container" class="bg-white p-2 rounded-xl shadow-md mb-6"></div>
+        <section>
+        <section>
+            <h2 class="text-lg font-semibold mb-3 text-gray-700">Próximos Eventos</h2>
+            <div id="lista-eventos-calendario" class="space-y-3">
+                <p class="text-center text-gray-500 mt-8">Cargando eventos...</p>
+            </div>
+        </section>
+    </div>
+
     <div id="modal-agregar-evento" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[1001] hidden">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md modal-content">
+            <header class="p-4 border-b flex justify-between items-center">
+                <h2 class="text-lg font-bold">Agendar Evento</h2>
+                <button id="btn-cerrar-modal-evento" class="text-2xl text-gray-500">&times;</button>
+            </header>
+            <form id="form-agregar-evento">
+                 <input type="hidden" name="evento_id" id="evento-id-input">
+    <main class="p-6 modal-main">
+                    <main class="p-6 modal-main">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Título del Evento</label>
+                                <input type="text" name="titulo" class="w-full p-2 border rounded-lg" placeholder="Ej: Chequeo Reproductivo" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Fecha y Hora</label>
+                                <input type="datetime-local" name="fecha_evento" class="w-full p-2 border rounded-lg" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Rancho</label>
+                                <select name="rancho_id" id="select-ranchos-evento" class="w-full p-2 border rounded-lg bg-white">
+                                    </select>
+                            </div>
+                             <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">O escribe el nombre si no está registrado</label>
+                                <input type="text" name="nombre_rancho_texto" class="w-full p-2 border rounded-lg" placeholder="Ej: Rancho Montana">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Descripción (opcional)</label>
+                                <textarea name="descripcion" rows="2" class="w-full p-2 border rounded-lg"></textarea>
+                            </div>
+                            <div id="evento-mensaje" class="text-sm h-4 text-center"></div>
+                        </div>
+                    </main>
+                    <footer class="p-2 bg-gray-50 rounded-b-2xl">
+    <button type="submit" id="btn-guardar-evento" class="w-full bg-brand-green text-white py-3 rounded-lg font-semibold">Guardar Evento</button>
+</footer>
+                </form>
         </div>
+    </div>
+</template>
+
+    <div id="modal-actividad" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[1001] hidden">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md modal-content">
+            <header class="p-4 border-b border-gray-200 flex justify-between items-center"><h2 id="modal-actividad-titulo" class="text-lg font-bold">Registro de Actividad</h2><button id="btn-cerrar-modal-actividad" class="text-2xl text-gray-500">&times;</button></header>
+            <main class="p-6 modal-main">
+                <form id="form-actividad-vaca">
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+    <div>
+        <label for="actividad-lote" class="block text-sm font-medium text-gray-700 mb-1">Lote</label>
+        <select id="actividad-lote" class="w-full p-2 border border-gray-300 rounded-lg bg-white"></select>
+    </div>
+    <div>
+        <label for="actividad-arete" class="block text-sm font-medium text-gray-700 mb-1">Arete</label>
+        <input type="text" id="actividad-arete" class="w-full p-2 border border-gray-300 rounded-lg" list="lista-aretes-autocompletar" required>
+        <datalist id="lista-aretes-autocompletar"></datalist>
+    </div>
+</div>
+<div class="relative mb-4">
+    <label for="actividad-raza" class="block text-sm font-medium text-gray-700 mb-1">Raza (opcional)</label>
+    <input type="text" id="actividad-raza" name="raza" class="w-full p-2 border border-gray-300 rounded-lg" autocomplete="off">
+    <div id="sugerencias-raza-container" class="absolute z-10 w-full bg-white border border-gray-300 rounded-b-md mt-1 max-h-40 overflow-y-auto hidden shadow-lg">
+        </div>
+</div>
+                    <div id="campos-dinamicos-procedimiento" class="space-y-3 border-t border-gray-200 pt-4"></div>
+                    <div id="mensaje-vaca" class="text-sm mt-2 h-4 text-center"></div>
+                </form>
+            </main>
+            <footer class="p-4 bg-gray-50 rounded-b-2xl grid grid-cols-2 gap-3">
+                <button id="btn-guardar-siguiente" class="w-full bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold flex items-center justify-center"><i class="fa-solid fa-floppy-disk mr-2"></i>Guardar y Siguiente</button>
+                <button id="btn-finalizar-actividad-modal" class="w-full bg-brand-green text-white px-4 py-3 rounded-lg font-semibold flex items-center justify-center"><i class="fa-solid fa-check-circle mr-2"></i>Finalizar Actividad</button>
+            </footer>
+        </div>
+    </div>
+    <div id="modal-historial-vaca" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[1001] hidden">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg modal-content">
+        <header class="p-4 border-b border-gray-200 flex justify-between items-center">
+            <h2 class="text-lg font-bold">Historial de <span id="modal-historial-nombre-vaca"></span></h2>
+            <button id="btn-cerrar-modal-historial" class="text-2xl text-gray-500">&times;</button>
+        </header>
+        <main id="modal-historial-contenido" class="p-6 modal-main space-y-3">
+            <p class="text-gray-500">Cargando historial...</p>
+        </main>
+    </div>
+</div>
 
     <script src="main.js"></script>
 </body>
