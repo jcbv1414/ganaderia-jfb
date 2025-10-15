@@ -611,50 +611,65 @@ app.get('/api/eventos/mvz/:mvzId', async (req, res) => {
 
 // ================== ESTADÍSTICAS ==================
 app.get('/api/rancho/:ranchoId/estadisticas', async (req, res) => {
-  try {
-    const { ranchoId } = req.params;
-    if (!ranchoId) return res.status(400).json({ message: 'ranchoId requerido.' });
-
-    // Obtenemos vacas y sus últimas actividades de palpación si existe RPC
-    const { data: vacas, error: vacasError } = await supabase.from('vacas').select('id, lote, raza').eq('rancho_id', ranchoId);
-    if (vacasError) throw vacasError;
-    if (!vacas || vacas.length === 0) return res.json({});
-
-    const cowIds = vacas.map(v => v.id);
-    let ultimasActividades = [];
     try {
-      const { data: rpcData, error: rpcError } = await supabase.rpc('get_latest_palpacion_for_cows', { cow_ids: cowIds });
-      if (!rpcError && Array.isArray(rpcData)) ultimasActividades = rpcData;
-    } catch (rpcErr) {
-      console.warn('RPC get_latest_palpacion_for_cows no está disponible o falló, continuando sin él.');
-    }
+        const { ranchoId } = req.params;
+        if (!ranchoId) return res.status(400).json({ message: 'ranchoId requerido.' });
 
-    const estadoMap = new Map();
-    ultimasActividades.forEach(act => {
-      try {
-        const desc = typeof act.descripcion === 'string' ? JSON.parse(act.descripcion) : act.descripcion || {};
-        estadoMap.set(act.vaca_id, desc);
-      } catch (e) {
-        console.error('Error parseando descripcion:', e);
-        estadoMap.set(act.vaca_id, {});
-      }
-    });
+        // 1. Obtenemos todas las vacas del rancho
+        const { data: vacas, error: vacasError } = await supabase
+            .from('vacas')
+            .select('id, lote, raza')
+            .eq('rancho_id', ranchoId);
+        if (vacasError) throw vacasError;
 
-    const stats = {};
-    vacas.forEach(vaca => {
-      const lote = vaca.lote || 'Sin Lote';
-      if (!stats[lote]) stats[lote] = { totalVacas: 0, estados: { Gestante: 0, Estatica: 0, Ciclando: 0 }, razas: {} };
-      stats[lote].totalVacas++;
-      const ultimo = estadoMap.get(vaca.id) || {};
-      if (ultimo.gestante === 'Sí') stats[lote].estados.Gestante++;
-      if (ultimo.estatica === 'Sí') stats[lote].estados.Estatica++;
-      if (ultimo.ciclando === 'Sí') stats[lote].estados.Ciclando++;
-      const raza = vaca.raza || 'Desconocida';
-      stats[lote].razas[raza] = (stats[lote].razas[raza] || 0) + 1;
-    });
+        if (!vacas || vacas.length === 0) {
+            return res.json({}); // Si no hay vacas, devuelve un objeto vacío
+        }
 
-    res.json(stats);
-  } catch (err) { handleServerError(res, err); }
+        // 2. Usamos nuestra función especial para obtener solo la ÚLTIMA palpación de cada vaca
+        const cowIds = vacas.map(v => v.id);
+        const { data: ultimasPalpaciones, error: rpcError } = await supabase
+            .rpc('get_latest_palpacion_for_cows', { cow_ids: cowIds });
+        if (rpcError) {
+             console.error("Error en la función RPC get_latest_palpacion_for_cows:", rpcError);
+             throw rpcError;
+        }
+
+        // 3. Creamos un "mapa" para acceder fácilmente al último estado de cada vaca
+        const estadoMap = new Map();
+        (ultimasPalpaciones || []).forEach(act => {
+            let desc = act.descripcion || {};
+            if (typeof desc === 'string') {
+                try { desc = JSON.parse(desc); } catch (e) { desc = {}; }
+            }
+            estadoMap.set(act.id_vaca, desc);
+        });
+
+        // 4. "Cocinamos" las estadísticas
+        const stats = vacas.reduce((acc, vaca) => {
+            const lote = vaca.lote || 'Sin Lote';
+            if (!acc[lote]) {
+                acc[lote] = { totalVacas: 0, estados: { Gestante: 0, Estatica: 0, Ciclando: 0 }, razas: {} };
+            }
+            acc[lote].totalVacas++;
+
+            // Obtenemos el último estado del mapa
+            const ultimoEstado = estadoMap.get(vaca.id);
+            if (ultimoEstado) {
+                if (ultimoEstado.gestante === 'Sí') acc[lote].estados.Gestante++;
+                if (ultimoEstado.estatica === 'Sí') acc[lote].estados.Estatica++;
+                if (ultimoEstado.ciclando === 'Sí') acc[lote].estados.Ciclando++;
+            }
+
+            const raza = vaca.raza || 'Desconocida';
+            acc[lote].razas[raza] = (acc[lote].razas[raza] || 0) + 1;
+            
+            return acc;
+        }, {});
+
+        res.json(stats);
+
+    } catch (err) { handleServerError(res, err); }
 });
 // ================== DATOS PARA EL DASHBOARD DEL PROPIETARIO ==================
 app.get('/api/rancho/:ranchoId/actividades-recientes', async (req, res) => {
