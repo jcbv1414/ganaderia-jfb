@@ -1376,9 +1376,10 @@ const fecha = fechaUTC.toLocaleDateString('es-MX', {day: 'numeric', month: 'long
         if (areteInput) areteInput.focus();
     }
 }
-    // =================================================================
-// FUNCIONES DEL CALENDARIO MVZ
 // =================================================================
+// LÓGICA DEL CALENDARIO DEL MVZ (VERSIÓN FINAL)
+// =================================================================
+
 async function renderizarVistaCalendario() {
     const modal = document.getElementById('modal-agregar-evento');
     const btnAbrirModal = document.getElementById('btn-abrir-modal-evento');
@@ -1400,7 +1401,64 @@ async function renderizarVistaCalendario() {
 
     // Llama a las funciones para cargar tanto la lista como el calendario visual
     await cargarEventos();
-    await inicializarCalendarioVisual(); // <-- Nueva función llamada aquí
+    await inicializarCalendarioVisual();
+}
+
+async function inicializarCalendarioVisual() {
+    // Espera un instante para asegurar que el DOM esté 100% listo
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    const container = document.getElementById('calendario-visual-container');
+    if (!container || typeof FullCalendar === 'undefined') {
+        console.error("FullCalendar no está cargado o el contenedor no existe.");
+        if(container) container.innerHTML = '<p class="text-center text-red-500 text-xs p-2">Error al cargar la herramienta del calendario.</p>';
+        return;
+    }
+    container.innerHTML = ''; // Limpia el contenedor
+
+    try {
+        // 1. Obtiene los eventos del MVZ
+        const res = await fetch(`/api/eventos/mvz/${currentUser.id}`);
+        if (!res.ok) throw new Error('No se pudieron cargar los eventos para el calendario');
+        const eventos = await res.json();
+
+        // 2. Transforma los eventos al formato que FullCalendar entiende
+        const eventosParaCalendario = eventos.map(e => ({
+            id: e.id,
+            title: e.titulo,
+            start: e.fecha_evento,
+            extendedProps: {
+                rancho: e.nombre_rancho_texto || e.ranchos?.nombre || 'General'
+            }
+        }));
+
+        // 3. Configura e inicializa el calendario
+        const calendario = new FullCalendar.Calendar(container, {
+            initialView: 'dayGridMonth',
+            locale: 'es',
+            height: 'auto',
+            headerToolbar: {
+                left: 'prev',
+                center: 'title',
+                right: 'next'
+            },
+            events: eventosParaCalendario,
+            eventClick: function(info) {
+                // Al hacer clic en un evento, abre el modal de edición
+                const eventoOriginal = eventos.find(e => e.id == info.event.id);
+                if (eventoOriginal) {
+                    handleEditarEvento(eventoOriginal);
+                }
+            }
+        });
+        
+        // 4. Dibuja el calendario en la pantalla
+        calendario.render();
+
+    } catch (error) {
+        console.error("Error al inicializar el calendario visual:", error);
+        container.innerHTML = '<p class="text-center text-red-500 text-xs p-2">No se pudo cargar el calendario.</p>';
+    }
 }
 
 async function cargarEventos() {
