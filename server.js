@@ -625,20 +625,31 @@ app.get('/api/rancho/:ranchoId/estadisticas', async (req, res) => {
   } catch (err) { handleServerError(res, err); }
 });
 // ================== DATOS PARA EL DASHBOARD DEL PROPIETARIO ==================
-
-// Endpoint para obtener las actividades más recientes de un rancho
 app.get('/api/rancho/:ranchoId/actividades-recientes', async (req, res) => {
     try {
         const { ranchoId } = req.params;
-
-        // CORRECCIÓN: Ahora busca usando la nueva columna 'rancho_id'
         const { data, error } = await supabase
             .from('actividades')
             .select('*, usuarios (nombre)')
-            .eq('rancho_id', ranchoId) // <-- ¡LA BÚSQUEDA EFICIENTE!
+            .eq('rancho_id', ranchoId)
             .order('created_at', { ascending: false })
-            .limit(3);
+            .limit(5); // Traemos las últimas 5 para el scroll
+        if (error) throw error;
+        res.json(data || []);
+    } catch (err) { handleServerError(res, err); }
+});
 
+app.get('/api/rancho/:ranchoId/eventos-proximos', async (req, res) => {
+    try {
+        const { ranchoId } = req.params;
+        const { data, error } = await supabase
+            .from('eventos')
+            .select('*')
+            .eq('rancho_id', ranchoId)
+            .eq('completado', false)
+            .gte('fecha_evento', new Date().toISOString())
+            .order('fecha_evento', { ascending: true })
+            .limit(3);
         if (error) throw error;
         res.json(data || []);
     } catch (err) { handleServerError(res, err); }

@@ -224,76 +224,98 @@ document.addEventListener('DOMContentLoaded', () => {
 async function cargarDatosDashboardPropietario() {
     if (!currentUser || currentUser.rol !== 'propietario') return;
 
+    // Actualiza el saludo y la fecha
+    const nombreEl = document.getElementById('dash-nombre-propietario');
+    if (nombreEl) nombreEl.textContent = currentUser.nombre.split(' ')[0];
+    const fechaEl = document.getElementById('dash-fecha-actual');
+    if (fechaEl) fechaEl.textContent = new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
+    
     const ranchoId = currentUser.ranchos?.[0]?.id;
     if (!ranchoId) {
-        document.getElementById('lotes-container').innerHTML = '<p class="text-red-500">No se encontró un rancho asociado.</p>';
+        // Manejo de error si no hay rancho
         return;
     }
 
+    // --- Carga de Estadísticas y Lotes ---
     try {
-        const res = await fetch(`/api/rancho/${ranchoId}/estadisticas`);
-        if (!res.ok) throw new Error('No se pudieron cargar las estadísticas.');
-        const stats = await res.json();
+        const resStats = await fetch(`/api/rancho/${ranchoId}/estadisticas`);
+        if (!resStats.ok) throw new Error('No se pudieron cargar las estadísticas.');
+        const stats = await resStats.json();
 
-        let totalVacas = 0, totalGestantes = 0, totalAlertas = 0; // totalAlertas es placeholder
+        let totalVacas = 0, totalGestantes = 0;
         Object.values(stats).forEach(lote => {
             totalVacas += lote.totalVacas || 0;
             totalGestantes += lote.estados?.Gestante || 0;
         });
 
-        document.getElementById('resumen-total-vacas').textContent = totalVacas;
-        document.getElementById('resumen-vacas-gestantes').textContent = totalGestantes;
-        document.getElementById('resumen-alertas').textContent = totalAlertas;
+        const totalVacasEl = document.getElementById('resumen-total-vacas');
+        if (totalVacasEl) totalVacasEl.textContent = totalVacas;
+        const gestantesEl = document.getElementById('resumen-vacas-gestantes');
+        if (gestantesEl) gestantesEl.textContent = totalGestantes;
 
         const lotesContainer = document.getElementById('lotes-container');
-        if (!lotesContainer) return;
-        lotesContainer.innerHTML = '';
-
-        if (Object.keys(stats).length === 0) {
-            lotesContainer.innerHTML = '<p class="text-gray-500">No hay lotes con datos para mostrar.</p>';
-        } else {
-            Object.entries(stats).forEach(([numeroLote, datosLote]) => {
-                const vacasEnLote = datosLote.totalVacas || 0;
-                const gestantesEnLote = datosLote.estados?.Gestante || 0;
-                const porcentajeGestacion = vacasEnLote > 0 ? Math.round((gestantesEnLote / vacasEnLote) * 100) : 0;
-                const nombreLote = numeroLote === 'Sin Lote' ? 'Animales sin Lote' : `Lote ${numeroLote}`;
-
-                const loteCardHTML = `
-                <div class="bg-white p-4 rounded-xl shadow-md flex items-center justify-between">
-                    <div class="flex items-center">
-                        <div class="progress-ring mr-4" style="--value: ${porcentajeGestacion}; --color: #22c55e;">
-                            <span class="progress-ring-percent">${porcentajeGestacion}%</span>
-                        </div>
-                        <div>
-                            <p class="font-semibold">${nombreLote}</p>
-                            <p class="text-sm text-gray-500">Gestación</p>
-                        </div>
-                    </div>
-                    <i class="fa-solid fa-chevron-right text-gray-400"></i>
-                </div>`;
-                lotesContainer.innerHTML += loteCardHTML;
-            });
+        if (lotesContainer) {
+            if (Object.keys(stats).length === 0) {
+                lotesContainer.innerHTML = '<p class="text-gray-500">No hay lotes con datos.</p>';
+            } else {
+                lotesContainer.innerHTML = Object.entries(stats).map(([numeroLote, datosLote]) => {
+                    const vacasEnLote = datosLote.totalVacas || 0;
+                    const gestantesEnLote = datosLote.estados?.Gestante || 0;
+                    const porcentaje = vacasEnLote > 0 ? Math.round((gestantesEnLote / vacasEnLote) * 100) : 0;
+                    const nombreLote = numeroLote === 'Sin Lote' ? 'Animales sin Lote' : `Lote ${numeroLote}`;
+                    return `<div class="bg-white p-4 rounded-xl shadow-md flex items-center justify-between"><div class="flex items-center"><div class="progress-ring mr-4" style="--value: ${porcentaje}; --color: #22c55e;"><span class="progress-ring-percent">${porcentaje}%</span></div><div><p class="font-semibold">${nombreLote}</p><p class="text-sm text-gray-500">Gestación</p></div></div><i class="fa-solid fa-chevron-right text-gray-400"></i></div>`;
+                }).join('');
+            }
         }
-        // ... dentro del try {} de cargarDatosDashboardPropietario
-// --- Carga las "Últimas Noticias" (actividades recientes) ---
-const noticiasContainer = document.getElementById('ultimas-noticias');
-if (noticiasContainer) {
-    const resNoticias = await fetch(`/api/rancho/${ranchoId}/actividades-recientes`);
-    const noticias = await resNoticias.json();
-    if (noticias.length === 0) {
-        noticiasContainer.innerHTML = '<p class="text-sm text-gray-500 ml-6">No hay actividades recientes en el rancho.</p>';
-    } else {
-        noticiasContainer.innerHTML = noticias.map(act => {
-            const fecha = new Date(act.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'long' });
-            const mvzNombre = act.usuarios?.nombre || 'Un veterinario';
-            return `<p class="text-sm text-gray-600 ml-6 pb-2 border-b border-gray-100 mb-2">${mvzNombre} registró una ${act.tipo_actividad} el ${fecha}.</p>`;
-        }).join('');
-    }
-}
     } catch (error) {
-        const el = document.getElementById('lotes-container');
-        if (el) el.innerHTML = '<p class="text-red-500">No se pudieron cargar los datos de los lotes.</p>';
-        console.error("Error cargando estadísticas del propietario:", error);
+        console.error("Error en estadísticas del propietario:", error);
+        const lotesContainer = document.getElementById('lotes-container');
+        if (lotesContainer) lotesContainer.innerHTML = `<p class="text-red-500">No se pudieron cargar los lotes.</p>`;
+    }
+
+    // --- Carga de "Últimas Noticias" ---
+    const noticiasContainer = document.getElementById('ultimas-noticias');
+    if (noticiasContainer) {
+        try {
+            const resNoticias = await fetch(`/api/rancho/${ranchoId}/actividades-recientes`);
+            const noticias = await resNoticias.json();
+            if (noticias.length === 0) {
+                noticiasContainer.innerHTML = '<p class="text-sm text-gray-500">No hay actividades recientes en el rancho.</p>';
+            } else {
+                noticiasContainer.innerHTML = noticias.map(act => {
+                    const fecha = new Date(act.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'long' });
+                    const mvzNombre = act.usuarios?.nombre || 'Un veterinario';
+                    return `<p class="text-sm text-gray-600 pb-2 border-b border-gray-100 mb-2">${mvzNombre} registró una ${act.tipo_actividad} el ${fecha}.</p>`;
+                }).join('');
+            }
+        } catch (error) {
+            console.error("Error cargando noticias:", error);
+            noticiasContainer.innerHTML = '<p class="text-red-500">Error al cargar noticias.</p>';
+        }
+    }
+
+    // --- Carga de "Próximos Eventos" ---
+    const eventosContainer = document.getElementById('proximos-eventos');
+    if (eventosContainer) {
+        try {
+            const resEventos = await fetch(`/api/rancho/${ranchoId}/eventos-proximos`);
+            const eventos = await resEventos.json();
+            if (eventos.length === 0) {
+                eventosContainer.innerHTML = '<p class="text-sm text-gray-500">No hay eventos programados para este rancho.</p>';
+            } else {
+                eventosContainer.innerHTML = eventos.map(e => {
+                    const fecha = new Date(e.fecha_evento);
+                    const manana = new Date(); manana.setDate(new Date().getDate() + 1);
+                    let textoFecha = fecha.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
+                    if (fecha.toDateString() === new Date().toDateString()) textoFecha = 'Hoy';
+                    if (fecha.toDateString() === manana.toDateString()) textoFecha = 'Mañana';
+                    return `<p class="text-sm text-gray-600 mb-2"><i class="fa-solid fa-calendar-alt text-brand-green mr-2"></i><strong>${textoFecha}:</strong> ${e.titulo}</p>`;
+                }).join('');
+            }
+        } catch (error) {
+            console.error("Error cargando eventos:", error);
+            eventosContainer.innerHTML = '<p class="text-red-500">Error al cargar eventos.</p>';
+        }
     }
 }
 
