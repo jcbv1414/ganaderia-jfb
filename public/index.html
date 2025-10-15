@@ -380,16 +380,16 @@
     
     <!-- Actividades MVZ -->
    <template id="template-actividades-mvz">
-    <div id="modo-seleccion-container" class="p-5">
-        <header class="mb-6 text-center">
+    <div id="modo-seleccion-container" class="min-h-[calc(100vh-80px)] flex flex-col items-center justify-center p-5">
+        <header class="mb-8 text-center">
             <h1 class="text-2xl font-bold text-gray-800">Control Reproductivo</h1>
             <p class="text-sm text-gray-500">¿Cómo quieres trabajar hoy?</p>
         </header>
-        <div class="space-y-4">
+        <div class="space-y-4 w-full max-w-sm">
             <button id="btn-show-rancho-registrado" class="w-full bg-blue-800 text-white p-4 rounded-lg font-bold flex items-center justify-center text-lg"><i class="fa-solid fa-key mr-3"></i>Rancho Registrado</button>
             <button id="btn-iniciar-independiente" class="w-full bg-gray-600 text-white p-4 rounded-lg font-bold flex items-center justify-center text-lg"><i class="fa-solid fa-user-ninja mr-3"></i>Modo Independiente</button>
         </div>
-        <div id="rancho-access-container" class="hidden mt-4 bg-white p-4 rounded-xl shadow-md">
+        <div id="rancho-access-container" class="hidden mt-4 bg-white p-4 rounded-xl shadow-md w-full max-w-sm">
             <label for="codigo-rancho" class="block text-sm font-medium text-gray-700 mb-1">Código del Rancho</label>
             <div class="flex items-center space-x-2">
                 <input type="text" id="codigo-rancho" placeholder="Ej: A1B2C3" class="w-full p-2 border border-gray-300 rounded-lg">
@@ -409,11 +409,20 @@
                         <p class="text-sm text-white/70">Lote actual: <span id="lote-info" class="font-semibold">0 vacas</span></p>
                     </div>
                 </div>
-                <button id="btn-fijar-rancho" title="Fijar este rancho" class="text-2xl text-white/50 hover:text-white"><i class="fa-solid fa-thumbtack"></i></button>
+                <div class="flex items-center space-x-2">
+                    <button id="btn-fijar-rancho-independiente" title="Fijar este rancho independiente" class="text-2xl text-white/50 hover:text-white hidden"><i class="fa-solid fa-thumbtack"></i></button>
+                    <button id="btn-fijar-rancho" title="Fijar este rancho" class="text-2xl text-white/50 hover:text-white"><i class="fa-solid fa-thumbtack"></i></button>
+                </div>
             </header>
-            <div id="rancho-independiente-input-container" class="relative hidden mt-4">
-                <input type="text" id="rancho-independiente-nombre" placeholder="Nombre del Rancho Atendido..." class="w-full bg-white/10 text-white placeholder-white/50 p-3 pr-10 border border-white/20 rounded-lg">
-            </div>
+           <div id="rancho-independiente-input-container" class="relative hidden mt-4">
+    <label for="rancho-independiente-nombre" class="block text-sm font-medium text-white/80 mb-1">Nombre del Rancho Atendido:</label>
+    <div class="relative">
+        <input type="text" id="rancho-independiente-nombre" placeholder="Ej: Rancho 'El Amanecer'" class="w-full bg-white/10 text-white placeholder-white/50 p-3 pr-10 border border-white/20 rounded-lg">
+        <button id="btn-fijar-rancho-independiente" class="absolute inset-y-0 right-0 pr-3 flex items-center" title="Fijar este rancho">
+            <i class="fa-solid fa-thumbtack text-white/50"></i>
+        </button>
+    </div>
+</div>
         </div>
 
         <div class="p-5 space-y-6">

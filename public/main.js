@@ -908,7 +908,7 @@ async function handleGuardarVaca(cerrarAlFinalizar) {
         }
     }
 
-   function iniciarActividadUI() {
+function iniciarActividadUI() {
     document.getElementById('modo-seleccion-container')?.classList.add('hidden');
     document.getElementById('rancho-actions-container')?.classList.remove('hidden');
 
@@ -920,52 +920,79 @@ async function handleGuardarVaca(cerrarAlFinalizar) {
     const logoEl = document.getElementById('rancho-logo');
     if (logoEl) logoEl.src = currentRancho?.logo_url || 'assets/logo.png';
     
-    // Muestra u oculta el campo para el nombre del rancho independiente
-    const ranchoIndependienteInputContainer = document.getElementById('rancho-independiente-input-container');
-    if (ranchoIndependienteInputContainer) {
-        ranchoIndependienteInputContainer.classList.toggle('hidden', !esIndependiente);
-    }
-
-    // Lógica del botón de fijar (pin)
+    // --- LÓGICA DE FIJADO RESTAURADA ---
     const btnFijarPrincipal = document.getElementById('btn-fijar-rancho');
-    if (btnFijarPrincipal) {
-        const pinnedRancho = JSON.parse(localStorage.getItem('pinnedRancho') || 'null');
-        const isPinned = !esIndependiente && pinnedRancho && pinnedRancho.id === currentRancho?.id;
-        
-        btnFijarPrincipal.classList.toggle('text-white', isPinned);
-        btnFijarPrincipal.classList.toggle('text-white/50', !isPinned);
-        btnFijarPrincipal.disabled = esIndependiente;
+    const btnFijarIndependiente = document.getElementById('btn-fijar-rancho-independiente');
+    const ranchoIndependienteContainer = document.getElementById('rancho-independiente-input-container');
 
-        if (esIndependiente) {
-            btnFijarPrincipal.classList.add('hidden'); // Oculta el pin principal en modo independiente
-        } else {
-            btnFijarPrincipal.classList.remove('hidden');
+    if (esIndependiente) {
+        if (ranchoIndependienteContainer) ranchoIndependienteContainer.classList.remove('hidden');
+        if (btnFijarPrincipal) btnFijarPrincipal.classList.add('hidden');
+        
+        // Carga el nombre del rancho independiente si estaba fijado
+        const pinnedRanchoData = localStorage.getItem('pinnedRancho');
+        if (pinnedRanchoData) {
+            try {
+                const pinnedRancho = JSON.parse(pinnedRanchoData);
+                if (pinnedRancho.nombre === 'Trabajo Independiente' && pinnedRancho.extra_data?.nombre_independiente) {
+                    document.getElementById('rancho-independiente-nombre').value = pinnedRancho.extra_data.nombre_independiente;
+                }
+            } catch (e) { console.error("Error al leer rancho fijado:", e); }
         }
 
-        btnFijarPrincipal.onclick = () => {
-            const currentlyPinned = JSON.parse(localStorage.getItem('pinnedRancho') || 'null');
-            if (currentlyPinned && currentlyPinned.id === currentRancho?.id) {
-                localStorage.removeItem('pinnedRancho');
-                btnFijarPrincipal.classList.replace('text-white', 'text-white/50');
-                alert('Rancho desfijado.');
-            } else {
-                localStorage.setItem('pinnedRancho', JSON.stringify(currentRancho));
-                btnFijarPrincipal.classList.replace('text-white/50', 'text-white');
-                alert(`Rancho '${currentRancho.nombre}' fijado como predeterminado.`);
-            }
-        };
+        if (btnFijarIndependiente) {
+            btnFijarIndependiente.onclick = () => {
+                const nombreIndependiente = document.getElementById('rancho-independiente-nombre').value.trim();
+                if (!nombreIndependiente) {
+                    alert('Escribe un nombre para el rancho antes de fijarlo.');
+                    return;
+                }
+                const newPinnedRancho = { id: null, nombre: 'Trabajo Independiente', extra_data: { nombre_independiente: nombreIndependiente } };
+                localStorage.setItem('pinnedRancho', JSON.stringify(newPinnedRancho));
+                alert(`Rancho independiente '${nombreIndependiente}' fijado.`);
+                // Actualiza el color del ícono
+                btnFijarIndependiente.querySelector('i').classList.replace('text-white/50', 'text-white');
+            };
+        }
+    } else { // Si es un rancho registrado
+        if (ranchoIndependienteContainer) ranchoIndependienteContainer.classList.add('hidden');
+        if (btnFijarPrincipal) btnFijarPrincipal.classList.remove('hidden');
+
+        if (btnFijarPrincipal) {
+            const pinnedRancho = JSON.parse(localStorage.getItem('pinnedRancho') || 'null');
+            const isPinned = pinnedRancho && pinnedRancho.id === currentRancho?.id;
+            
+            btnFijarPrincipal.querySelector('i').classList.toggle('text-white', isPinned);
+            btnFijarPrincipal.querySelector('i').classList.toggle('text-white/50', !isPinned);
+
+            btnFijarPrincipal.onclick = () => {
+                const currentlyPinned = JSON.parse(localStorage.getItem('pinnedRancho') || 'null');
+                if (currentlyPinned && currentlyPinned.id === currentRancho?.id) {
+                    localStorage.removeItem('pinnedRancho');
+                    btnFijarPrincipal.querySelector('i').classList.replace('text-white', 'text-white/50');
+                    alert('Rancho desfijado.');
+                } else {
+                    localStorage.setItem('pinnedRancho', JSON.stringify(currentRancho));
+                    btnFijarPrincipal.querySelector('i').classList.replace('text-white/50', 'text-white');
+                    alert(`Rancho '${currentRancho.nombre}' fijado.`);
+                }
+            };
+        }
     }
     
-    // Dibuja las nuevas tarjetas de acción
+   // Dibuja las nuevas tarjetas de acción (esta es la parte que cambia)
     const accionesContainer = document.getElementById('acciones-rapidas-container');
     if (accionesContainer) {
         accionesContainer.innerHTML = ''; // Limpiamos
         
+        // Define tus nuevas acciones con sus iconos y colores
         const acciones = [
             { id: 'palpacion', titulo: 'Palpación', icono: 'fa-stethoscope', color: 'bg-blue-100', textColor: 'text-blue-800' },
             { id: 'inseminacion', titulo: 'Inseminación', icono: 'fa-syringe', color: 'bg-green-100', textColor: 'text-green-800' },
-            { id: 'medicamentos', titulo: 'Medicamentos', icono: 'fa-pills', color: 'bg-yellow-100', textColor: 'text-yellow-800' },
-            { id: 'transferencia', titulo: 'Otros', icono: 'fa-ellipsis', color: 'bg-gray-100', textColor: 'text-gray-800' }
+            { id: 'transferencia', titulo: 'Transferencia', icono: 'fa-flask-vial', color: 'bg-yellow-100', textColor: 'text-yellow-800' },
+            { id: 'sincronizacion', titulo: 'Sincronización', icono: 'fa-clock-rotate-left', color: 'bg-purple-100', textColor: 'text-purple-800' },
+            { id: 'medicamentos', titulo: 'Medicamentos', icono: 'fa-pills', color: 'bg-red-100', textColor: 'text-red-800' },
+            { id: 'otros', titulo: 'Otros', icono: 'fa-ellipsis', color: 'bg-gray-100', textColor: 'text-gray-800' }
         ];
 
         acciones.forEach(accion => {
@@ -973,7 +1000,7 @@ async function handleGuardarVaca(cerrarAlFinalizar) {
             card.className = `p-4 rounded-2xl shadow-sm text-left flex flex-col justify-between h-28 ${accion.color}`;
             card.onclick = () => abrirModalActividad(accion.id);
             card.innerHTML = `
-                <i class="fa-solid ${accion.icono} text-2xl ${accion.textColor}"></i>
+                <i class="fa-solid ${accion.icono} text-2xl ${accion.textColor} mb-2"></i>
                 <span class="font-bold text-md ${accion.textColor}">${accion.titulo}</span>
             `;
             accionesContainer.appendChild(card);
