@@ -1077,26 +1077,44 @@ if (actividadLoteEl) {
 }
 
 async function handleFinalizarYReportar() {
+    const btn = document.getElementById('btn-finalizar-actividad-modal');
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Procesando...';
+    }
+
+    // --- INICIO DE LA CORRECCIÓN CLAVE ---
+    // 1. Verificamos explícitamente que tenemos un rancho activo antes de continuar.
+    if (!currentRancho) {
+        alert('Error: No se ha definido un rancho de trabajo. Por favor, reinicia la actividad.');
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Finalizar Actividad';
+        }
+        return;
+    }
+    // --- FIN DE LA CORRECCIÓN CLAVE ---
+
     if (loteActividadActual.length === 0) {
-        alert("No hay actividades en el lote para reportar.");
+        alert("No hay actividades en el lote para reportar. Guarda al menos un animal antes de finalizar.");
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Finalizar Actividad';
+        }
         return;
     }
 
-    const btn = document.getElementById('btn-finalizar-actividad-modal');
-    if (btn) { btn.disabled = true; btn.textContent = 'Procesando...'; }
-
     try {
-        // CORRECCIÓN: Asegurarse de que el nombre del rancho sea el correcto
-        const nombreDelRancho = currentRancho?.nombre === 'Trabajo Independiente'
+        const nombreDelRancho = currentRancho.id === null
             ? document.getElementById('rancho-independiente-nombre')?.value?.trim() || 'Independiente'
-            : currentRancho?.nombre || 'Independiente';
+            : currentRancho.nombre;
 
         const payload = {
             mvzId: currentUser?.id,
-            ranchoId: currentRancho?.id || null,
+            ranchoId: currentRancho.id, // Ahora usamos el ID que ya verificamos que existe
             loteActividad: loteActividadActual,
             mvzNombre: currentUser?.nombre || '',
-            ranchoNombre: nombreDelRancho // Usamos el nombre corregido
+            ranchoNombre: nombreDelRancho
         };
 
         const res = await fetch('/api/actividades', {
@@ -1106,8 +1124,12 @@ async function handleFinalizarYReportar() {
         });
 
         if (!res.ok) {
-            const errData = await res.json();
-            throw new Error(errData.message || 'Error en el servidor.');
+            try {
+                const errData = await res.json();
+                throw new Error(errData.message || 'Error en el servidor al generar el reporte.');
+            } catch (e) {
+                throw new Error(res.statusText);
+            }
         }
 
         const blob = await res.blob();
@@ -1119,16 +1141,20 @@ async function handleFinalizarYReportar() {
         a.click();
         a.remove();
         window.URL.revokeObjectURL(url);
-
+        
         loteActividadActual = [];
-        document.getElementById('lote-info').textContent = `0 vacas`;
+        const loteInfoEl = document.getElementById('lote-info');
+        if (loteInfoEl) loteInfoEl.textContent = `0 vacas`;
         renderizarHistorialMVZ();
 
     } catch (err) {
         console.error("Error al finalizar y generar PDF:", err);
         alert(err.message || 'Hubo un error inesperado.');
     } finally {
-        if (btn) { btn.disabled = false; btn.textContent = 'Finalizar Actividad'; }
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Finalizar Actividad';
+        }
     }
 }
 
