@@ -1381,6 +1381,7 @@ const fecha = fechaUTC.toLocaleDateString('es-MX', {day: 'numeric', month: 'long
 // =================================================================
 
 async function renderizarVistaCalendario() {
+    // Primero, conectamos los botones del modal para que siempre funcionen
     const modal = document.getElementById('modal-agregar-evento');
     const btnAbrirModal = document.getElementById('btn-abrir-modal-evento');
     const btnCerrarModal = document.getElementById('btn-cerrar-modal-evento');
@@ -1388,20 +1389,90 @@ async function renderizarVistaCalendario() {
 
     if (btnAbrirModal) btnAbrirModal.onclick = async () => {
         form.reset();
-        document.getElementById('evento-id-input').value = ''; 
+        document.getElementById('evento-id-input').value = '';
         await cargarSelectDeRanchos();
         modal.querySelector('h2').textContent = 'Agendar Evento';
         document.getElementById('btn-guardar-evento').textContent = 'Guardar Evento';
         modal.classList.remove('hidden');
     };
     if (btnCerrarModal) btnCerrarModal.onclick = () => modal.classList.add('hidden');
-    if (form) {
-        form.onsubmit = handleGuardarEvento;
-    }
+    if (form) form.onsubmit = handleGuardarEvento;
 
-    // Llama a las funciones para cargar tanto la lista como el calendario visual
-    await cargarEventos();
-    await inicializarCalendarioVisual();
+    // Ahora, vamos a buscar los datos y a dibujar todo
+    const containerCalendario = document.getElementById('calendario-visual-container');
+    const containerLista = document.getElementById('lista-eventos-calendario');
+
+    if (!containerCalendario || !containerLista) return;
+    
+    containerCalendario.innerHTML = '<p class="text-center text-gray-500 p-4">Cargando calendario...</p>';
+    containerLista.innerHTML = '<p class="text-center text-gray-500">Cargando eventos...</p>';
+
+    try {
+        // 1. Obtenemos los eventos UNA SOLA VEZ
+        const res = await fetch(`/api/eventos/mvz/${currentUser.id}`);
+        if (!res.ok) throw new Error('No se pudieron cargar los eventos.');
+        const eventos = await res.json();
+
+        // 2. Dibujamos la lista de "Próximos Eventos"
+        if (eventos.length === 0) {
+            containerLista.innerHTML = '<p class="text-center text-gray-500">No tienes eventos próximos agendados.</p>';
+        } else {
+            containerLista.innerHTML = eventos.map(e => {
+                 const fecha = new Date(e.fecha_evento);
+                 const rancho = e.nombre_rancho_texto || e.ranchos?.nombre || 'General';
+                 return `
+                    <div class="bg-white p-4 rounded-xl shadow-md space-y-2">
+                        <div>
+                            <p class="font-bold text-brand-green">${e.titulo}</p>
+                            <p class="text-sm text-gray-600"><i class="fa-solid fa-house-medical w-5 text-center mr-1 text-gray-400"></i>Rancho: ${rancho}</p>
+                            <p class="text-sm text-gray-600"><i class="fa-solid fa-clock w-5 text-center mr-1 text-gray-400"></i>${fecha.toLocaleString('es-MX', { dateStyle: 'full', timeStyle: 'short' })}</p>
+                            ${e.descripcion ? `<p class="text-xs text-gray-500 mt-2 pt-2 border-t">${e.descripcion}</p>` : ''}
+                        </div>
+                        <div class="flex justify-end space-x-3 pt-2 border-t border-gray-100">
+                            <button onclick='handleEliminarEvento(${e.id})' class="text-sm text-red-600 font-semibold">Eliminar</button>
+                            <button onclick='handleEditarEvento(${JSON.stringify(e)})' class="text-sm bg-gray-600 text-white font-semibold px-4 py-1 rounded-md">Editar</button>
+                        </div>
+                    </div>`;
+            }).join('');
+        }
+
+        // 3. Dibujamos el calendario visual
+        if (typeof FullCalendar === 'undefined') {
+            throw new Error("La librería FullCalendar no está cargada.");
+        }
+        
+        const eventosParaCalendario = eventos.map(e => ({
+            id: e.id,
+            title: e.titulo,
+            start: e.fecha_evento,
+        }));
+        
+        containerCalendario.innerHTML = '';
+        const calendario = new FullCalendar.Calendar(containerCalendario, {
+            initialView: 'dayGridMonth',
+            locale: 'es',
+            height: 'auto',
+            headerToolbar: { left: 'prev', center: 'title', right: 'next' },
+            events: eventosParaCalendario,
+            // ----- INICIO DE LA CORRECCIÓN CLAVE -----
+            eventClick: function(info) {
+                // Al hacer clic, busca el evento original completo
+                const eventoOriginal = eventos.find(e => e.id == info.event.id);
+                if (eventoOriginal) {
+                    // Y llama a la función que muestra la NUEVA tarjeta de detalles
+                    mostrarDetalleEvento(eventoOriginal);
+                }
+            }
+            // ----- FIN DE LA CORRECCIÓN CLAVE -----
+        });
+        
+        calendario.render();
+
+    } catch (error) {
+        console.error("Error al renderizar la vista del calendario:", error);
+        containerCalendario.innerHTML = `<p class="text-center text-red-500 p-4">${error.message}</p>`;
+        containerLista.innerHTML = `<p class="text-center text-red-500">${error.message}</p>`;
+    }
 }
 
 async function inicializarCalendarioVisual() {
