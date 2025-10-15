@@ -908,118 +908,78 @@ async function handleGuardarVaca(cerrarAlFinalizar) {
         }
     }
 
-    function iniciarActividadUI() {
+   function iniciarActividadUI() {
     document.getElementById('modo-seleccion-container')?.classList.add('hidden');
     document.getElementById('rancho-actions-container')?.classList.remove('hidden');
 
     const esIndependiente = !currentRancho?.id;
-    const ranchoIndependienteInputContainer = document.getElementById('rancho-independiente-input-container');
-    const btnFijarRanchoIndependiente = document.getElementById('btn-fijar-rancho-independiente');
 
+    // Actualiza el encabezado
+    const nombreActivoEl = document.getElementById('rancho-nombre-activo');
+    if (nombreActivoEl) nombreActivoEl.textContent = esIndependiente ? 'Trabajo Independiente' : (currentRancho?.nombre || '');
+    const logoEl = document.getElementById('rancho-logo');
+    if (logoEl) logoEl.src = currentRancho?.logo_url || 'assets/logo.png';
+    
+    // Muestra u oculta el campo para el nombre del rancho independiente
+    const ranchoIndependienteInputContainer = document.getElementById('rancho-independiente-input-container');
     if (ranchoIndependienteInputContainer) {
         ranchoIndependienteInputContainer.classList.toggle('hidden', !esIndependiente);
     }
 
-    document.getElementById('rancho-nombre-activo').textContent = esIndependiente ? 'Trabajo Independiente' : (currentRancho?.nombre || '');
-    document.getElementById('rancho-logo').src = currentRancho?.logo_url || 'assets/logo.png';
-
     // Lógica del botón de fijar (pin)
-    // El botón principal de fijar (fuera del input) sigue existiendo para ranchos registrados
     const btnFijarPrincipal = document.getElementById('btn-fijar-rancho');
+    if (btnFijarPrincipal) {
+        const pinnedRancho = JSON.parse(localStorage.getItem('pinnedRancho') || 'null');
+        const isPinned = !esIndependiente && pinnedRancho && pinnedRancho.id === currentRancho?.id;
+        
+        btnFijarPrincipal.classList.toggle('text-white', isPinned);
+        btnFijarPrincipal.classList.toggle('text-white/50', !isPinned);
+        btnFijarPrincipal.disabled = esIndependiente;
 
-    // CORRECCIÓN: Manejar el botón de fijar según el modo (independiente o registrado)
-    if (esIndependiente) {
-        if (btnFijarPrincipal) btnFijarPrincipal.classList.add('hidden'); // Oculta el pin principal
-        if (btnFijarRanchoIndependiente) {
-            btnFijarRanchoIndependiente.classList.remove('hidden');
+        if (esIndependiente) {
+            btnFijarPrincipal.classList.add('hidden'); // Oculta el pin principal en modo independiente
+        } else {
+            btnFijarPrincipal.classList.remove('hidden');
+        }
 
-            // Carga el nombre del rancho independiente si estaba fijado
-            const pinnedRanchoData = localStorage.getItem('pinnedRancho');
-            if (pinnedRanchoData) {
-                try {
-                    const pinnedRancho = JSON.parse(pinnedRanchoData);
-                    if (pinnedRancho.nombre === 'Trabajo Independiente' && pinnedRancho.extra_data?.nombre_independiente) {
-                        document.getElementById('rancho-independiente-nombre').value = pinnedRancho.extra_data.nombre_independiente;
-                    }
-                } catch (e) { console.error("Error parsing pinned rancho data:", e); }
+        btnFijarPrincipal.onclick = () => {
+            const currentlyPinned = JSON.parse(localStorage.getItem('pinnedRancho') || 'null');
+            if (currentlyPinned && currentlyPinned.id === currentRancho?.id) {
+                localStorage.removeItem('pinnedRancho');
+                btnFijarPrincipal.classList.replace('text-white', 'text-white/50');
+                alert('Rancho desfijado.');
+            } else {
+                localStorage.setItem('pinnedRancho', JSON.stringify(currentRancho));
+                btnFijarPrincipal.classList.replace('text-white/50', 'text-white');
+                alert(`Rancho '${currentRancho.nombre}' fijado como predeterminado.`);
             }
-
-            // Ajusta el color del pin para el rancho independiente
-            const isPinned = pinnedRanchoData && JSON.parse(pinnedRanchoData).nombre === 'Trabajo Independiente';
-            btnFijarRanchoIndependiente.classList.toggle('text-brand-green', isPinned);
-            btnFijarRanchoIndependiente.classList.toggle('text-gray-400', !isPinned);
-
-            btnFijarRanchoIndependiente.onclick = () => {
-                const nombreIndependiente = document.getElementById('rancho-independiente-nombre').value.trim();
-                if (!nombreIndependiente) {
-                    alert('Por favor, ingresa un nombre para el rancho independiente antes de fijarlo.');
-                    return;
-                }
-
-                const pinnedRancho = JSON.parse(localStorage.getItem('pinnedRancho') || 'null');
-                const isCurrentlyPinned = pinnedRancho && pinnedRancho.nombre === 'Trabajo Independiente' && pinnedRancho.extra_data.nombre_independiente === nombreIndependiente;
-
-                if (isCurrentlyPinned) {
-                    localStorage.removeItem('pinnedRancho');
-                    btnFijarRanchoIndependiente.classList.replace('text-brand-green', 'text-gray-400');
-                    alert('Rancho independiente desfijado.');
-                } else {
-                    const newPinnedRancho = {
-                        id: null,
-                        nombre: 'Trabajo Independiente',
-                        extra_data: { nombre_independiente: nombreIndependiente }
-                    };
-                    localStorage.setItem('pinnedRancho', JSON.stringify(newPinnedRancho));
-                    btnFijarRanchoIndependiente.classList.replace('text-gray-400', 'text-brand-green');
-                    alert(`Rancho independiente '${nombreIndependiente}' fijado.`);
-                }
-            };
-        }
-    } else {
-        // Lógica para ranchos registrados (el pin sigue fuera del input)
-        if (btnFijarPrincipal) btnFijarPrincipal.classList.remove('hidden');
-        if (btnFijarRanchoIndependiente) btnFijarRanchoIndependiente.classList.add('hidden'); // Oculta el pin del input
-
-        if (btnFijarPrincipal) {
-            const pinnedRancho = JSON.parse(localStorage.getItem('pinnedRancho') || 'null');
-            const isPinned = !esIndependiente && pinnedRancho && pinnedRancho.id === currentRancho?.id;
-
-            btnFijarPrincipal.classList.toggle('text-brand-green', isPinned);
-            btnFijarPrincipal.classList.toggle('text-gray-400', !isPinned);
-            btnFijarPrincipal.disabled = esIndependiente;
-
-            btnFijarPrincipal.onclick = () => {
-                const currentlyPinned = JSON.parse(localStorage.getItem('pinnedRancho') || 'null');
-                if (currentlyPinned && currentlyPinned.id === currentRancho?.id) {
-                    localStorage.removeItem('pinnedRancho');
-                    btnFijarPrincipal.classList.replace('text-brand-green', 'text-gray-400');
-                    alert('Rancho desfijado.');
-                } else {
-                    localStorage.setItem('pinnedRancho', JSON.stringify(currentRancho));
-                    btnFijarPrincipal.classList.replace('text-gray-400', 'text-brand-green');
-                    alert(`Rancho '${currentRancho.nombre}' fijado como predeterminado.`);
-                }
-            };
-        }
+        };
     }
-
+    
+    // Dibuja las nuevas tarjetas de acción
     const accionesContainer = document.getElementById('acciones-rapidas-container');
     if (accionesContainer) {
-        accionesContainer.innerHTML = '';
-        const colores = ['bg-teal-600', 'bg-sky-600', 'bg-lime-600', 'bg-amber-600', 'bg-indigo-600'];
-        const iconos = ['fa-syringe', 'fa-vial', 'fa-egg', 'fa-pills', 'fa-stethoscope'];
+        accionesContainer.innerHTML = ''; // Limpiamos
+        
+        const acciones = [
+            { id: 'palpacion', titulo: 'Palpación', icono: 'fa-stethoscope', color: 'bg-blue-100', textColor: 'text-blue-800' },
+            { id: 'inseminacion', titulo: 'Inseminación', icono: 'fa-syringe', color: 'bg-green-100', textColor: 'text-green-800' },
+            { id: 'medicamentos', titulo: 'Medicamentos', icono: 'fa-pills', color: 'bg-yellow-100', textColor: 'text-yellow-800' },
+            { id: 'transferencia', titulo: 'Otros', icono: 'fa-ellipsis', color: 'bg-gray-100', textColor: 'text-gray-800' }
+        ];
 
-        Object.keys(PROCEDIMIENTOS).forEach((key, index) => {
-            const proc = PROCEDIMIENTOS[key];
-            const button = document.createElement('button');
-            button.className = `text-left ${colores[index % colores.length]} text-white p-4 rounded-lg font-bold flex items-center shadow-lg`;
-            button.dataset.actividad = key;
-            button.innerHTML = `<i class="fa-solid ${iconos[index % iconos.length]} w-6 text-center mr-3"></i>${proc.titulo}`;
-            button.onclick = () => abrirModalActividad(key);
-            accionesContainer.appendChild(button);
+        acciones.forEach(accion => {
+            const card = document.createElement('button');
+            card.className = `p-4 rounded-2xl shadow-sm text-left flex flex-col justify-between h-28 ${accion.color}`;
+            card.onclick = () => abrirModalActividad(accion.id);
+            card.innerHTML = `
+                <i class="fa-solid ${accion.icono} text-2xl ${accion.textColor}"></i>
+                <span class="font-bold text-md ${accion.textColor}">${accion.titulo}</span>
+            `;
+            accionesContainer.appendChild(card);
         });
     }
-
+    
     renderizarHistorialMVZ();
 }
 
@@ -1175,68 +1135,49 @@ async function handleFinalizarYReportar() {
         if (!res.ok) throw new Error('No se pudo cargar el historial.');
         const sesiones = await res.json();
 
-        // Filtramos las sesiones que no tengan una fecha válida
-        const sesionesValidas = sesiones.filter(s => s.fecha);
-
-        if (!sesionesValidas || sesionesValidas.length === 0) {
-            historialContainer.innerHTML = '<p class="text-gray-500 text-center">No hay actividades recientes.</p>';
-        } else {
-                historialContainer.innerHTML = sesionesValidas.map(sesion => {
-    const ranchoNombre = sesion.rancho_nombre || 'No especificado';
-    const conteoAnimales = sesion.conteo || 0;
-    // CORRECCIÓN: Forzar la interpretación de la fecha como UTC.
-const fechaUTC = new Date(sesion.fecha + 'T00:00:00Z');
-const fecha = fechaUTC.toLocaleDateString('es-MX', {day: 'numeric', month: 'long', timeZone: 'UTC'});
-
-    return `
-      <div class="bg-gray-100 p-3 rounded-lg flex items-center justify-between">
-          <div class="flex items-center">
-              <input type="checkbox" data-sesion-id="${sesion.sesion_id}" class="h-5 w-5 rounded border-gray-300 mr-3">
-              <div>
-                  <p class="font-semibold text-gray-800">${sesion.tipo_actividad} en <em>${ranchoNombre}</em></p>
-                  <p class="text-xs text-gray-500">${conteoAnimales} animales - ${fecha}</p>
-              </div>
-          </div>
-          <button data-sesion-id="${sesion.sesion_id}" class="btn-eliminar-sesion text-red-400 hover:text-red-600 px-2">
-              <i class="fa-solid fa-trash-can"></i>
-          </button>
-      </div>
-    `;
-}).join('');
-            }
-            
-            // botón PDF: (quitamos listeners previos y añadimos uno nuevo)
-            const btnPdf = document.getElementById('btn-generar-pdf-historial');
-            if (btnPdf) {
-                btnPdf.replaceWith(btnPdf.cloneNode(true)); // remove all listeners simply
-                const nuevoBtnPdf = document.getElementById('btn-generar-pdf-historial');
-                if (nuevoBtnPdf) nuevoBtnPdf.addEventListener('click', handleGenerarPdfDeHistorial);
-            }
-            // --- LÓGICA AGREGADA PARA EL BOTÓN DE BORRAR ---
+        if (!sesiones || sesiones.length === 0) {
+            historialContainer.innerHTML = '<div class="bg-white p-4 rounded-xl text-center text-gray-500"><p>No hay reportes recientes.</p></div>';
+            return;
+        }
+        
+        historialContainer.innerHTML = sesiones.map(sesion => {
+            const fechaUTC = new Date(sesion.fecha + 'T00:00:00Z');
+            const fecha = fechaUTC.toLocaleDateString('es-MX', {day: 'numeric', month: 'long', timeZone: 'UTC'});
+            return `
+            <div class="bg-white p-3 rounded-xl shadow-sm flex items-center justify-between">
+                <div class="flex items-center">
+                    <input type="checkbox" data-sesion-id="${sesion.sesion_id}" class="h-6 w-6 rounded border-gray-300 mr-4">
+                    <div>
+                        <p class="font-bold text-gray-800">${sesion.tipo_actividad} en <em>${sesion.rancho_nombre}</em></p>
+                        <p class="text-sm text-gray-500">${sesion.conteo} animales - ${fecha}</p>
+                    </div>
+                </div>
+                <button data-sesion-id="${sesion.sesion_id}" class="btn-eliminar-sesion text-red-400 hover:text-red-600 px-2">
+                    <i class="fa-solid fa-trash-can"></i>
+                </button>
+            </div>
+            `;
+        }).join('');
+        
+        // Reconectar los botones de eliminar
         historialContainer.querySelectorAll('.btn-eliminar-sesion').forEach(button => {
             button.addEventListener('click', async (e) => {
                 const sesionId = e.currentTarget.dataset.sesionId;
-                if (!confirm('¿Estás seguro de que quieres eliminar esta sesión y todas sus actividades? Esta acción no se puede deshacer.')) {
-                    return;
-                }
-                
+                if (!confirm('¿Estás seguro de que quieres eliminar esta sesión?')) return;
                 try {
                     const deleteRes = await fetch(`/api/sesiones/${sesionId}`, { method: 'DELETE' });
                     if (!deleteRes.ok) throw new Error('No se pudo eliminar la sesión.');
-                    
-                    // Si se borra con éxito, recargamos la lista del historial
-                    renderizarHistorialMVZ();
-
+                    renderizarHistorialMVZ(); // Recarga la lista
                 } catch (error) {
                     alert(error.message || 'Error al eliminar la sesión.');
                 }
             });
         });
 
-        } catch (error) {
-            historialContainer.innerHTML = '<p class="text-red-500 text-center">Error al cargar historial.</p>';
-        }
+    } catch (error) {
+        historialContainer.innerHTML = '<p class="text-red-500 text-center">Error al cargar historial.</p>';
     }
+}
 
     async function handleGenerarPdfDeHistorial() {
         const checkboxes = document.querySelectorAll('#historial-actividades-mvz input[type="checkbox"]:checked');

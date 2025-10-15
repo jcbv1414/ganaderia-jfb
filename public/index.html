@@ -379,56 +379,59 @@
 </template>
     
     <!-- Actividades MVZ -->
-    <template id="template-actividades-mvz">
-        <div class="p-5">
-            <div id="modo-seleccion-container">
-                <header class="mb-6 text-center"><h1 class="text-2xl font-bold text-gray-800">Control Reproductivo</h1><p class="text-sm text-gray-500">¿Cómo quieres trabajar hoy?</p></header>
-                <div class="space-y-4"><button id="btn-show-rancho-registrado" class="w-full bg-brand-green text-white p-4 rounded-lg font-bold flex items-center justify-center text-lg"><i class="fa-solid fa-key mr-3"></i>Rancho Registrado</button><button id="btn-iniciar-independiente" class="w-full bg-gray-600 text-white p-4 rounded-lg font-bold flex items-center justify-center text-lg"><i class="fa-solid fa-user-ninja mr-3"></i>Modo Independiente</button></div>
-                <div id="rancho-access-container" class="hidden mt-4 bg-white p-4 rounded-xl shadow-md">
-                     <label for="codigo-rancho" class="block text-sm font-medium text-gray-700 mb-1">Código del Rancho</label>
-                    <div class="flex items-center space-x-2"><input type="text" id="codigo-rancho" placeholder="Ej: A1B2C3" class="w-full p-2 border border-gray-300 rounded-lg"><button id="btn-validar-rancho" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold">Acceder</button></div>
-                    <div id="mensaje-rancho" class="text-sm mt-2 h-4"></div>
-                </div>
-            </div>
-            <div id="rancho-actions-container" class="hidden">
-                <header class="mb-6">
-    <div class="flex justify-between items-center">
-        <div class="flex items-center space-x-3">
-             <img id="rancho-logo" src="assets/logo.png" class="w-12 h-12 rounded-lg object-cover bg-gray-200">
-            <div>
-                <h1 class="text-2xl font-bold text-gray-800" id="rancho-nombre-activo"></h1>
-                <p class="text-sm text-gray-500">Lote actual: <span id="lote-info" class="font-semibold">0 vacas</span></p>
-            </div>
+   <template id="template-actividades-mvz">
+    <div id="modo-seleccion-container" class="p-5">
+        <header class="mb-6 text-center">
+            <h1 class="text-2xl font-bold text-gray-800">Control Reproductivo</h1>
+            <p class="text-sm text-gray-500">¿Cómo quieres trabajar hoy?</p>
+        </header>
+        <div class="space-y-4">
+            <button id="btn-show-rancho-registrado" class="w-full bg-blue-800 text-white p-4 rounded-lg font-bold flex items-center justify-center text-lg"><i class="fa-solid fa-key mr-3"></i>Rancho Registrado</button>
+            <button id="btn-iniciar-independiente" class="w-full bg-gray-600 text-white p-4 rounded-lg font-bold flex items-center justify-center text-lg"><i class="fa-solid fa-user-ninja mr-3"></i>Modo Independiente</button>
         </div>
-        <button id="btn-fijar-rancho" title="Fijar este rancho como predeterminado" class="text-2xl text-gray-400 hover:text-brand-green"><i class="fa-solid fa-thumbtack"></i></button>
+        <div id="rancho-access-container" class="hidden mt-4 bg-white p-4 rounded-xl shadow-md">
+            <label for="codigo-rancho" class="block text-sm font-medium text-gray-700 mb-1">Código del Rancho</label>
+            <div class="flex items-center space-x-2">
+                <input type="text" id="codigo-rancho" placeholder="Ej: A1B2C3" class="w-full p-2 border border-gray-300 rounded-lg">
+                <button id="btn-validar-rancho" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold">Acceder</button>
+            </div>
+            <div id="mensaje-rancho" class="text-sm mt-2 h-4"></div>
+        </div>
     </div>
-</header>
-                <div id="rancho-independiente-input-container" class="relative hidden">
-    <label for="rancho-independiente-nombre" class="block text-sm font-medium text-gray-700">Nombre del Rancho Atendido:</label>
-    <div class="relative mt-1">
-        <input type="text" id="rancho-independiente-nombre" placeholder="Ej: Rancho 'El Amanecer'" class="w-full p-3 pr-10 border border-gray-300 rounded-lg">
-        <button id="btn-fijar-rancho-independiente" class="absolute inset-y-0 right-0 pr-3 flex items-center hidden" title="Fijar este rancho">
-            <i class="fa-solid fa-thumbtack text-gray-400"></i>
-        </button>
-    </div>
-</div>
 
-                <!-- contenedor de acciones rápidas (se agregó id esperado por main.js) -->
-                <div id="acciones-rapidas-container" class="space-y-3">
-                    <h3 class="font-semibold text-gray-600">Acciones Rápidas</h3>
-                    <!-- botones se crean dinámicamente desde main.js -->
-                </div>
-
-                <div class="mt-8">
-                    <h3 class="font-semibold text-gray-600 mb-3">Documentos y Reportes</h3>
-                    <div id="historial-actividades-mvz" class="bg-white p-4 rounded-lg shadow-inner max-h-60 overflow-y-auto space-y-2">
-                         <p class="text-gray-500 text-center">No hay actividades recientes.</p>
+    <div id="rancho-actions-container" class="hidden">
+        <div class="p-5" style="background-color: #203a43;">
+            <header class="flex justify-between items-center">
+                <div class="flex items-center space-x-3">
+                    <img id="rancho-logo" src="assets/logo.png" class="w-12 h-12 rounded-lg object-cover bg-gray-200">
+                    <div>
+                        <h1 class="text-2xl font-bold text-white" id="rancho-nombre-activo"></h1>
+                        <p class="text-sm text-white/70">Lote actual: <span id="lote-info" class="font-semibold">0 vacas</span></p>
                     </div>
-                    <button id="btn-generar-pdf-historial" class="mt-4 w-full bg-green-700 text-white p-3 rounded-lg font-bold flex items-center justify-center"><i class="fa-solid fa-file-pdf mr-3"></i>Generar Reporte PDF</button>
                 </div>
+                <button id="btn-fijar-rancho" title="Fijar este rancho" class="text-2xl text-white/50 hover:text-white"><i class="fa-solid fa-thumbtack"></i></button>
+            </header>
+            <div id="rancho-independiente-input-container" class="relative hidden mt-4">
+                <input type="text" id="rancho-independiente-nombre" placeholder="Nombre del Rancho Atendido..." class="w-full bg-white/10 text-white placeholder-white/50 p-3 pr-10 border border-white/20 rounded-lg">
             </div>
         </div>
-    </template>
+
+        <div class="p-5 space-y-6">
+            <section>
+                <h2 class="text-lg font-bold text-gray-800 mb-3">Acciones Principales</h2>
+                <div id="acciones-rapidas-container" class="grid grid-cols-2 gap-4">
+                    </div>
+            </section>
+
+            <section>
+                <h2 class="text-lg font-bold text-gray-800 mb-3">Historial de Reportes</h2>
+                <div id="historial-actividades-mvz" class="space-y-3">
+                    </div>
+                <button id="btn-generar-pdf-historial" class="mt-4 w-full bg-gray-800 text-white p-3 rounded-lg font-bold flex items-center justify-center"><i class="fa-solid fa-file-pdf mr-3"></i>Generar PDF de Seleccionados</button>
+            </section>
+        </div>
+    </div>
+</template>
     
     <template id="template-mis-ranchos-mvz"><h1 class="text-center p-8 text-2xl">Mis Ranchos (en construcción)</h1></template>
     <template id="template-estadisticas-mvz"><h1 class="text-center p-8 text-2xl">Estadísticas MVZ (en construcción)</h1></template>
