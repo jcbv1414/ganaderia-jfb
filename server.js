@@ -623,6 +623,41 @@ app.get('/api/rancho/:ranchoId/estadisticas', async (req, res) => {
     res.json(stats);
   } catch (err) { handleServerError(res, err); }
 });
+// ================== DATOS PARA EL DASHBOARD DEL PROPIETARIO ==================
+
+// Endpoint para obtener las actividades más recientes de un rancho
+app.get('/api/rancho/:ranchoId/actividades-recientes', async (req, res) => {
+    try {
+        const { ranchoId } = req.params;
+        const { data, error } = await supabase
+            .from('actividades')
+            .select('*, usuarios (nombre)') // Pedimos también el nombre del MVZ
+            .eq('extra_data->>rancho_id', ranchoId) // Busca dentro del campo JSON
+            .order('created_at', { ascending: false }) // Las más nuevas primero
+            .limit(3); // Solo trae las últimas 3
+
+        if (error) throw error;
+        res.json(data || []);
+    } catch (err) { handleServerError(res, err); }
+});
+
+// Endpoint para obtener los próximos eventos de un rancho
+app.get('/api/rancho/:ranchoId/eventos-proximos', async (req, res) => {
+    try {
+        const { ranchoId } = req.params;
+        const { data, error } = await supabase
+            .from('eventos')
+            .select('*')
+            .eq('rancho_id', ranchoId) // Filtra por el ID del rancho
+            .eq('completado', false) // Solo eventos no completados
+            .gte('fecha_evento', new Date().toISOString()) // Solo eventos futuros
+            .order('fecha_evento', { ascending: true }) // Los más cercanos primero
+            .limit(3); // Solo trae los próximos 3
+
+        if (error) throw error;
+        res.json(data || []);
+    } catch (err) { handleServerError(res, err); }
+});
 
 // ✅ FEATURE 5: Endpoint para datos del dashboard del MVZ
 app.get('/api/dashboard/mvz/:mvzId', async (req, res) => {
