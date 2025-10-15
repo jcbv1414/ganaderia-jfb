@@ -464,26 +464,36 @@ app.get('/api/actividades/mvz/:mvzId', async (req, res) => {
 // En server.js, reemplaza el endpoint de PDF con este:
 
 app.post('/api/historial/pdf', async (req, res) => {
-  try {
-    const { sesion_ids, mvzNombre } = req.body || {};
-    if (!Array.isArray(sesion_ids) || sesion_ids.length === 0) {
-      return res.status(400).json({ message: 'Parámetros inválidos.' });
-    }
+    console.log('---[HISTORIAL-INSPECTOR] Solicitud para generar PDF de historial recibida ---');
+    try {
+        const { sesion_ids, mvzNombre } = req.body || {};
+        if (!Array.isArray(sesion_ids) || sesion_ids.length === 0) {
+            console.error('[HISTORIAL-INSPECTOR] Error: No se recibieron IDs de sesión.');
+            return res.status(400).json({ message: 'Parámetros inválidos.' });
+        }
+        console.log('[HISTORIAL-INSPECTOR] Buscando actividades para las sesiones:', sesion_ids);
 
-    const { data: actividades, error } = await supabase
-      .from('actividades')
-      .select('*')
-      .in('sesion_id', sesion_ids)
-      .order('fecha_actividad', { ascending: false });
+        const { data: actividades, error } = await supabase
+            .from('actividades')
+            .select('*')
+            .in('sesion_id', sesion_ids)
+            .order('fecha_actividad', { ascending: false });
 
-    if (error) throw error;
-    if (!actividades || !actividades.length) {
-      return res.status(404).json({ message: 'No se encontraron actividades.' });
-    }
-    
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="reporte_historial_${Date.now()}.pdf"`);
-    
+        if (error) {
+            console.error('[HISTORIAL-INSPECTOR] ¡Error de Supabase al buscar actividades!', error);
+            throw error;
+        }
+        if (!actividades || !actividades.length) {
+            console.warn('[HISTORIAL-INSPECTOR] No se encontraron actividades para estas sesiones.');
+            return res.status(404).json({ message: 'No se encontraron actividades.' });
+        }
+        console.log(`[HISTORIAL-INSPECTOR] Se encontraron ${actividades.length} actividades. Iniciando creación de PDF.`);
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="reporte_historial_${Date.now()}.pdf"`);
+        
+        const doc = new PDFDocument({ size: 'LETTER', margin: 40 });
+        doc.pipe(res);
     // --- CORRECCIÓN DEL LOGO ---
     try {
     const logoPath = path.join(__dirname, 'public', 'assets', 'logo.png');
@@ -572,11 +582,17 @@ app.post('/api/historial/pdf', async (req, res) => {
     }
 });
 
-    doc.end();
+     console.log('[HISTORIAL-INSPECTOR] PDF de historial creado y enviado correctamente.');
+        doc.end();
 
-  } catch (err) {
-    handleServerError(res, err);
-  }
+    } catch (err) {
+        console.error('---[HISTORIAL-INSPECTOR] ¡CRASH! El proceso falló. Causa del error: ---');
+        console.error(err);
+        // Evitamos enviar una respuesta de error si el PDF ya empezó a enviarse
+        if (!res.headersSent) {
+            res.status(500).json({ message: 'Hubo un error inesperado al generar el reporte.' });
+        }
+    }
 });
 
 app.get('/api/eventos/mvz/:mvzId', async (req, res) => {
