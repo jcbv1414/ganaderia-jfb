@@ -611,11 +611,14 @@ app.get('/api/eventos/mvz/:mvzId', async (req, res) => {
 
 // ================== ESTADÍSTICAS ==================
 app.get('/api/rancho/:ranchoId/estadisticas', async (req, res) => {
+    console.log(`---[INSPECTOR ESTADÍSTICAS] Iniciando para ranchoId: ${req.params.ranchoId} ---`);
     try {
         const { ranchoId } = req.params;
-        if (!ranchoId) return res.status(400).json({ message: 'ranchoId requerido.' });
+        if (!ranchoId) {
+            console.error('[INSPECTOR ESTADÍSTICAS] No se recibió ranchoId.');
+            return res.status(400).json({ message: 'ranchoId requerido.' });
+        }
 
-        // 1. Obtenemos todas las vacas del rancho
         const { data: vacas, error: vacasError } = await supabase
             .from('vacas')
             .select('id, lote, raza')
@@ -623,17 +626,26 @@ app.get('/api/rancho/:ranchoId/estadisticas', async (req, res) => {
         if (vacasError) throw vacasError;
 
         if (!vacas || vacas.length === 0) {
-            return res.json({}); // Si no hay vacas, devuelve un objeto vacío
+            console.log('[INSPECTOR ESTADÍSTICAS] No se encontraron vacas. Proceso finalizado.');
+            return res.json({});
         }
+        console.log(`[INSPECTOR ESTADÍSTICAS] Se encontraron ${vacas.length} vacas. Llamando al "chef experto" (RPC)...`);
 
-        // 2. Usamos nuestra función especial para obtener solo la ÚLTIMA palpación de cada vaca
         const cowIds = vacas.map(v => v.id);
         const { data: ultimasPalpaciones, error: rpcError } = await supabase
             .rpc('get_latest_palpacion_for_cows', { cow_ids: cowIds });
+
+        // ----- ESTA ES LA PARTE MÁS IMPORTANTE -----
         if (rpcError) {
-             console.error("Error en la función RPC get_latest_palpacion_for_cows:", rpcError);
-             throw rpcError;
+            console.error('---[INSPECTOR ESTADÍSTICAS] ¡CRASH! La llamada al chef (RPC) falló. Causa del error: ---');
+            // Imprime el error completo y formateado para que sea fácil de leer
+            console.error(JSON.stringify(rpcError, null, 2)); 
+            throw rpcError; // Lanza el error para que se detenga el proceso
         }
+        // -----------------------------------------
+        
+        console.log('[INSPECTOR ESTADÍSTICAS] El chef respondió. Procesando estadísticas...');
+        
 
         // 3. Creamos un "mapa" para acceder fácilmente al último estado de cada vaca
         const estadoMap = new Map();
@@ -667,9 +679,10 @@ app.get('/api/rancho/:ranchoId/estadisticas', async (req, res) => {
             return acc;
         }, {});
 
-        res.json(stats);
-
-    } catch (err) { handleServerError(res, err); }
+         } catch (err) {
+        console.error('---[INSPECTOR ESTADÍSTICAS] Error final en el bloque catch: ---', err.message);
+        handleServerError(res, err);
+    }
 });
 // ================== DATOS PARA EL DASHBOARD DEL PROPIETARIO ==================
 app.get('/api/rancho/:ranchoId/actividades-recientes', async (req, res) => {
