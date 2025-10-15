@@ -1813,9 +1813,12 @@ async function inicializarCalendarioVisual() {
             headerToolbar: { left: 'prev', center: 'title', right: 'next' },
             events: eventosParaCalendario,
             eventClick: function(info) {
-                const eventoOriginal = eventos.find(e => e.id == info.event.id);
-                if (eventoOriginal) handleEditarEvento(eventoOriginal);
-            }
+    // Al hacer clic en un evento, ahora muestra la nueva tarjeta de detalles
+    const eventoOriginal = eventos.find(e => e.id == info.event.id);
+    if (eventoOriginal) {
+        mostrarDetalleEvento(eventoOriginal);
+    }
+}
         });
 
         calendario.render();
@@ -2096,6 +2099,46 @@ async function inicializarCalendarioPropietario() {
         console.error("Error al inicializar calendario del propietario:", error);
         container.innerHTML = '<p class="text-red-500">No se pudo cargar el calendario.</p>';
     }
+}
+// =================================================================
+// FUNCIÓN PARA MOSTRAR LA TARJETA DE DETALLE DEL EVENTO
+// =================================================================
+function mostrarDetalleEvento(evento) {
+    const modal = document.getElementById('modal-detalle-evento');
+    if (!modal) return;
+
+    // Llenar los datos de la tarjeta
+    document.getElementById('detalle-evento-titulo').textContent = evento.titulo;
+
+    const fecha = new Date(evento.fecha_evento);
+    document.getElementById('detalle-evento-fecha').innerHTML = `<i class="fa-solid fa-clock w-5 text-center mr-1 text-gray-400"></i> ${fecha.toLocaleString('es-MX', { dateStyle: 'full', timeStyle: 'short' })}`;
+
+    const rancho = evento.nombre_rancho_texto || evento.ranchos?.nombre || 'General';
+    document.getElementById('detalle-evento-rancho').innerHTML = `<i class="fa-solid fa-house-medical w-5 text-center mr-1 text-gray-400"></i> Rancho: ${rancho}`;
+
+    const descripcionEl = document.getElementById('detalle-evento-descripcion');
+    if (evento.descripcion) {
+        descripcionEl.textContent = evento.descripcion;
+        descripcionEl.classList.remove('hidden');
+    } else {
+        descripcionEl.classList.add('hidden');
+    }
+
+    // Conectar los botones de la tarjeta
+    document.getElementById('btn-cerrar-detalle-evento').onclick = () => modal.classList.add('hidden');
+    document.getElementById('btn-eliminar-detalle-evento').onclick = () => {
+        modal.classList.add('hidden');
+        handleEliminarEvento(evento.id);
+    };
+    document.getElementById('btn-editar-detalle-evento').onclick = () => {
+        modal.classList.add('hidden');
+
+        // Reutilizamos la función que ya teníamos para editar
+        handleEditarEvento(evento); 
+    };
+
+    // Mostrar la tarjeta
+    modal.classList.remove('hidden');
 }
     initApp();
 });
