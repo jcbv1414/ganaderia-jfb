@@ -234,7 +234,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // =================================================================
    async function cargarDashboardMVZ() {
     // --- INICIO DE LA CORRECCIÓN ---
-    // Actualiza el saludo, la fecha y LA FOTO DE PERFIL
+    // Actualiza el saludo, la fecha y LA FOTO DE PERFIL del MVZ
     const nombreEl = document.getElementById('dash-nombre-mvz');
     if (nombreEl) nombreEl.textContent = currentUser.nombre.split(' ')[0];
     
