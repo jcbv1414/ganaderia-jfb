@@ -233,12 +233,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // LÓGICA DEL MVZ
     // =================================================================
    async function cargarDashboardMVZ() {
-    // Verificamos si los elementos del encabezado existen antes de modificarlos
+    // --- INICIO DE LA CORRECCIÓN ---
+    // Actualiza el saludo, la fecha y LA FOTO DE PERFIL
     const nombreEl = document.getElementById('dash-nombre-mvz');
-    if (nombreEl) nombreEl.textContent = currentUser?.nombre?.split(' ')[0] || '';
+    if (nombreEl) nombreEl.textContent = currentUser.nombre.split(' ')[0];
     
     const fechaEl = document.getElementById('dash-fecha-actual-mvz');
     if (fechaEl) fechaEl.textContent = new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
+
+    const avatarEl = document.getElementById('dash-mvz-avatar');
+    if (avatarEl) avatarEl.src = currentUser.avatar_url || 'assets/avatar_mvz_default.png';
+    // --- FIN DE LA CORRECCIÓN ---
 
     try {
         // Cargar datos del resumen diario desde el servidor
