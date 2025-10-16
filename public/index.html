@@ -156,38 +156,36 @@
         </div>
     </template>
 
-   <template id="template-inicio-propietario">
-    <div style="background-color: #203a43;" class="text-white p-5">
+  <template id="template-inicio-propietario">
+    <div class="p-5" style="background-color: #203a43;">
         <header class="flex justify-between items-start mb-6">
-    <div>
-        <h1 class="text-2xl font-bold">¡Bienvenido, <span id="dash-nombre-propietario"></span>!</h1>
-        <p class="text-sm opacity-80" id="dash-rancho-nombre">Cargando rancho...</p>
-        <p class="text-sm opacity-80" id="dash-fecha-actual"></p>
-    </div>
-    <div class="flex items-center space-x-4">
-        <button id="btn-perfil-propietario" class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center overflow-hidden">
-            <img id="dash-propietario-avatar" src="assets/logo.png" alt="Avatar" class="w-full h-full object-cover">
-        </button>
-        <button id="btn-logout-propietario" title="Salir" class="text-2xl text-white hover:opacity-70">
-            <i class="fa-solid fa-right-from-bracket"></i>
-        </button>
-    </div>
-</header>
-         </div>
+            <div>
+                <h1 class="text-2xl font-bold text-white">¡Bienvenido, <span id="dash-nombre-propietario"></span>!</h1>
+                <p class="text-sm text-white/80" id="dash-rancho-nombre">Cargando rancho...</p>
+                <p class="text-sm text-white/80" id="dash-fecha-actual"></p>
+            </div>
+            <div class="flex items-center space-x-4">
+                <button id="btn-perfil-propietario" class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center overflow-hidden">
+                    <img id="dash-propietario-avatar" src="assets/logo.png" alt="Avatar" class="w-full h-full object-cover">
+                </button>
+                <button id="btn-logout-propietario" title="Salir" class="text-2xl text-white hover:opacity-70">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                </button>
+            </div>
         </header>
-        
-        <div class="grid grid-cols-3 gap-3 text-center text-brand-green">
-            <div class="bg-white p-3 rounded-xl shadow-lg">
+
+        <div class="grid grid-cols-3 gap-3 text-center text-white">
+            <div class="bg-white/20 p-3 rounded-xl backdrop-blur-sm">
                 <p class="text-3xl font-bold" id="resumen-total-vacas">--</p>
-                <p class="text-xs font-semibold mt-1 opacity-70">Animales</p>
+                <p class="text-xs font-semibold mt-1 opacity-90">Animales</p>
             </div>
-            <div class="bg-white p-3 rounded-xl shadow-lg">
+            <div class="bg-white/20 p-3 rounded-xl backdrop-blur-sm">
                 <p class="text-3xl font-bold" id="resumen-vacas-gestantes">--</p>
-                <p class="text-xs font-semibold mt-1 opacity-70">Gestantes</p>
+                <p class="text-xs font-semibold mt-1 opacity-90">Gestantes</p>
             </div>
-            <div class="bg-white p-3 rounded-xl shadow-lg">
-                <p class="text-3xl font-bold text-red-500" id="resumen-alertas">--</p>
-                <p class="text-xs font-semibold mt-1 opacity-70">Alertas</p>
+            <div class="bg-white/20 p-3 rounded-xl backdrop-blur-sm">
+                <p class="text-3xl font-bold" id="resumen-alertas">--</p>
+                <p class="text-xs font-semibold mt-1 opacity-90">Alertas</p>
             </div>
         </div>
     </div>
