@@ -38,6 +38,24 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 document.getElementById('form-registro').addEventListener('submit', handleRegister);
                 document.getElementById('link-a-login').addEventListener('click', (ev) => { ev.preventDefault(); navigateTo('login'); });
+            
+                const rolSelector = document.getElementById('registro-rol');
+    const ranchoField = document.getElementById('campo-rancho');
+    if (rolSelector && ranchoField) {
+        // Función para mostrar u ocultar el campo
+        const toggleRanchoField = () => {
+            if (rolSelector.value === 'propietario') {
+                ranchoField.style.display = 'block';
+            } else {
+                ranchoField.style.display = 'none';
+            }
+        };
+            toggleRanchoField();
+
+        // Añade el "escuchador" para que cambie en tiempo real
+        rolSelector.addEventListener('change', toggleRanchoField);
+    }
+            
             }
         }else if (viewId === 'inicio-propietario') {
     document.getElementById('dash-nombre-propietario').textContent = currentUser?.nombre?.split(' ')[0] || '';
