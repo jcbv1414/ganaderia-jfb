@@ -865,6 +865,48 @@ app.delete('/api/eventos/:eventoId', async (req, res) => {
 
     } catch (err) { handleServerError(res, err); }
 });
+// ================== RUTAS PARA AJUSTES DE USUARIO ==================
+
+// Endpoint para ACTUALIZAR el perfil de un usuario (propietario o mvz)
+app.put('/api/usuarios/:usuarioId', async (req, res) => {
+    try {
+        const { usuarioId } = req.params;
+        const { nombre, info_profesional } = req.body; // info_profesional será para el MVZ
+
+        const updatePayload = {};
+        if (nombre) updatePayload.nombre = nombre;
+        if (info_profesional) updatePayload.info_profesional = info_profesional;
+
+        const { data, error } = await supabase
+            .from('usuarios')
+            .update(updatePayload)
+            .eq('id', usuarioId)
+            .select()
+            .single();
+
+        if (error) throw error;
+        res.json({ success: true, message: 'Perfil actualizado', usuario: data });
+    } catch (err) { handleServerError(res, err); }
+});
+
+// Endpoint para ACTUALIZAR el nombre de un rancho
+app.put('/api/ranchos/:ranchoId', async (req, res) => {
+    try {
+        const { ranchoId } = req.params;
+        const { nombre } = req.body;
+        if (!nombre) return res.status(400).json({ message: 'El nombre del rancho es requerido.' });
+
+        const { data, error } = await supabase
+            .from('ranchos')
+            .update({ nombre })
+            .eq('id', ranchoId)
+            .select()
+            .single();
+            
+        if (error) throw error;
+        res.json({ success: true, message: 'Rancho actualizado', rancho: data });
+    } catch (err) { handleServerError(res, err); }
+});
 // ================== INICIO DEL SERVIDOR ==================
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);

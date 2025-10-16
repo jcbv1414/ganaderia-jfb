@@ -70,6 +70,8 @@ document.addEventListener('DOMContentLoaded', () => {
             renderizarVistaMiMvz();
         } else if (viewId === 'estadisticas') {
             renderizarVistaEstadisticas();
+          } else if (viewId === 'ajustes') { // <-- ESTE ES EL QUE CAMBIAMOS
+    renderizarVistaAjustesPropietario();  
         } else if (viewId === 'calendario-propietario') { // <-- AÑADE ESTE BLOQUE
     renderizarVistaCalendarioPropietario();   
         } else if (viewId === 'inicio-mvz') {
@@ -2220,6 +2222,72 @@ function mostrarDetalleEvento(evento) {
 
     // Mostrar la tarjeta
     modal.classList.remove('hidden');
+}
+// =================================================================
+// LÓGICA PARA LA PANTALLA DE AJUSTES DEL PROPIETARIO
+// =================================================================
+
+function renderizarVistaAjustesPropietario() {
+    // 1. Cargar los datos actuales en los campos del formulario
+    const nombreInput = document.getElementById('ajustes-nombre-propietario');
+    const emailInput = document.getElementById('ajustes-email-propietario');
+    const ranchoInput = document.getElementById('ajustes-rancho-nombre');
+
+    if (nombreInput) nombreInput.value = currentUser.nombre || '';
+    if (emailInput) emailInput.value = currentUser.email || '';
+    if (ranchoInput && currentUser.ranchos?.[0]) {
+        ranchoInput.value = currentUser.ranchos[0].nombre || '';
+    }
+
+    // 2. Conectar los botones
+    const btnGuardar = document.getElementById('btn-guardar-ajustes-propietario');
+    const btnLogout = document.getElementById('btn-logout-ajustes');
+
+    if (btnGuardar) btnGuardar.onclick = handleGuardarAjustesPropietario;
+    if (btnLogout) btnLogout.onclick = logout;
+}
+
+async function handleGuardarAjustesPropietario() {
+    const btnGuardar = document.getElementById('btn-guardar-ajustes-propietario');
+    btnGuardar.disabled = true;
+    btnGuardar.textContent = 'Guardando...';
+
+    const nuevoNombre = document.getElementById('ajustes-nombre-propietario').value;
+    const nuevoNombreRancho = document.getElementById('ajustes-rancho-nombre').value;
+
+    try {
+        // Actualizar el nombre del usuario
+        const resUser = await fetch(`/api/usuarios/${currentUser.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nombre: nuevoNombre })
+        });
+        if (!resUser.ok) throw new Error('No se pudo actualizar el perfil.');
+        const { usuario: usuarioActualizado } = await resUser.json();
+
+        // Actualizar el nombre del rancho
+        const ranchoId = currentUser.ranchos?.[0]?.id;
+        const resRancho = await fetch(`/api/ranchos/${ranchoId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nombre: nuevoNombreRancho })
+        });
+        if (!resRancho.ok) throw new Error('No se pudo actualizar el rancho.');
+        const { rancho: ranchoActualizado } = await resRancho.json();
+
+        // Actualizar la información local para que se refleje en toda la app
+        currentUser.nombre = usuarioActualizado.nombre;
+        currentUser.ranchos[0].nombre = ranchoActualizado.nombre;
+        sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
+
+        mostrarMensaje('ajustes-mensaje', '¡Cambios guardados con éxito!', false);
+
+    } catch (error) {
+        mostrarMensaje('ajustes-mensaje', error.message, true);
+    } finally {
+        btnGuardar.disabled = false;
+        btnGuardar.textContent = 'Guardar Cambios';
+    }
 }
     initApp();
 });

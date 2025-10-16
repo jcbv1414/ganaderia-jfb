@@ -318,7 +318,31 @@
                 </div>
             </div>
 
+            <div class="bg-white p-4 rounded-xl shadow-md">
+                <h2 class="font-bold text-lg mb-3">Seguridad</h2>
+                <div>
+                    <label class="text-sm font-medium text-gray-600">Cambiar Contraseña</label>
+                    <button id="btn-cambiar-password" class="w-full mt-1 text-left p-3 border rounded-lg text-blue-600 font-semibold bg-blue-50 hover:bg-blue-100">
+                        Actualizar mi contraseña
+                    </button>
+                </div>
+            </div>
+            
+            <div class="bg-white p-4 rounded-xl shadow-md">
+                <h2 class="font-bold text-lg mb-3">Suscripción</h2>
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600">Plan Actual</p>
+                        <p class="font-bold">Plan Básico</p>
+                    </div>
+                    <button class="bg-gray-200 text-gray-500 font-semibold py-2 px-4 rounded-lg cursor-not-allowed">Administrar</button>
+                </div>
+            </div>
+
             <button id="btn-guardar-ajustes-propietario" class="w-full bg-brand-green text-white font-semibold py-3 rounded-lg">Guardar Cambios</button>
+            <div id="ajustes-mensaje" class="text-center h-4 mt-2"></div>
+            
+            <button id="btn-logout-ajustes" class="w-full bg-red-50 text-red-600 font-semibold py-3 rounded-lg mt-4">Cerrar Sesión</button>
         </div>
     </div>
 </template>
