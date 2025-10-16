@@ -311,12 +311,24 @@
             </div>
 
             <div class="bg-white p-4 rounded-xl shadow-md">
-                <h2 class="font-bold text-lg mb-3">Mi Rancho</h2>
-                <div>
-                    <label class="text-sm font-medium text-gray-600">Nombre del Rancho</label>
-                    <input type="text" id="ajustes-rancho-nombre" class="w-full mt-1 p-2 border rounded-lg">
-                </div>
+    <h2 class="font-bold text-lg mb-3">Mi Rancho</h2>
+    <div class="space-y-3">
+        <div>
+            <label class="text-sm font-medium text-gray-600">Nombre del Rancho</label>
+            <input type="text" id="ajustes-rancho-nombre" class="w-full mt-1 p-2 border rounded-lg">
+        </div>
+        <div>
+            <label class="text-sm font-medium text-gray-600">Logo/Foto del Rancho</label>
+            <div class="mt-1 flex items-center space-x-4">
+                <img id="ajustes-rancho-logo-preview" src="assets/logo.png" alt="Logo del Rancho" class="w-20 h-20 object-cover rounded-lg border border-gray-300">
+                <input type="file" id="ajustes-rancho-logo-input" accept="image/*" class="hidden">
+                <button type="button" id="btn-seleccionar-logo" class="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-600">
+                    Seleccionar Imagen
+                </button>
             </div>
+        </div>
+    </div>
+</div>
 
             <div class="bg-white p-4 rounded-xl shadow-md">
                 <h2 class="font-bold text-lg mb-3">Seguridad</h2>

@@ -2226,25 +2226,50 @@ function mostrarDetalleEvento(evento) {
 // =================================================================
 // LÓGICA PARA LA PANTALLA DE AJUSTES DEL PROPIETARIO
 // =================================================================
+let selectedRanchoLogoFile = null; // Variable para guardar el archivo de imagen seleccionado
 
 function renderizarVistaAjustesPropietario() {
     // 1. Cargar los datos actuales en los campos del formulario
     const nombreInput = document.getElementById('ajustes-nombre-propietario');
     const emailInput = document.getElementById('ajustes-email-propietario');
     const ranchoInput = document.getElementById('ajustes-rancho-nombre');
+    const ranchoLogoPreview = document.getElementById('ajustes-rancho-logo-preview');
+    const ranchoLogoInput = document.getElementById('ajustes-rancho-logo-input');
+    const btnSeleccionarLogo = document.getElementById('btn-seleccionar-logo');
 
     if (nombreInput) nombreInput.value = currentUser.nombre || '';
     if (emailInput) emailInput.value = currentUser.email || '';
     if (ranchoInput && currentUser.ranchos?.[0]) {
         ranchoInput.value = currentUser.ranchos[0].nombre || '';
     }
+    if (ranchoLogoPreview && currentUser.ranchos?.[0]?.logo_url) {
+        ranchoLogoPreview.src = currentUser.ranchos[0].logo_url;
+    }
 
-    // 2. Conectar los botones
+    // 2. Conectar los eventos para la subida de logo
+    if (btnSeleccionarLogo && ranchoLogoInput) {
+        btnSeleccionarLogo.onclick = () => ranchoLogoInput.click(); // Al hacer clic en el botón, activa el input de archivo
+        ranchoLogoInput.onchange = (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                selectedRanchoLogoFile = file; // Guardar el archivo seleccionado
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    if (ranchoLogoPreview) ranchoLogoPreview.src = e.target.result; // Previsualizar la imagen
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+    }
+
+    // 3. Conectar los botones de guardar y cerrar sesión
     const btnGuardar = document.getElementById('btn-guardar-ajustes-propietario');
     const btnLogout = document.getElementById('btn-logout-ajustes');
+    const btnCambiarPassword = document.getElementById('btn-cambiar-password'); // Asumiendo que ya lo tienes del template anterior
 
     if (btnGuardar) btnGuardar.onclick = handleGuardarAjustesPropietario;
     if (btnLogout) btnLogout.onclick = logout;
+    if (btnCambiarPassword) btnCambiarPassword.onclick = () => mostrarAlerta('info', 'Funcionalidad de cambio de contraseña', 'Esta funcionalidad aún no está implementada. ¡Pronto estará disponible!'); // Placeholder
 }
 
 async function handleGuardarAjustesPropietario() {
@@ -2254,35 +2279,68 @@ async function handleGuardarAjustesPropietario() {
 
     const nuevoNombre = document.getElementById('ajustes-nombre-propietario').value;
     const nuevoNombreRancho = document.getElementById('ajustes-rancho-nombre').value;
+    const ranchoId = currentUser.ranchos?.[0]?.id;
 
     try {
-        // Actualizar el nombre del usuario
-        const resUser = await fetch(`/api/usuarios/${currentUser.id}`, {
+        // Promesas para todas las actualizaciones
+        const updates = [];
+
+        // 1. Actualizar el nombre del usuario
+        updates.push(fetch(`/api/usuarios/${currentUser.id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ nombre: nuevoNombre })
-        });
-        if (!resUser.ok) throw new Error('No se pudo actualizar el perfil.');
-        const { usuario: usuarioActualizado } = await resUser.json();
+        }).then(res => {
+            if (!res.ok) throw new Error('No se pudo actualizar el perfil.');
+            return res.json();
+        }));
 
-        // Actualizar el nombre del rancho
-        const ranchoId = currentUser.ranchos?.[0]?.id;
-        const resRancho = await fetch(`/api/ranchos/${ranchoId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nombre: nuevoNombreRancho })
-        });
-        if (!resRancho.ok) throw new Error('No se pudo actualizar el rancho.');
-        const { rancho: ranchoActualizado } = await resRancho.json();
+        // 2. Actualizar el nombre del rancho
+        if (ranchoId) {
+            updates.push(fetch(`/api/ranchos/${ranchoId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nombre: nuevoNombreRancho })
+            }).then(res => {
+                if (!res.ok) throw new Error('No se pudo actualizar el rancho.');
+                return res.json();
+            }));
+        }
 
-        // Actualizar la información local para que se refleje en toda la app
-        currentUser.nombre = usuarioActualizado.nombre;
-        currentUser.ranchos[0].nombre = ranchoActualizado.nombre;
+        // 3. Subir y actualizar el logo del rancho (si se seleccionó un nuevo archivo)
+        if (selectedRanchoLogoFile && ranchoId) {
+            const formData = new FormData();
+            formData.append('logo', selectedRanchoLogoFile);
+
+            updates.push(fetch(`/api/ranchos/${ranchoId}/upload-logo`, {
+                method: 'POST',
+                body: formData // No Content-Type cuando usas FormData, el navegador lo añade
+            }).then(res => {
+                if (!res.ok) throw new Error('No se pudo subir el logo.');
+                return res.json();
+            }).then(data => {
+                currentUser.ranchos[0].logo_url = data.logo_url; // Actualizar URL en currentUser
+            }));
+        }
+
+        // Esperar a que todas las actualizaciones se completen
+        const results = await Promise.all(updates);
+
+        // Actualizar la información local del currentUser si es necesario (ya se hizo para logo_url)
+        const usuarioActualizado = results.find(r => r.usuario)?.usuario;
+        const ranchoActualizado = results.find(r => r.rancho)?.rancho;
+
+        if (usuarioActualizado) currentUser.nombre = usuarioActualizado.nombre;
+        if (ranchoActualizado) currentUser.ranchos[0].nombre = ranchoActualizado.nombre;
         sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
+
+        // Limpiar el archivo seleccionado después de subirlo
+        selectedRanchoLogoFile = null;
 
         mostrarMensaje('ajustes-mensaje', '¡Cambios guardados con éxito!', false);
 
     } catch (error) {
+        console.error("Error al guardar ajustes:", error);
         mostrarMensaje('ajustes-mensaje', error.message, true);
     } finally {
         btnGuardar.disabled = false;

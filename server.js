@@ -1,5 +1,6 @@
 // server.js - Versión Limpia
 const express = require('express');
+const multer = require('multer'); // <--- Añadir esto
 const cors = require('cors');
 const path = require('path');
 const PDFDocument = require('pdfkit');
@@ -905,6 +906,46 @@ app.put('/api/ranchos/:ranchoId', async (req, res) => {
             
         if (error) throw error;
         res.json({ success: true, message: 'Rancho actualizado', rancho: data });
+    } catch (err) { handleServerError(res, err); }
+});
+// Endpoint para SUBIR y actualizar el logo del rancho
+app.post('/api/ranchos/:ranchoId/upload-logo', upload.single('logo'), async (req, res) => {
+    try {
+        const { ranchoId } = req.params;
+        if (!req.file) return res.status(400).json({ message: 'No se envió ningún archivo.' });
+
+        const file = req.file;
+        const filePath = `logos/${ranchoId}/${Date.now()}_${file.originalname}`;
+
+        // Subir a Supabase Storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('ranchos_logos') // Asegúrate de que este bucket exista en Supabase Storage
+            .upload(filePath, file.buffer, {
+                contentType: file.mimetype,
+                upsert: true
+            });
+
+        if (uploadError) throw uploadError;
+
+        // Obtener la URL pública del archivo
+        const { data: publicUrlData } = supabase.storage
+            .from('ranchos_logos')
+            .getPublicUrl(filePath);
+
+        const publicUrl = publicUrlData.publicUrl;
+
+        // Actualizar el campo 'logo_url' en la tabla de ranchos
+        const { data: ranchoData, error: ranchoError } = await supabase
+            .from('ranchos')
+            .update({ logo_url: publicUrl })
+            .eq('id', ranchoId)
+            .select()
+            .single();
+
+        if (ranchoError) throw ranchoError;
+
+        res.json({ success: true, message: 'Logo actualizado', logo_url: publicUrl });
+
     } catch (err) { handleServerError(res, err); }
 });
 // ================== INICIO DEL SERVIDOR ==================
