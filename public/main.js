@@ -2028,16 +2028,19 @@ function aplicarFiltrosDeGanado() {
 }
 
 // ESTA FUNCIÓN FALTABA EN TU CÓDIGO ANTERIOR
+// =================================================================
+// FUNCIÓN PARA DIBUJAR LA LISTA DE VACAS CON EL NUEVO DISEÑO
+// =================================================================
 function renderizarListaDeVacas(vacas) {
     const container = document.getElementById('lista-vacas-container');
     if (!container) return;
-    
+
     if (!vacas || vacas.length === 0) {
         container.innerHTML = '<p class="text-center text-gray-500 mt-8">No se encontraron animales con esos filtros.</p>';
         return;
     }
 
-     container.innerHTML = vacas.map(vaca => `
+    container.innerHTML = vacas.map(vaca => `
         <div class="bg-white rounded-xl shadow-md overflow-hidden mb-4">
             <img src="${vaca.foto_url || 'https://via.placeholder.com/300x200'}" alt="Foto de ${vaca.nombre}" class="w-full h-40 object-cover">
             <div class="p-4">
@@ -2050,7 +2053,8 @@ function renderizarListaDeVacas(vacas) {
                 </div>
                 <div class="text-sm text-gray-600 mt-2 space-y-1">
                     <p><strong>Raza:</strong> ${vaca.raza || 'N/A'}</p>
-                    <p><strong>Lote:</strong> ${vaca.lote || 'Sin asignar'}</p> <p><strong>ID (Arete):</strong> #${vaca.numero_siniiga}</p>
+                    <p><strong>Lote:</strong> ${vaca.lote || 'Sin asignar'}</p>
+                    <p><strong>ID (Arete):</strong> #${vaca.numero_siniiga}</p>
                 </div>
                 <button onclick="verHistorialVaca(${vaca.id}, '${vaca.nombre}')" class="w-full bg-green-100 text-green-800 font-semibold p-2 rounded-lg mt-4 hover:bg-green-200 transition">
                     Ver Detalles

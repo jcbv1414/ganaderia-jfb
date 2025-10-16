@@ -227,83 +227,35 @@
     </div>
 </template>
     
-    <!-- Mi ganado -->
-    <template id="template-mis-vacas">
-        <div class="p-5">
-            <header class="flex justify-between items-center mb-4 p-5">
-    <h1 class="text-2xl font-bold text-gray-800">Mi Ganado</h1>
-    <p class="text-gray-500"><span id="total-vacas-header">0</span> animales</p>
-</header>
-            <section id="filtros-ganado-container" class="bg-white p-4 rounded-xl shadow-md mb-6 space-y-4">
-    <section class="p-5">
-    <div class="relative mb-4">
-        <input type="text" id="filtro-busqueda-ganado" placeholder="Buscar por Arete o No. de Pierna..." class="w-full p-3 pl-10 border border-gray-200 rounded-lg bg-white">
-        <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+<template id="template-mi-ganado">
+    <div class="bg-blue-dark text-white p-5 sticky top-0 z-10" style="background-color: #203a43;">
+        <header class="flex justify-between items-center mb-4">
+            <h1 class="text-2xl font-bold">Mi Ganado</h1>
+            <span class="bg-white/20 text-xs px-3 py-1 rounded-full font-semibold" id="total-animales">0 animales</span>
+        </header>
     </div>
-    <div class="flex items-center justify-around bg-gray-100 p-2 rounded-lg">
-        <button id="filtro-btn-sexo" class="filtro-btn flex-1 text-gray-700 font-semibold py-2 rounded-lg">Sexo</button>
-        <button id="filtro-btn-lote" class="filtro-btn flex-1 text-gray-700 font-semibold py-2 rounded-lg">Lote</button>
-        <button id="filtro-btn-raza" class="filtro-btn flex-1 text-gray-700 font-semibold py-2 rounded-lg">Raza</button>
-    </div>
-</section>
-<div id="lista-vacas-container" class="space-y-4">
-    </div>
-            <div id="lista-vacas-container" class="space-y-4">
-                <p class="text-center text-gray-500 mt-8">Ganaderia JFB</p>
+
+    <div class="p-5 -mt-8 relative z-20">
+        <div class="bg-white p-4 rounded-xl shadow-lg mb-4">
+            <div class="relative mb-4">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                <input type="text" id="filtro-ganado" placeholder="Buscar por Arete o No. de Pierna..." class="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+            </div>
+            <div class="flex justify-around items-center bg-gray-50 p-2 rounded-lg text-sm text-gray-700 font-semibold">
+                <button id="btn-filtro-sexo" class="flex-1 text-center py-1 rounded-md hover:bg-gray-200">Sexo</button>
+                <button id="btn-filtro-lote" class="flex-1 text-center py-1 rounded-md hover:bg-gray-200">Lote</button>
+                <button id="btn-filtro-raza" class="flex-1 text-center py-1 rounded-md hover:bg-gray-200">Raza</button>
             </div>
         </div>
-        <button id="btn-abrir-modal-vaca" class="fab">+</button>
-        <div id="modal-agregar-vaca" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
-            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md modal-content">
-                <header class="p-4 border-b border-gray-200 flex justify-between items-center"><h2 class="text-lg font-bold">Registrar Nuevo Animal</h2><button id="btn-cerrar-modal-vaca" class="text-2xl text-gray-500">&times;</button></header>
-                <main class="p-6 modal-main">
-                    <form id="form-agregar-vaca" class="space-y-4" enctype="multipart/form-data">
-                        <form id="form-agregar-vaca" class="space-y-4" enctype="multipart/form-data">
-    <input type="hidden" name="vacaId" id="vaca-id-input">
-                        <div><label class="block text-sm font-medium text-gray-700 mb-1">Sexo</label><div class="grid grid-cols-2 gap-2" id="sexo-selector"> <button type="button" data-value="Hembra" class="p-2 border rounded-lg">Hembra</button> <button type="button" data-value="Macho" class="p-2 border rounded-lg">Macho</button></div><input type="hidden" name="sexo" id="vaca-sexo" required></div>
-                        <div><label for="vaca-nombre" class="block text-sm font-medium text-gray-700 mb-1">Nombre del Animal</label><input type="text" name="nombre" id="vaca-nombre" class="w-full p-2 border border-gray-300 rounded-lg" required></div>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div><label for="vaca-siniiga" class="block text-sm font-medium text-gray-700 mb-1">No. SINIIGA (Arete)</label><input type="text" name="siniiga" id="vaca-siniiga" class="w-full p-2 border border-gray-300 rounded-lg" required></div>
-                            <div><label for="vaca-pierna" class="block text-sm font-medium text-gray-700 mb-1">No. de Pierna</label><input type="text" name="pierna" id="vaca-pierna" class="w-full p-2 border border-gray-300 rounded-lg"></div>
-                        </div>
-                        <div class="mt-4">
-    <label for="vaca-lote" class="block text-sm font-medium text-gray-700 mb-1">Lote</label>
-    <input type="number" name="lote" id="vaca-lote" class="w-full p-2 border border-gray-300 rounded-lg" placeholder="Ej: 4">
-</div>
-<div>
-                        <div><label for="vaca-raza" class="block text-sm font-medium text-gray-700 mb-1">Raza</label><input type="text" name="raza" id="vaca-raza" list="lista-razas" class="w-full p-2 border border-gray-300 rounded-lg"><datalist id="lista-razas"></datalist></div>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div><label for="vaca-nacimiento" class="block text-sm font-medium text-gray-700 mb-1">Fecha de Nacimiento</label><input type="date" name="nacimiento" id="vaca-nacimiento" class="w-full p-2 border border-gray-300 rounded-lg"></div>
-                            <div><label for="vaca-edad" class="block text-sm font-medium text-gray-700 mb-1">Edad</label><input type="text" id="vaca-edad" class="w-full p-2 border border-gray-200 rounded-lg bg-gray-100" readonly></div>
-                        </div>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div><label for="vaca-padre" class="block text-sm font-medium text-gray-700 mb-1">Padre</label><input type="text" name="padre" id="vaca-padre" class="w-full p-2 border border-gray-300 rounded-lg"></div>
-                            <div><label for="vaca-madre" class="block text-sm font-medium text-gray-700 mb-1">Madre</label><input type="text" name="madre" id="vaca-madre" class="w-full p-2 border border-gray-300 rounded-lg"></div>
-                        </div>
-                        <div><label for="vaca-origen" class="block text-sm font-medium text-gray-700 mb-1">Método de Origen</label><select name="origen" id="vaca-origen" class="w-full p-2 border border-gray-300 rounded-lg bg-white"><option>Natural</option><option>Inseminación Artificial (IA)</option><option>Transferencia de Embrión (TE)</option><option>FIV</option></select></div>
+    </div>
 
-                        <!-- INPUT FOTO: se agregó name="fotoVaca" para que el servidor la reciba -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Foto (opcional)</label>
-                            <input type="file" id="vaca-foto" name="fotoVaca" accept="image/*" class="w-full">
-                            <div id="file-name-display" class="text-sm text-gray-500 mt-1"></div>
-                        </div>
+    <div id="lista-vacas" class="px-5 pb-20 space-y-4 -mt-4">
+        <p class="text-center text-gray-500">Cargando ganado...</p>
+    </div>
 
-                        <div id="vaca-mensaje" class="text-sm h-4 text-center"></div>
-                    </form>
-                </main>
-                 </main>
-
-      <footer class="p-4 bg-gray-50 rounded-b-2xl grid grid-cols-2 gap-3">
-          <button id="btn-guardar-siguiente-vaca" class="w-full bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold flex items-center justify-center">
-              <i class="fa-solid fa-plus mr-2"></i>Guardar y Siguiente
-          </button>
-          <button id="btn-finalizar-registro-vaca" class="w-full bg-brand-green text-white px-4 py-3 rounded-lg font-semibold flex items-center justify-center">
-              <i class="fa-solid fa-check-circle mr-2"></i>Finalizar
-          </button>
-      </footer>
-      </div>
-</div>
+    <button id="btn-agregar-vaca" class="fixed bottom-20 right-5 bg-brand-green text-white w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-3xl font-bold z-30">
+        <i class="fa-solid fa-plus"></i>
+    </button>
 </template>   
 
     
