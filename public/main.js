@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let filtrosActivos = { sexo: '', lote: '', raza: '' };
     let loteActividadActual = [];
     let vacasIndex = new Map();
+    let selectedMvzAvatarFile = null;
     let datosEstadisticasCompletos = null;
     let miGrafico = null;
     const API_URL = ''; // opcional si quieres prefijar la API
@@ -2367,26 +2368,101 @@ async function handleGuardarAjustesPropietario() {
 // =================================================================
 
 function renderizarVistaAjustesMvz() {
-    // 1. Cargar los datos actuales en los campos del formulario
+    // 1. Cargar datos actuales
     const nombreInput = document.getElementById('ajustes-nombre-mvz');
     const emailInput = document.getElementById('ajustes-email-mvz');
     const cedulaInput = document.getElementById('ajustes-cedula-mvz');
     const especialidadInput = document.getElementById('ajustes-especialidad-mvz');
+    const avatarPreview = document.getElementById('ajustes-mvz-avatar-preview');
+    const avatarInput = document.getElementById('ajustes-mvz-avatar-input');
+    const btnSeleccionarAvatar = document.getElementById('btn-seleccionar-avatar-mvz');
 
     if (nombreInput) nombreInput.value = currentUser.nombre || '';
     if (emailInput) emailInput.value = currentUser.email || '';
-
+    if (avatarPreview) avatarPreview.src = currentUser.avatar_url || 'assets/avatar_mvz_default.png';
+    
     if (currentUser.info_profesional) {
         if (cedulaInput) cedulaInput.value = currentUser.info_profesional.cedula || '';
         if (especialidadInput) especialidadInput.value = currentUser.info_profesional.especialidad || '';
     }
 
-    // 2. Conectar los botones
+    // 2. Conectar eventos de la foto
+    if (btnSeleccionarAvatar && avatarInput) {
+        btnSeleccionarAvatar.onclick = () => avatarInput.click();
+        avatarInput.onchange = (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                selectedMvzAvatarFile = file;
+                const reader = new FileReader();
+                reader.onload = (e) => { if (avatarPreview) avatarPreview.src = e.target.result; };
+                reader.readAsDataURL(file);
+            }
+        };
+    }
+
+    // 3. Conectar otros botones
     const btnGuardar = document.getElementById('btn-guardar-ajustes-mvz');
     const btnLogout = document.getElementById('btn-logout-ajustes-mvz');
+    const btnCambiarPassword = document.getElementById('btn-cambiar-password-mvz');
 
     if (btnGuardar) btnGuardar.onclick = handleGuardarAjustesMvz;
     if (btnLogout) btnLogout.onclick = logout;
+    if (btnCambiarPassword) btnCambiarPassword.onclick = () => { alert('Funcionalidad de cambio de contraseña en construcción.'); };
+}
+
+async function handleGuardarAjustesMvz() {
+    const btnGuardar = document.getElementById('btn-guardar-ajustes-mvz');
+    btnGuardar.disabled = true;
+    btnGuardar.textContent = 'Guardando...';
+
+    try {
+        const updates = [];
+
+        // 1. Actualizar datos de texto
+        const nuevoNombre = document.getElementById('ajustes-nombre-mvz').value;
+        const nuevaCedula = document.getElementById('ajustes-cedula-mvz').value;
+        const nuevaEspecialidad = document.getElementById('ajustes-especialidad-mvz').value;
+        const infoProfesional = { cedula: nuevaCedula, especialidad: nuevaEspecialidad };
+        
+        updates.push(fetch(`/api/usuarios/${currentUser.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ nombre: nuevoNombre, info_profesional: infoProfesional })
+        }).then(res => res.json()));
+
+        // 2. Subir nueva foto de perfil si existe
+        if (selectedMvzAvatarFile) {
+            const formData = new FormData();
+            formData.append('avatar', selectedMvzAvatarFile);
+            updates.push(fetch(`/api/usuarios/${currentUser.id}/upload-avatar`, {
+                method: 'POST',
+                body: formData
+            }).then(res => res.json()));
+        }
+
+        const results = await Promise.all(updates);
+
+        // Actualizar currentUser con todos los datos nuevos
+        results.forEach(result => {
+            if (result.usuario) {
+                currentUser.nombre = result.usuario.nombre;
+                currentUser.info_profesional = result.usuario.info_profesional;
+            }
+            if (result.avatar_url) {
+                currentUser.avatar_url = result.avatar_url;
+            }
+        });
+        sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
+        selectedMvzAvatarFile = null; // Limpiar
+
+        mostrarMensaje('ajustes-mvz-mensaje', '¡Cambios guardados con éxito!', false);
+
+    } catch (error) {
+        mostrarMensaje('ajustes-mvz-mensaje', error.message, true);
+    } finally {
+        btnGuardar.disabled = false;
+        btnGuardar.textContent = 'Guardar Cambios';
+    }
 }
 
 async function handleGuardarAjustesMvz() {

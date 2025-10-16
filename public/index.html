@@ -468,7 +468,7 @@
     
     <template id="template-mis-ranchos-mvz"><h1 class="text-center p-8 text-2xl">Mis Ranchos (en construcción)</h1></template>
     <template id="template-estadisticas-mvz"><h1 class="text-center p-8 text-2xl">Estadísticas MVZ (en construcción)</h1></template>
-    <template id="template-ajustes-mvz">
+<template id="template-ajustes-mvz">
     <div class="p-5">
         <header class="flex items-center mb-6">
             <button onclick="navigateTo('inicio-mvz')" class="text-2xl mr-4"><i class="fa-solid fa-arrow-left"></i></button>
@@ -477,7 +477,15 @@
 
         <div class="space-y-6">
             <div class="bg-white p-4 rounded-xl shadow-md">
-                <h2 class="font-bold text-lg mb-3">Mi Perfil</h2>
+                <h2 class="font-bold text-lg mb-4">Mi Perfil</h2>
+                <div class="flex items-center space-x-4 mb-4">
+                    <img id="ajustes-mvz-avatar-preview" src="assets/avatar_mvz_default.png" alt="Avatar MVZ" class="w-20 h-20 object-cover rounded-full border-2 border-gray-200">
+                    <div>
+                        <button id="btn-seleccionar-avatar-mvz" class="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-600">Cambiar Foto</button>
+                        <input type="file" id="ajustes-mvz-avatar-input" accept="image/*" class="hidden">
+                        <p class="text-xs text-gray-500 mt-2">Sube tu foto de perfil.</p>
+                    </div>
+                </div>
                 <div class="space-y-3">
                     <div>
                         <label class="text-sm font-medium text-gray-600">Nombre Completo</label>
@@ -495,16 +503,39 @@
                 <div class="space-y-3">
                     <div>
                         <label class="text-sm font-medium text-gray-600">Cédula Profesional</label>
-                        <input type="text" id="ajustes-cedula-mvz" class="w-full mt-1 p-2 border rounded-lg">
+                        <input type="text" id="ajustes-cedula-mvz" class="w-full mt-1 p-2 border rounded-lg" placeholder="Ej: 1234567">
                     </div>
                     <div>
                         <label class="text-sm font-medium text-gray-600">Especialidad</label>
-                        <input type="text" id="ajustes-especialidad-mvz" class="w-full mt-1 p-2 border rounded-lg">
+                        <input type="text" id="ajustes-especialidad-mvz" class="w-full mt-1 p-2 border rounded-lg" placeholder="Ej: Reproducción Bovina">
                     </div>
                 </div>
             </div>
+            
+            <div class="bg-white p-4 rounded-xl shadow-md">
+                <h2 class="font-bold text-lg mb-3">Seguridad</h2>
+                <div>
+                    <button id="btn-cambiar-password-mvz" class="w-full text-left p-3 border rounded-lg text-blue-600 font-semibold bg-blue-50 hover:bg-blue-100">
+                        Actualizar mi contraseña
+                    </button>
+                </div>
+            </div>
 
+            <div class="bg-white p-4 rounded-xl shadow-md">
+                <h2 class="font-bold text-lg mb-3">Suscripción</h2>
+                <div class="flex justify-between items-center">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600">Plan Actual</p>
+                        <p class="font-bold">Plan MVZ Básico</p>
+                    </div>
+                    <button class="bg-gray-200 text-gray-500 font-semibold py-2 px-4 rounded-lg cursor-not-allowed">Administrar</button>
+                </div>
+            </div>
+            
             <button id="btn-guardar-ajustes-mvz" class="w-full bg-brand-green text-white font-semibold py-3 rounded-lg">Guardar Cambios</button>
+            <div id="ajustes-mvz-mensaje" class="text-center h-4 mt-2"></div>
+            
+            <button id="btn-logout-ajustes-mvz" class="w-full bg-red-50 text-red-600 font-semibold py-3 rounded-lg mt-4">Cerrar Sesión</button>
         </div>
     </div>
 </template>
