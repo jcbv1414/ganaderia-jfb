@@ -288,7 +288,40 @@
                 </div>
         </div>
     </template>
-    <template id="template-ajustes"><h1 class="text-center p-8 text-2xl">Ajustes (en construcción)</h1></template>
+    <template id="template-ajustes">
+    <div class="p-5">
+        <header class="flex items-center mb-6">
+            <button onclick="navigateTo('inicio-propietario')" class="text-2xl mr-4"><i class="fa-solid fa-arrow-left"></i></button>
+            <h1 class="text-2xl font-bold text-gray-800">Ajustes</h1>
+        </header>
+
+        <div class="space-y-6">
+            <div class="bg-white p-4 rounded-xl shadow-md">
+                <h2 class="font-bold text-lg mb-3">Mi Perfil</h2>
+                <div class="space-y-3">
+                    <div>
+                        <label class="text-sm font-medium text-gray-600">Nombre Completo</label>
+                        <input type="text" id="ajustes-nombre-propietario" class="w-full mt-1 p-2 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium text-gray-600">Correo Electrónico</label>
+                        <input type="email" id="ajustes-email-propietario" class="w-full mt-1 p-2 border rounded-lg bg-gray-100" readonly>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white p-4 rounded-xl shadow-md">
+                <h2 class="font-bold text-lg mb-3">Mi Rancho</h2>
+                <div>
+                    <label class="text-sm font-medium text-gray-600">Nombre del Rancho</label>
+                    <input type="text" id="ajustes-rancho-nombre" class="w-full mt-1 p-2 border rounded-lg">
+                </div>
+            </div>
+
+            <button id="btn-guardar-ajustes-propietario" class="w-full bg-brand-green text-white font-semibold py-3 rounded-lg">Guardar Cambios</button>
+        </div>
+    </div>
+</template>
 
     <!-- Inicio MVZ -->
     <template id="template-inicio-mvz">
@@ -396,7 +429,46 @@
     
     <template id="template-mis-ranchos-mvz"><h1 class="text-center p-8 text-2xl">Mis Ranchos (en construcción)</h1></template>
     <template id="template-estadisticas-mvz"><h1 class="text-center p-8 text-2xl">Estadísticas MVZ (en construcción)</h1></template>
-    <template id="template-ajustes-mvz"><h1 class="text-center p-8 text-2xl">Ajustes (en construcción)</h1></template>
+    <template id="template-ajustes-mvz">
+    <div class="p-5">
+        <header class="flex items-center mb-6">
+            <button onclick="navigateTo('inicio-mvz')" class="text-2xl mr-4"><i class="fa-solid fa-arrow-left"></i></button>
+            <h1 class="text-2xl font-bold text-gray-800">Ajustes</h1>
+        </header>
+
+        <div class="space-y-6">
+            <div class="bg-white p-4 rounded-xl shadow-md">
+                <h2 class="font-bold text-lg mb-3">Mi Perfil</h2>
+                <div class="space-y-3">
+                    <div>
+                        <label class="text-sm font-medium text-gray-600">Nombre Completo</label>
+                        <input type="text" id="ajustes-nombre-mvz" class="w-full mt-1 p-2 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium text-gray-600">Correo Electrónico</label>
+                        <input type="email" id="ajustes-email-mvz" class="w-full mt-1 p-2 border rounded-lg bg-gray-100" readonly>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white p-4 rounded-xl shadow-md">
+                <h2 class="font-bold text-lg mb-3">Información Profesional</h2>
+                <div class="space-y-3">
+                    <div>
+                        <label class="text-sm font-medium text-gray-600">Cédula Profesional</label>
+                        <input type="text" id="ajustes-cedula-mvz" class="w-full mt-1 p-2 border rounded-lg">
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium text-gray-600">Especialidad</label>
+                        <input type="text" id="ajustes-especialidad-mvz" class="w-full mt-1 p-2 border rounded-lg">
+                    </div>
+                </div>
+            </div>
+
+            <button id="btn-guardar-ajustes-mvz" class="w-full bg-brand-green text-white font-semibold py-3 rounded-lg">Guardar Cambios</button>
+        </div>
+    </div>
+</template>
     <template id="template-calendario-mvz">
     <div class="p-5">
         <header class="flex justify-between items-center mb-6">
