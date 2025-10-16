@@ -119,8 +119,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!currentUser || currentUser.rol !== 'propietario') return;
 
     // Actualiza el saludo y la fecha
+       // --- INICIO DE LA CORRECCIÓN ---
+    // Actualiza el saludo, el nombre del rancho y la foto de perfil
     const nombreEl = document.getElementById('dash-nombre-propietario');
     if (nombreEl) nombreEl.textContent = currentUser.nombre.split(' ')[0];
+
     const fechaEl = document.getElementById('dash-fecha-actual');
     if (fechaEl) fechaEl.textContent = new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
     
@@ -129,6 +132,13 @@ document.addEventListener('DOMContentLoaded', () => {
         // Manejo de error si no hay rancho
         return;
     }
+    
+    const ranchoNombreEl = document.getElementById('dash-rancho-nombre');
+    if (ranchoNombreEl) ranchoNombreEl.textContent = ranchoPrincipal?.nombre || 'Mi Rancho';
+
+    const avatarEl = document.getElementById('dash-propietario-avatar');
+    if (avatarEl) avatarEl.src = ranchoPrincipal?.logo_url || 'assets/logo.png';
+    // --- FIN DE LA CORRECCIÓN ---
 
     // --- Carga de Estadísticas y Lotes ---
     try {

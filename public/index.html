@@ -162,9 +162,12 @@
             <div>
                 <h1 class="text-2xl font-bold">¡Bienvenido, <span id="dash-nombre-propietario"></span>!</h1>
                 <p class="text-sm opacity-80" id="dash-fecha-actual"></p>
+                <p class="text-sm opacity-80" id="dash-rancho-nombre">Nombre del Rancho</p> </div>
             </div>
             <div class="flex items-center space-x-4">
-                <button id="btn-perfil-propietario" class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center"><i class="fa-solid fa-user text-2xl text-white"></i></button>
+               <button id="btn-perfil-propietario" class="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center overflow-hidden">
+    <img id="dash-propietario-avatar" src="assets/logo.png" alt="Avatar" class="w-full h-full object-cover">
+</button>
                 <button id="btn-logout-propietario" title="Salir" class="text-2xl text-white hover:opacity-70">
                     <i class="fa-solid fa-right-from-bracket"></i>
                 </button>
