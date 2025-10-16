@@ -6,7 +6,6 @@ const path = require('path');
 const PDFDocument = require('pdfkit');
 const bcrypt = require('bcryptjs');
 const { createClient } = require('@supabase/supabase-js');
-const multer = require('multer');
 const crypto = require('crypto');
 const fs = require('fs');
 
