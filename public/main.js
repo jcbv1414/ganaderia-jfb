@@ -115,32 +115,33 @@ document.addEventListener('DOMContentLoaded', () => {
     // =================================================================
     // LÓGICA DEL PROPIETARIO
     // =================================================================
-    async function cargarDatosDashboardPropietario() {
+ async function cargarDatosDashboardPropietario() {
     if (!currentUser || currentUser.rol !== 'propietario') return;
 
-    // Actualiza el saludo y la fecha
-       // --- INICIO DE LA CORRECCIÓN ---
-    // Actualiza el saludo, el nombre del rancho y la foto de perfil
+    const ranchoPrincipal = currentUser.ranchos?.[0];
+    const ranchoId = ranchoPrincipal?.id;
+
+    // --- PARTE 1: Actualiza el encabezado ---
     const nombreEl = document.getElementById('dash-nombre-propietario');
     if (nombreEl) nombreEl.textContent = currentUser.nombre.split(' ')[0];
-
-    const fechaEl = document.getElementById('dash-fecha-actual');
-    if (fechaEl) fechaEl.textContent = new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
-    
-    const ranchoId = currentUser.ranchos?.[0]?.id;
-    if (!ranchoId) {
-        // Manejo de error si no hay rancho
-        return;
-    }
     
     const ranchoNombreEl = document.getElementById('dash-rancho-nombre');
     if (ranchoNombreEl) ranchoNombreEl.textContent = ranchoPrincipal?.nombre || 'Mi Rancho';
 
     const avatarEl = document.getElementById('dash-propietario-avatar');
     if (avatarEl) avatarEl.src = ranchoPrincipal?.logo_url || 'assets/logo.png';
-    // --- FIN DE LA CORRECCIÓN ---
+    
+    const fechaEl = document.getElementById('dash-fecha-actual');
+    if (fechaEl) fechaEl.textContent = new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
 
-    // --- Carga de Estadísticas y Lotes ---
+    // Si no hay rancho, muestra un error y se detiene.
+    if (!ranchoId) {
+        const lotesContainer = document.getElementById('lotes-container');
+        if (lotesContainer) lotesContainer.innerHTML = '<p class="text-red-500">No se encontró un rancho asociado.</p>';
+        return;
+    }
+
+    // --- PARTE 2: Carga de Estadísticas y Lotes ---
     try {
         const resStats = await fetch(`/api/rancho/${ranchoId}/estadisticas`);
         if (!resStats.ok) throw new Error('No se pudieron cargar las estadísticas.');
@@ -156,6 +157,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (totalVacasEl) totalVacasEl.textContent = totalVacas;
         const gestantesEl = document.getElementById('resumen-vacas-gestantes');
         if (gestantesEl) gestantesEl.textContent = totalGestantes;
+        const alertasEl = document.getElementById('resumen-alertas');
+        if (alertasEl) alertasEl.textContent = 0; // Placeholder para futuras alertas
 
         const lotesContainer = document.getElementById('lotes-container');
         if (lotesContainer) {
@@ -177,7 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (lotesContainer) lotesContainer.innerHTML = `<p class="text-red-500">No se pudieron cargar los lotes.</p>`;
     }
 
-    // --- Carga de "Últimas Noticias" ---
+    // --- PARTE 3: Carga de "Últimas Noticias" ---
     const noticiasContainer = document.getElementById('ultimas-noticias');
     if (noticiasContainer) {
         try {
@@ -198,7 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- Carga de "Próximos Eventos" ---
+    // --- PARTE 4: Carga de "Próximos Eventos" ---
     const eventosContainer = document.getElementById('proximos-eventos');
     if (eventosContainer) {
         try {
