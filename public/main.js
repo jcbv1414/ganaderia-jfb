@@ -83,6 +83,8 @@ document.addEventListener('DOMContentLoaded', () => {
             initActividadesMvzListeners();
         } else if (viewId === 'calendario-mvz') { // <-- Aquí se añade la nueva vista
             renderizarVistaCalendario();
+            } else if (viewId === 'ajustes-mvz') { // <-- ¡ESTA ES LA "PUERTA" QUE FALTABA!
+    renderizarVistaAjustesMvz();
         }
     }
 
@@ -2355,6 +2357,75 @@ async function handleGuardarAjustesPropietario() {
     } catch (error) {
         console.error("Error al guardar ajustes:", error);
         mostrarMensaje('ajustes-mensaje', error.message, true);
+    } finally {
+        btnGuardar.disabled = false;
+        btnGuardar.textContent = 'Guardar Cambios';
+    }
+}
+// =================================================================
+// LÓGICA PARA LA PANTALLA DE AJUSTES DEL MVZ
+// =================================================================
+
+function renderizarVistaAjustesMvz() {
+    // 1. Cargar los datos actuales en los campos del formulario
+    const nombreInput = document.getElementById('ajustes-nombre-mvz');
+    const emailInput = document.getElementById('ajustes-email-mvz');
+    const cedulaInput = document.getElementById('ajustes-cedula-mvz');
+    const especialidadInput = document.getElementById('ajustes-especialidad-mvz');
+
+    if (nombreInput) nombreInput.value = currentUser.nombre || '';
+    if (emailInput) emailInput.value = currentUser.email || '';
+
+    if (currentUser.info_profesional) {
+        if (cedulaInput) cedulaInput.value = currentUser.info_profesional.cedula || '';
+        if (especialidadInput) especialidadInput.value = currentUser.info_profesional.especialidad || '';
+    }
+
+    // 2. Conectar los botones
+    const btnGuardar = document.getElementById('btn-guardar-ajustes-mvz');
+    const btnLogout = document.getElementById('btn-logout-ajustes-mvz');
+
+    if (btnGuardar) btnGuardar.onclick = handleGuardarAjustesMvz;
+    if (btnLogout) btnLogout.onclick = logout;
+}
+
+async function handleGuardarAjustesMvz() {
+    const btnGuardar = document.getElementById('btn-guardar-ajustes-mvz');
+    btnGuardar.disabled = true;
+    btnGuardar.textContent = 'Guardando...';
+
+    const nuevoNombre = document.getElementById('ajustes-nombre-mvz').value;
+    const nuevaCedula = document.getElementById('ajustes-cedula-mvz').value;
+    const nuevaEspecialidad = document.getElementById('ajustes-especialidad-mvz').value;
+
+    const infoProfesional = {
+        cedula: nuevaCedula,
+        especialidad: nuevaEspecialidad
+    };
+
+    try {
+        // Reutilizamos la ruta de actualización de usuario que ya existe
+        const res = await fetch(`/api/usuarios/${currentUser.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                nombre: nuevoNombre,
+                info_profesional: infoProfesional
+            })
+        });
+
+        if (!res.ok) throw new Error('No se pudo actualizar el perfil.');
+        const { usuario: usuarioActualizado } = await res.json();
+
+        // Actualizar la información local para que se refleje en toda la app
+        currentUser.nombre = usuarioActualizado.nombre;
+        currentUser.info_profesional = usuarioActualizado.info_profesional;
+        sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
+
+        mostrarMensaje('ajustes-mvz-mensaje', '¡Cambios guardados con éxito!', false);
+
+    } catch (error) {
+        mostrarMensaje('ajustes-mvz-mensaje', error.message, true);
     } finally {
         btnGuardar.disabled = false;
         btnGuardar.textContent = 'Guardar Cambios';
