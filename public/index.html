@@ -227,36 +227,36 @@
     </div>
 </template>
     
-<template id="template-mi-ganado">
-    <div class="bg-blue-dark text-white p-5 sticky top-0 z-10" style="background-color: #203a43;">
-        <header class="flex justify-between items-center mb-4">
-            <h1 class="text-2xl font-bold">Mi Ganado</h1>
-            <span class="bg-white/20 text-xs px-3 py-1 rounded-full font-semibold" id="total-animales">0 animales</span>
+<template id="template-mis-vacas">
+    <div class="p-5" style="background-color: #203a43;">
+        <header class="flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-white">Mi Ganado</h1>
+            <span id="total-vacas-header" class="bg-white/20 text-white text-xs px-3 py-1 rounded-full font-semibold">0 animales</span>
         </header>
     </div>
 
     <div class="p-5 -mt-8 relative z-20">
-        <div class="bg-white p-4 rounded-xl shadow-lg mb-4">
+        <div class="bg-white p-4 rounded-xl shadow-lg mb-6">
             <div class="relative mb-4">
-                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                <input type="text" id="filtro-ganado" placeholder="Buscar por Arete o No. de Pierna..." class="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                <input type="text" id="filtro-busqueda-ganado" placeholder="Buscar por Arete o No. de Pierna..." class="w-full p-3 pl-10 border border-gray-200 rounded-lg bg-gray-50">
             </div>
-            <div class="flex justify-around items-center bg-gray-50 p-2 rounded-lg text-sm text-gray-700 font-semibold">
-                <button id="btn-filtro-sexo" class="flex-1 text-center py-1 rounded-md hover:bg-gray-200">Sexo</button>
-                <button id="btn-filtro-lote" class="flex-1 text-center py-1 rounded-md hover:bg-gray-200">Lote</button>
-                <button id="btn-filtro-raza" class="flex-1 text-center py-1 rounded-md hover:bg-gray-200">Raza</button>
+            <div class="flex items-center justify-around bg-gray-100 p-2 rounded-lg">
+                <button id="filtro-btn-sexo" class="filtro-btn flex-1 text-gray-700 font-semibold py-2 rounded-lg">Sexo</button>
+                <button id="filtro-btn-lote" class="filtro-btn flex-1 text-gray-700 font-semibold py-2 rounded-lg">Lote</button>
+                <button id="filtro-btn-raza" class="filtro-btn flex-1 text-gray-700 font-semibold py-2 rounded-lg">Raza</button>
             </div>
+        </div>
+
+        <div id="lista-vacas-container" class="space-y-4">
+            <p class="text-center text-gray-500">Cargando ganado...</p>
         </div>
     </div>
 
-    <div id="lista-vacas" class="px-5 pb-20 space-y-4 -mt-4">
-        <p class="text-center text-gray-500">Cargando ganado...</p>
-    </div>
-
-    <button id="btn-agregar-vaca" class="fixed bottom-20 right-5 bg-brand-green text-white w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-3xl font-bold z-30">
+    <button id="btn-abrir-modal-vaca" class="fab">
         <i class="fa-solid fa-plus"></i>
     </button>
-</template>   
+</template>  
 
     
     <!-- Mi MVZ -->

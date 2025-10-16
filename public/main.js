@@ -2027,7 +2027,6 @@ function aplicarFiltrosDeGanado() {
     renderizarListaDeVacas(vacasFiltradas);
 }
 
-// ESTA FUNCIÓN FALTABA EN TU CÓDIGO ANTERIOR
 // =================================================================
 // FUNCIÓN PARA DIBUJAR LA LISTA DE VACAS CON EL NUEVO DISEÑO
 // =================================================================
@@ -2036,12 +2035,12 @@ function renderizarListaDeVacas(vacas) {
     if (!container) return;
 
     if (!vacas || vacas.length === 0) {
-        container.innerHTML = '<p class="text-center text-gray-500 mt-8">No se encontraron animales con esos filtros.</p>';
+        container.innerHTML = '<p class="text-center text-gray-500 mt-8 bg-white p-6 rounded-xl shadow-md">No se encontraron animales con esos filtros.</p>';
         return;
     }
 
     container.innerHTML = vacas.map(vaca => `
-        <div class="bg-white rounded-xl shadow-md overflow-hidden mb-4">
+        <div class="bg-white rounded-xl shadow-md overflow-hidden">
             <img src="${vaca.foto_url || 'https://via.placeholder.com/300x200'}" alt="Foto de ${vaca.nombre}" class="w-full h-40 object-cover">
             <div class="p-4">
                 <div class="flex justify-between items-start">
