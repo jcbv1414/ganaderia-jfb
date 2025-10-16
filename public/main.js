@@ -2368,6 +2368,7 @@ function renderizarVistaAjustesMvz() {
         if (cedulaInput) cedulaInput.value = currentUser.info_profesional.cedula || '';
         if (especialidadInput) especialidadInput.value = currentUser.info_profesional.especialidad || '';
     }
+    
 
     // 2. Conectar eventos de la foto
     if (btnSeleccionarAvatar && avatarInput) {
