@@ -524,138 +524,117 @@ async function renderizarVistaMiMvz() {
     }
 }    
 // REEMPLAZA TU FUNCIÓN 'abrirModalVaca' CON ESTA VERSIÓN FINAL
+// REEMPLAZA tu función 'abrirModalVaca' (la que está por la línea 1530) con esta:
 function abrirModalVaca() {
-    const modal = document.getElementById('modal-agregar-vaca');
-    const form = document.getElementById('form-agregar-vaca');
-    if (!modal || !form) return;
+    const modal = document.getElementById('modal-agregar-vaca');
+    const form = document.getElementById('form-agregar-vaca');
+    if (!modal || !form) return;
 
-    form.reset();
-    document.getElementById('vaca-id-input').value = '';
-    document.getElementById('file-name-display').textContent = '';
-    document.getElementById('vaca-edad').value = '';
-    document.getElementById('vaca-mensaje').textContent = '';
+    form.reset();
+    document.getElementById('vaca-id-input').value = '';
+    document.getElementById('vaca-edad').value = '';
+    document.getElementById('vaca-mensaje').textContent = '';
 
-    // Limpia el selector de sexo
-    const sexoSelector = document.getElementById('sexo-selector');
-    sexoSelector.querySelectorAll('button').forEach(b => {
-        b.classList.remove('bg-brand-green', 'text-white');
-        b.setAttribute('aria-pressed', 'false');
-    });
-    document.getElementById('vaca-sexo').value = '';
+    // Limpia el display de la foto (para el nuevo diseño)
+    const fileNameDisplay = document.getElementById('file-name-display');
+    if (fileNameDisplay) {
+        fileNameDisplay.innerHTML = '<span class="font-semibold">Click para subir</span> o arrastra';
+        fileNameDisplay.classList.add('text-gray-500');
+        fileNameDisplay.classList.remove('text-brand-green', 'font-semibold');
+    }
 
-    // Conecta el botón 'X' para cerrar
-    const btnCerrar = modal.querySelector('#btn-cerrar-modal-vaca');
-    if (btnCerrar) btnCerrar.onclick = () => cerrarModalVaca();
+    // Limpia el selector de sexo
+    const sexoSelector = document.getElementById('sexo-selector');
+    if (sexoSelector) {
+        sexoSelector.querySelectorAll('button').forEach(b => {
+            b.classList.remove('bg-brand-green', 'text-white');
+            b.setAttribute('aria-pressed', 'false');
+        });
+    }
+    const sexoInput = document.getElementById('vaca-sexo');
+    if(sexoInput) sexoInput.value = '';
 
-    // Configura el modal para "CREAR"
-    modal.querySelector('#modal-vaca-titulo').textContent = 'Registrar Nuevo Animal';
-    document.getElementById('btn-guardar-siguiente-vaca').style.display = 'flex';
-    document.getElementById('btn-finalizar-registro-vaca').textContent = 'Guardar y Finalizar';
+    // Conecta el botón 'X' para cerrar
+    const btnCerrar = modal.querySelector('#btn-cerrar-modal-vaca');
+    if (btnCerrar) btnCerrar.onclick = () => modal.classList.add('hidden');
 
-    // Conecta los botones de acción
-    document.getElementById('btn-guardar-siguiente-vaca').onclick = () => handleGuardarVaca(false);
-    document.getElementById('btn-finalizar-registro-vaca').onclick = () => handleGuardarVaca(true);
+    // Configura el modal para "CREAR"
+    modal.querySelector('#modal-vaca-titulo').textContent = 'Registrar Nuevo Animal';
+    document.getElementById('btn-guardar-siguiente-vaca').style.display = 'flex';
+    document.getElementById('btn-finalizar-registro-vaca').innerHTML = '<i class="fa-solid fa-check-circle mr-2"></i>Guardar y Finalizar';
 
-    // Conecta las funciones auxiliares
-    conectarAyudantesFormVaca();
+    // Conecta los botones de acción
+    document.getElementById('btn-guardar-siguiente-vaca').onclick = () => handleGuardarVaca(false);
+    document.getElementById('btn-finalizar-registro-vaca').onclick = () => handleGuardarVaca(true);
 
-    modal.classList.remove('hidden');
+    // ¡Conecta las funciones auxiliares! (Esto arregla el bug)
+    conectarAyudantesFormVaca();
+
+    modal.classList.remove('hidden');
 }
-    // Lógica del Propietario (handleGuardarVaca corregido)
-async function handleGuardarVaca(cerrarAlFinalizar) {
-    const form = document.getElementById('form-agregar-vaca');
-    const btnSiguiente = document.getElementById('btn-guardar-siguiente-vaca');
-    const btnFinalizar = document.getElementById('btn-finalizar-registro-vaca');
 
-    if (btnSiguiente) btnSiguiente.disabled = true;
-    if (btnFinalizar) btnFinalizar.disabled = true;
+// REEMPLAZA tu función 'handleEditarVaca' (la que está por la línea 1566) con esta:
+window.handleEditarVaca = function(vaca) {
+    const modal = document.getElementById('modal-agregar-vaca');
+    const form = document.getElementById('form-agregar-vaca');
+    if (!modal || !form) return;
 
-    const nombre = form.querySelector('#vaca-nombre').value;
-    const siniiga = form.querySelector('#vaca-siniiga').value;
+    form.reset();
+    
+    // Limpia el display de la foto
+    const fileNameDisplay = document.getElementById('file-name-display');
+    if (fileNameDisplay) {
+        fileNameDisplay.innerHTML = vaca.foto_url ? 'Foto cargada anteriormente' : '<span class="font-semibold">Click para subir</span> o arrastra';
+        fileNameDisplay.classList.add('text-gray-500');
+        fileNameDisplay.classList.remove('text-brand-green', 'font-semibold');
+    }
 
-    if (!nombre || !siniiga) {
-        mostrarMensaje('vaca-mensaje', 'Nombre y SINIIGA son obligatorios.');
-        if (btnSiguiente) btnSiguiente.disabled = false;
-        if (btnFinalizar) btnFinalizar.disabled = false;
-        return;
-    }
+    // Rellenar el formulario
+    form.querySelector('#vaca-id-input').value = vaca.id;
+    form.querySelector('#vaca-nombre').value = vaca.nombre || '';
+    form.querySelector('#vaca-siniiga').value = vaca.numero_siniiga || '';
+    form.querySelector('#vaca-pierna').value = vaca.numero_pierna || '';
+    form.querySelector('#vaca-lote').value = vaca.lote || '';
+    form.querySelector('#vaca-raza').value = vaca.raza || '';
+    form.querySelector('#vaca-nacimiento').value = vaca.fecha_nacimiento || '';
+    form.querySelector('#vaca-padre').value = vaca.padre || '';
+    form.querySelector('#vaca-madre').value = vaca.madre || '';
+    form.querySelector('#vaca-origen').value = vaca.origen || 'Natural';
 
-    const vacaId = form.querySelector('#vaca-id-input').value;
-    const isUpdating = vacaId && vacaId !== '';
+    // Seleccionar el sexo
+    const sexo = vaca.sexo || 'Hembra';
+    const sexoInput = document.getElementById('vaca-sexo');
+    const sexoSelector = document.getElementById('sexo-selector');
+    sexoInput.value = sexo;
+    sexoSelector.querySelectorAll('button').forEach(btn => {
+        if (btn.dataset.value === sexo) {
+            btn.classList.add('bg-brand-green', 'text-white');
+            btn.setAttribute('aria-pressed', 'true');
+        } else {
+            btn.classList.remove('bg-brand-green', 'text-white');
+            btn.setAttribute('aria-pressed', 'false');
+        }
+    });
 
-    // --- CORRECCIÓN DEFINITIVA: "EMPAQUETAR A MANO" ---
-    // 1. Creamos un paquete de envío (FormData) vacío.
-    const formData = new FormData();
+    // Conecta el botón 'X' para cerrar
+    const btnCerrar = modal.querySelector('#btn-cerrar-modal-vaca');
+    if (btnCerrar) btnCerrar.onclick = () => modal.classList.add('hidden');
 
-    // 2. Metemos cada dato en el paquete, uno por uno.
-    formData.append('nombre', nombre);
-    formData.append('siniiga', siniiga);
-    formData.append('pierna', form.querySelector('#vaca-pierna').value);
-    formData.append('lote', form.querySelector('#vaca-lote').value);
-    formData.append('raza', form.querySelector('#vaca-raza').value);
-    formData.append('nacimiento', form.querySelector('#vaca-nacimiento').value);
-    formData.append('padre', form.querySelector('#vaca-padre').value);
-    formData.append('madre', form.querySelector('#vaca-madre').value);
-    formData.append('origen', form.querySelector('#vaca-origen').value);
-    formData.append('sexo', form.querySelector('#vaca-sexo').value);
-    
-    // Añadimos la foto, si es que hay una seleccionada
-    const fotoInput = form.querySelector('#vaca-foto');
-    if (fotoInput.files[0]) {
-        formData.append('fotoVaca', fotoInput.files[0]);
-    }
+    // Configura el modal para "EDITAR"
+    modal.querySelector('#modal-vaca-titulo').textContent = 'Editar Animal';
+    document.getElementById('btn-guardar-siguiente-vaca').style.display = 'none'; // Oculta "Guardar y Siguiente"
 
-    // 3. Añadimos los datos de sesión, que ya sabíamos que funcionaban.
-    if (!isUpdating) {
-        if (!currentUser?.id || !currentUser.ranchos?.[0]?.id) {
-            mostrarMensaje('vaca-mensaje', 'Error: Sesión de usuario no encontrada. Recarga la página.');
-            if (btnSiguiente) btnSiguiente.disabled = false;
-            if (btnFinalizar) btnFinalizar.disabled = false;
-            return;
-        }
-        formData.append('propietarioId', currentUser.id);
-        formData.append('ranchoId', currentUser.ranchos[0].id);
-    }
-    // --- FIN DE LA CORRECCIÓN ---
+    const btnFinalizar = document.getElementById('btn-finalizar-registro-vaca');
+    btnFinalizar.innerHTML = '<i class="fa-solid fa-save mr-2"></i>Actualizar Cambios';
+    btnFinalizar.onclick = () => handleGuardarVaca(true); // Siempre cierra al editar
 
-    const method = isUpdating ? 'PUT' : 'POST';
-    const url = isUpdating ? `/api/vacas/${vacaId}` : '/api/vacas';
-    const debeCerrar = isUpdating || cerrarAlFinalizar;
+    // ¡Conecta las funciones auxiliares!
+    conectarAyudantesFormVaca();
+    // Dispara el 'change' para que calcule la edad al abrir
+    const nacimientoInput = document.getElementById('vaca-nacimiento');
+    if(nacimientoInput) nacimientoInput.dispatchEvent(new Event('change')); 
 
-    try {
-        const res = await fetch(url, { method: method, body: formData });
-        const respuesta = await res.json();
-        if (!res.ok) throw new Error(respuesta.message);
-
-        mostrarMensaje('vaca-mensaje', `¡Animal ${isUpdating ? 'actualizado' : 'guardado'}!`, false);
-
-        if (debeCerrar) {
-            setTimeout(() => {
-                document.getElementById('modal-agregar-vaca')?.classList.add('hidden');
-                renderizarVistaMisVacas();
-            }, 1200);
-        } else {
-            setTimeout(() => {
-                form.reset();
-                const fileNameDisplay = document.getElementById('file-name-display');
-                if (fileNameDisplay) fileNameDisplay.textContent = '';
-                const edadInput = document.getElementById('vaca-edad');
-                if (edadInput) edadInput.value = '';
-                const sexoSelector = document.getElementById('sexo-selector');
-                sexoSelector.querySelector('.bg-brand-green')?.classList.remove('bg-brand-green', 'text-white');
-                form.querySelector('#vaca-nombre').focus();
-                mostrarMensaje('vaca-mensaje', 'Listo para el siguiente animal.', false);
-            }, 1200);
-        }
-
-    } catch (error) {
-        mostrarMensaje('vaca-mensaje', error.message || 'Error inesperado', true);
-    } finally {
-        setTimeout(() => {
-            if (btnSiguiente) btnSiguiente.disabled = false;
-            if (btnFinalizar) btnFinalizar.disabled = false;
-        }, 1200);
-    }
+    modal.classList.remove('hidden');
 }
     async function handleEliminarVaca(vacaId) {
         if (!confirm('¿Estás seguro de que quieres eliminar este animal? Esta acción no se puede deshacer.')) return;
@@ -2581,6 +2560,75 @@ async function handleGuardarAjustesMvz() {
         btnGuardar.disabled = false;
         btnGuardar.textContent = 'Guardar Cambios';
     }
+}
+// Pega esta función en CUALQUIER LUGAR de tu main.js (afuera de otra función)
+function conectarAyudantesFormVaca() {
+    // 1. Conectar selector de SEXO
+    const sexoSelector = document.getElementById('sexo-selector');
+    const sexoInput = document.getElementById('vaca-sexo');
+    if (sexoSelector && sexoInput) {
+        sexoSelector.querySelectorAll('button').forEach(btn => {
+            btn.onclick = () => {
+                // Deselecciona el botón activo
+                sexoSelector.querySelector('.bg-brand-green')?.classList.remove('bg-brand-green', 'text-white');
+                // Selecciona el nuevo
+                btn.classList.add('bg-brand-green', 'text-white');
+                sexoInput.value = btn.dataset.value;
+            };
+        });
+    }
+
+    // 2. Conectar autocompletado de RAZA
+    // (Tú ya tienes la función 'crearAutocompletado' y 'RAZAS_BOVINAS' en tu main.js)
+    crearAutocompletado('vaca-raza', 'sugerencias-vaca-raza-container', RAZAS_BOVINAS);
+
+    // 3. Conectar cálculo de EDAD
+    const nacimientoInput = document.getElementById('vaca-nacimiento');
+    const edadInput = document.getElementById('vaca-edad');
+    if (nacimientoInput && edadInput) {
+        nacimientoInput.onchange = () => {
+            if (!nacimientoInput.value) {
+                edadInput.value = '';
+                return;
+            }
+            try {
+                const nacimiento = new Date(nacimientoInput.value + 'T00:00:00-06:00'); // Asume zona horaria local
+                const hoy = new Date();
+                if (nacimiento > hoy) {
+                    edadInput.value = 'Fecha futura';
+                    return;
+                }
+                let edadMeses = (hoy.getFullYear() - nacimiento.getFullYear()) * 12;
+                edadMeses -= nacimiento.getMonth();
+                edadMeses += hoy.getMonth();
+                if (hoy.getDate() < nacimiento.getDate()) edadMeses--;
+        
+                const anios = Math.floor(edadMeses / 12);
+                const meses = edadMeses % 12;
+                edadInput.value = `${anios} años y ${meses} meses`;
+            } catch(e) {
+                edadInput.value = 'Fecha inválida';
+            }
+        };
+    }
+
+    // 4. Conectar nombre de archivo de FOTO (para el nuevo diseño)
+    const fotoInput = document.getElementById('vaca-foto');
+    const fileNameDisplay = document.getElementById('file-name-display');
+    if (fotoInput && fileNameDisplay) {
+        fotoInput.onchange = (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                fileNameDisplay.textContent = file.name; // Muestra el nombre
+                fileNameDisplay.classList.remove('text-gray-500');
+                fileNameDisplay.classList.add('text-brand-green', 'font-semibold');
+            } else {
+                fileNameDisplay.innerHTML = '<span class="font-semibold">Click para subir</span> o arrastra'; // Vuelve al default
+                fileNameDisplay.classList.add('text-gray-500');
+                fileNameDisplay.classList.remove('text-brand-green', 'font-semibold');
+            }
+        };
+    }
 }
     initApp();
 });
