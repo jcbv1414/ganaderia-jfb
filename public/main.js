@@ -118,7 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // =================================================================
     // LÓGICA DEL PROPIETARIO
     // =================================================================
- async function cargarDatosDashboardPropietario() {
+async function cargarDatosDashboardPropietario() {
     if (!currentUser || currentUser.rol !== 'propietario') return;
 
     const ranchoPrincipal = currentUser.ranchos?.[0];

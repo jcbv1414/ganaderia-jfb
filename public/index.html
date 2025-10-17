@@ -191,14 +191,13 @@
 
     <div class="p-5 space-y-6">
         <section>
-            <div class="flex justify-between items-center mb-3">
-                <h2 class="text-lg font-bold text-gray-800">Estado de Lotes</h2>
-                <button class="text-sm font-medium text-brand-green">Ver Todos</button>
-            </div>
-            <div id="lotes-container" class="space-y-3">
-                <p class="text-gray-500">Cargando lotes...</p>
-            </div>
-        </section>
+    <div class="flex justify-between items-center mb-3">
+        <h2 class="text-lg font-bold text-gray-800">Estado de Lotes</h2>
+        </div>
+    <div id="lotes-container-scroll" class="flex overflow-x-auto space-x-4 pb-4">
+        <p id="lotes-placeholder" class="text-gray-500">Cargando lotes...</p>
+    </div>
+</section>
         <section>
             <h2 class="text-lg font-bold text-gray-800 mb-3">Actividad y Eventos</h2>
             <div class="bg-white p-4 rounded-xl shadow-md space-y-4">
