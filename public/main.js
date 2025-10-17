@@ -2073,7 +2073,7 @@ window.handleEditarVaca = function(vaca) {
 
     // Conecta el botón 'X' para cerrar
     const btnCerrar = modal.querySelector('#btn-cerrar-modal-vaca');
-    if (btnCerrar) btnCerrar.onclick = () => cerrarModalVaca();
+   if (btnCerrar) btnCerrar.onclick = () => modal.classList.add('hidden');
 
     // Configura el modal para "EDITAR"
     modal.querySelector('#modal-vaca-titulo').textContent = 'Editar Animal';
