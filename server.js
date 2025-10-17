@@ -888,6 +888,46 @@ app.put('/api/usuarios/:usuarioId', async (req, res) => {
         res.json({ success: true, message: 'Perfil actualizado', usuario: data });
     } catch (err) { handleServerError(res, err); }
 });
+// Endpoint para SUBIR y actualizar el AVATAR de un usuario (MVZ)
+app.post('/api/usuarios/:usuarioId/upload-avatar', upload.single('avatar'), async (req, res) => {
+    try {
+        const { usuarioId } = req.params;
+        if (!req.file) return res.status(400).json({ message: 'No se envió ningún archivo.' });
+
+        const file = req.file;
+        const filePath = `avatars/usuario_${usuarioId}_${Date.now()}`;
+
+        // Sube al bucket 'avatars' (¡asegúrate de que sea público!)
+        const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('avatars') 
+            .upload(filePath, file.buffer, {
+                contentType: file.mimetype,
+                upsert: true
+            });
+
+        if (uploadError) throw uploadError;
+
+        const { data: publicUrlData } = supabase.storage
+            .from('avatars')
+            .getPublicUrl(filePath);
+
+        const publicUrl = publicUrlData.publicUrl;
+
+        // Actualiza el campo 'avatar_url' en la tabla de usuarios
+        const { data: userData, error: userError } = await supabase
+            .from('usuarios')
+            .update({ avatar_url: publicUrl })
+            .eq('id', usuarioId)
+            .select()
+            .single();
+
+        if (userError) throw userError;
+
+        // Devuelve el usuario actualizado
+        res.json({ success: true, message: 'Avatar actualizado', usuario: userData });
+
+    } catch (err) { handleServerError(res, err); }
+});
 
 // Endpoint para ACTUALIZAR el nombre de un rancho
 app.put('/api/ranchos/:ranchoId', async (req, res) => {
