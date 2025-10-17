@@ -548,8 +548,8 @@ function abrirModalVaca() {
     const fileNameDisplay = document.getElementById('file-name-display');
     if (fileNameDisplay) fileNameDisplay.textContent = '';
 
-    const datalistRazas = document.getElementById('lista-razas');
-    if (datalistRazas) datalistRazas.innerHTML = RAZAS_BOVINAS.map(r => `<option value="${r}"></option>`).join('');
+    
+crearAutocompletado('vaca-raza', 'sugerencias-vaca-raza-container', RAZAS_BOVINAS);
 
     const nacimientoInput = document.getElementById('vaca-nacimiento');
     const edadInput = document.getElementById('vaca-edad');
