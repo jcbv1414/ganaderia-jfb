@@ -674,68 +674,72 @@
 <div id="modal-agregar-vaca" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[1001] hidden">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md modal-content">
         <header class="p-4 border-b border-gray-200 flex justify-between items-center">
-            <h2 class="text-lg font-bold">Registrar Nuevo Animal</h2>
+            <h2 id="modal-vaca-titulo" class="text-lg font-bold">Registrar Nuevo Animal</h2>
             <button id="btn-cerrar-modal-vaca" class="text-2xl text-gray-500">&times;</button>
         </header>
+        
         <form id="form-agregar-vaca" enctype="multipart/form-data">
             <main class="p-6 modal-main space-y-4">
                 <input type="hidden" name="vacaId" id="vaca-id-input">
                 
                 <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Nombre del Animal</label>
+                    <input type="text" name="nombre" id="vaca-nombre" class="w-full p-3 border border-gray-300 rounded-lg" required>
+                </div>
+                
+                <div>
                     <label class="block text-sm font-medium text-gray-700 mb-1">Sexo</label>
                     <div class="grid grid-cols-2 gap-2" id="sexo-selector">
-                        <button type="button" data-value="Hembra" class="p-2 border rounded-lg">Hembra</button>
-                        <button type="button" data-value="Macho" class="p-2 border rounded-lg">Macho</button>
+                        <button type="button" data-value="Hembra" class="p-3 border rounded-lg text-gray-700 font-medium">Hembra</button>
+                        <button type="button" data-value="Macho" class="p-3 border rounded-lg text-gray-700 font-medium">Macho</button>
                     </div>
                     <input type="hidden" name="sexo" id="vaca-sexo" required>
                 </div>
-                <div>
-                    <label for="vaca-nombre" class="block text-sm font-medium text-gray-700 mb-1">Nombre del Animal</label>
-                    <input type="text" name="nombre" id="vaca-nombre" class="w-full p-2 border border-gray-300 rounded-lg" required>
-                </div>
-                <div class="grid grid-cols-2 gap-4">
+
+                <div class="grid grid-cols-3 gap-3">
                     <div>
-                        <label for="vaca-siniiga" class="block text-sm font-medium text-gray-700 mb-1">No. SINIIGA (Arete)</label>
-                        <input type="text" name="siniiga" id="vaca-siniiga" class="w-full p-2 border border-gray-300 rounded-lg" required>
+                        <label for="vaca-siniiga" class="block text-sm font-medium text-gray-700 mb-1">Arete SINIIGA</label>
+                        <input type="text" name="siniiga" id="vaca-siniiga" class="w-full p-3 border border-gray-300 rounded-lg" required>
                     </div>
                     <div>
-                        <label for="vaca-pierna" class="block text-sm font-medium text-gray-700 mb-1">No. de Pierna</label>
-                        <input type="text" name="pierna" id="vaca-pierna" class="w-full p-2 border border-gray-300 rounded-lg">
+                        <label for="vaca-pierna" class="block text-sm font-medium text-gray-700 mb-1">No. Pierna</label>
+                        <input type="text" name="pierna" id="vaca-pierna" class="w-full p-3 border border-gray-300 rounded-lg">
+                    </div>
+                     <div>
+                        <label for="vaca-lote" class="block text-sm font-medium text-gray-700 mb-1">Lote</label>
+                        <input type="number" name="lote" id="vaca-lote" class="w-full p-3 border border-gray-300 rounded-lg">
                     </div>
                 </div>
-                <div>
-                    <label for="vaca-lote" class="block text-sm font-medium text-gray-700 mb-1">Lote</label>
-                    <input type="number" name="lote" id="vaca-lote" class="w-full p-2 border border-gray-300 rounded-lg" placeholder="Ej: 4">
-                </div>
+
                 <div class="relative">
                     <label for="vaca-raza" class="block text-sm font-medium text-gray-700 mb-1">Raza</label>
-                    <input type="text" name="raza" id="vaca-raza" class="w-full p-2 border border-gray-300 rounded-lg" autocomplete="off">
+                    <input type="text" name="raza" id="vaca-raza" class="w-full p-3 border border-gray-300 rounded-lg" autocomplete="off">
                     <div id="sugerencias-vaca-raza-container" class="absolute z-[1002] w-full bg-white border border-gray-300 rounded-b-md mt-1 max-h-40 overflow-y-auto hidden shadow-lg">
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label for="vaca-nacimiento" class="block text-sm font-medium text-gray-700 mb-1">Fecha de Nacimiento</label>
-                        <input type="date" name="nacimiento" id="vaca-nacimiento" class="w-full p-2 border border-gray-300 rounded-lg">
+                        <label for="vaca-nacimiento" class="block text-sm font-medium text-gray-700 mb-1">Nacimiento</label>
+                        <input type="date" name="nacimiento" id="vaca-nacimiento" class="w-full p-3 border border-gray-300 rounded-lg">
                     </div>
                     <div>
                         <label for="vaca-edad" class="block text-sm font-medium text-gray-700 mb-1">Edad</label>
-                        <input type="text" id="vaca-edad" class="w-full p-2 border border-gray-200 rounded-lg bg-gray-100" readonly>
+                        <input type="text" id="vaca-edad" class="w-full p-3 border border-gray-200 rounded-lg bg-gray-100" readonly>
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label for="vaca-padre" class="block text-sm font-medium text-gray-700 mb-1">Padre</label>
-                        <input type="text" name="padre" id="vaca-padre" class="w-full p-2 border border-gray-300 rounded-lg">
+                        <input type="text" name="padre" id="vaca-padre" class="w-full p-3 border border-gray-300 rounded-lg">
                     </div>
                     <div>
                         <label for="vaca-madre" class="block text-sm font-medium text-gray-700 mb-1">Madre</label>
-                        <input type="text" name="madre" id="vaca-madre" class="w-full p-2 border border-gray-300 rounded-lg">
+                        <input type="text" name="madre" id="vaca-madre" class="w-full p-3 border border-gray-300 rounded-lg">
                     </div>
                 </div>
                 <div>
                     <label for="vaca-origen" class="block text-sm font-medium text-gray-700 mb-1">Método de Origen</label>
-                    <select name="origen" id="vaca-origen" class="w-full p-2 border border-gray-300 rounded-lg bg-white">
+                    <select name="origen" id="vaca-origen" class="w-full p-3 border border-gray-300 rounded-lg bg-white">
                         <option>Natural</option>
                         <option>Inseminación Artificial (IA)</option>
                         <option>Transferencia de Embrión (TE)</option>

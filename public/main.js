@@ -530,31 +530,34 @@ function abrirModalVaca() {
     if (!modal || !form) return;
 
     form.reset();
-    document.getElementById('vaca-id-input').value = '';
+    document.getElementById('vaca-id-input').value = ''; // Limpia el ID
+    
+    // Limpia campos visuales que reset() no maneja
+    const fileNameDisplay = document.getElementById('file-name-display');
+    if (fileNameDisplay) fileNameDisplay.textContent = '';
+    const edadInput = document.getElementById('vaca-edad');
+    if (edadInput) edadInput.value = '';
+    const sexoSelector = document.getElementById('sexo-selector');
+    sexoSelector.querySelector('.bg-brand-green')?.classList.remove('bg-brand-green', 'text-white');
+
+    // Conecta el botón 'X' para cerrar
     const btnCerrar = modal.querySelector('#btn-cerrar-modal-vaca');
     if (btnCerrar) btnCerrar.onclick = () => modal.classList.add('hidden');
+    
+    // Configura el modal para "CREAR"
+    modal.querySelector('#modal-vaca-titulo').textContent = 'Registrar Nuevo Animal';
+    document.getElementById('btn-guardar-siguiente-vaca').style.display = 'flex';
+    document.getElementById('btn-finalizar-registro-vaca').textContent = 'Finalizar';
 
-    // --- CONFIGURACIÓN PARA "CREAR" ---
-    modal.querySelector('h2').textContent = 'Registrar Nuevo Animal';
-    document.getElementById('btn-guardar-siguiente-vaca').style.display = 'flex'; // Muestra el botón "Siguiente"
-    document.getElementById('btn-finalizar-registro-vaca').textContent = 'Finalizar'; // Texto para "Crear"
-
+    // Conecta los botones de acción
     const btnGuardarSiguiente = document.getElementById('btn-guardar-siguiente-vaca');
     const btnFinalizar = document.getElementById('btn-finalizar-registro-vaca');
 
     if (btnGuardarSiguiente) btnGuardarSiguiente.onclick = () => handleGuardarVaca(false); // false = no cerrar
     if (btnFinalizar) btnFinalizar.onclick = () => handleGuardarVaca(true); // true = sí cerrar
-    
 
-    // --- TODA TU LÓGICA ANTERIOR (INTACTA) ---
-    const fileNameDisplay = document.getElementById('file-name-display');
-    if (fileNameDisplay) fileNameDisplay.textContent = '';
-
-    
-crearAutocompletado('vaca-raza', 'sugerencias-vaca-raza-container', RAZAS_BOVINAS);
-
+    // Conecta el cálculo de edad
     const nacimientoInput = document.getElementById('vaca-nacimiento');
-    const edadInput = document.getElementById('vaca-edad');
     if (nacimientoInput && edadInput) {
         nacimientoInput.onchange = () => {
             if (!nacimientoInput.value) { edadInput.value = ''; return; }
@@ -570,11 +573,9 @@ crearAutocompletado('vaca-raza', 'sugerencias-vaca-raza-container', RAZAS_BOVINA
         };
     }
 
-    const sexoSelector = document.getElementById('sexo-selector');
+    // Conecta el selector de sexo
     const sexoInput = document.getElementById('vaca-sexo');
     if (sexoSelector && sexoInput) {
-        // Limpia la selección anterior del botón de sexo
-        sexoSelector.querySelector('.bg-brand-green')?.classList.remove('bg-brand-green', 'text-white');
         sexoSelector.querySelectorAll('button').forEach(btn => {
             btn.onclick = () => {
                 sexoSelector.querySelector('.bg-brand-green')?.classList.remove('bg-brand-green', 'text-white');
@@ -584,6 +585,7 @@ crearAutocompletado('vaca-raza', 'sugerencias-vaca-raza-container', RAZAS_BOVINA
         });
     }
 
+    // Conecta el input de la foto
     const fotoInput = document.getElementById('vaca-foto');
     if (fotoInput) {
         fotoInput.onchange = () => {
@@ -594,9 +596,9 @@ crearAutocompletado('vaca-raza', 'sugerencias-vaca-raza-container', RAZAS_BOVINA
         };
     }
 
-    form.onsubmit = handleGuardarVaca;
-
-    // Muestra el modal al final de todo
+    // Activa el autocompletado de raza
+    crearAutocompletado('vaca-raza', 'sugerencias-vaca-raza-container', RAZAS_BOVINAS);
+    
     modal.classList.remove('hidden');
 }
     // Lógica del Propietario (handleGuardarVaca corregido)
