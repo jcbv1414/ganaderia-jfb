@@ -118,7 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // =================================================================
     // LÓGICA DEL PROPIETARIO
     // =================================================================
-async function cargarDatosDashboardPropietario() {
+ async function cargarDatosDashboardPropietario() {
     if (!currentUser || currentUser.rol !== 'propietario') return;
 
     const ranchoPrincipal = currentUser.ranchos?.[0];
@@ -567,58 +567,94 @@ async function handleGuardarVaca(cerrarAlFinalizar) {
     const btnSiguiente = document.getElementById('btn-guardar-siguiente-vaca');
     const btnFinalizar = document.getElementById('btn-finalizar-registro-vaca');
 
-    // Validación
+    if (btnSiguiente) btnSiguiente.disabled = true;
+    if (btnFinalizar) btnFinalizar.disabled = true;
+
     const nombre = form.querySelector('#vaca-nombre').value;
     const siniiga = form.querySelector('#vaca-siniiga').value;
-    const sexo = form.querySelector('#vaca-sexo').value;
-    if (!nombre || !siniiga || !sexo) {
-        mostrarMensaje('vaca-mensaje', 'Nombre, SINIIGA y Sexo son obligatorios.');
+
+    if (!nombre || !siniiga) {
+        mostrarMensaje('vaca-mensaje', 'Nombre y SINIIGA son obligatorios.');
+        if (btnSiguiente) btnSiguiente.disabled = false;
+        if (btnFinalizar) btnFinalizar.disabled = false;
         return;
     }
 
-    btnSiguiente.disabled = true; btnFinalizar.disabled = true;
-    btnFinalizar.innerHTML = '<i class="fa-solid fa-spinner animate-spin mr-2"></i> Guardando...';
-
-    const formData = new FormData(form);
-    const vacaId = formData.get('vacaId');
+    const vacaId = form.querySelector('#vaca-id-input').value;
     const isUpdating = vacaId && vacaId !== '';
 
-    const method = isUpdating ? 'PUT' : 'POST';
-    const url = isUpdating ? `/api/vacas/${vacaId}` : '/api/vacas';
+    // --- CORRECCIÓN DEFINITIVA: "EMPAQUETAR A MANO" ---
+    // 1. Creamos un paquete de envío (FormData) vacío.
+    const formData = new FormData();
 
+    // 2. Metemos cada dato en el paquete, uno por uno.
+    formData.append('nombre', nombre);
+    formData.append('siniiga', siniiga);
+    formData.append('pierna', form.querySelector('#vaca-pierna').value);
+    formData.append('lote', form.querySelector('#vaca-lote').value);
+    formData.append('raza', form.querySelector('#vaca-raza').value);
+    formData.append('nacimiento', form.querySelector('#vaca-nacimiento').value);
+    formData.append('padre', form.querySelector('#vaca-padre').value);
+    formData.append('madre', form.querySelector('#vaca-madre').value);
+    formData.append('origen', form.querySelector('#vaca-origen').value);
+    formData.append('sexo', form.querySelector('#vaca-sexo').value);
+    
+    // Añadimos la foto, si es que hay una seleccionada
+    const fotoInput = form.querySelector('#vaca-foto');
+    if (fotoInput.files[0]) {
+        formData.append('fotoVaca', fotoInput.files[0]);
+    }
+
+    // 3. Añadimos los datos de sesión, que ya sabíamos que funcionaban.
     if (!isUpdating) {
+        if (!currentUser?.id || !currentUser.ranchos?.[0]?.id) {
+            mostrarMensaje('vaca-mensaje', 'Error: Sesión de usuario no encontrada. Recarga la página.');
+            if (btnSiguiente) btnSiguiente.disabled = false;
+            if (btnFinalizar) btnFinalizar.disabled = false;
+            return;
+        }
         formData.append('propietarioId', currentUser.id);
         formData.append('ranchoId', currentUser.ranchos[0].id);
     }
+    // --- FIN DE LA CORRECCIÓN ---
+
+    const method = isUpdating ? 'PUT' : 'POST';
+    const url = isUpdating ? `/api/vacas/${vacaId}` : '/api/vacas';
+    const debeCerrar = isUpdating || cerrarAlFinalizar;
 
     try {
         const res = await fetch(url, { method: method, body: formData });
         const respuesta = await res.json();
         if (!res.ok) throw new Error(respuesta.message);
 
-        showToast(`¡Animal ${isUpdating ? 'actualizado' : 'guardado'}!`);
+        mostrarMensaje('vaca-mensaje', `¡Animal ${isUpdating ? 'actualizado' : 'guardado'}!`, false);
 
-        if (isUpdating || cerrarAlFinalizar) {
-            cerrarModalVaca();
-            renderizarVistaMisVacas();
+        if (debeCerrar) {
+            setTimeout(() => {
+                document.getElementById('modal-agregar-vaca')?.classList.add('hidden');
+                renderizarVistaMisVacas();
+            }, 1200);
         } else {
-            form.reset();
-            document.getElementById('file-name-display').textContent = '';
-            document.getElementById('vaca-edad').value = '';
-            document.getElementById('vaca-mensaje').textContent = '';
-            const sexoSelector = document.getElementById('sexo-selector');
-            sexoSelector.querySelectorAll('button').forEach(b => {
-                b.classList.remove('bg-brand-green', 'text-white');
-                b.setAttribute('aria-pressed', 'false');
-            });
-            document.getElementById('vaca-sexo').value = '';
-            document.getElementById('vaca-nombre').focus();
+            setTimeout(() => {
+                form.reset();
+                const fileNameDisplay = document.getElementById('file-name-display');
+                if (fileNameDisplay) fileNameDisplay.textContent = '';
+                const edadInput = document.getElementById('vaca-edad');
+                if (edadInput) edadInput.value = '';
+                const sexoSelector = document.getElementById('sexo-selector');
+                sexoSelector.querySelector('.bg-brand-green')?.classList.remove('bg-brand-green', 'text-white');
+                form.querySelector('#vaca-nombre').focus();
+                mostrarMensaje('vaca-mensaje', 'Listo para el siguiente animal.', false);
+            }, 1200);
         }
+
     } catch (error) {
         mostrarMensaje('vaca-mensaje', error.message || 'Error inesperado', true);
     } finally {
-        btnSiguiente.disabled = false; btnFinalizar.disabled = false;
-        btnFinalizar.innerHTML = '<i class="fa-solid fa-check-circle mr-2"></i> Guardar y Finalizar';
+        setTimeout(() => {
+            if (btnSiguiente) btnSiguiente.disabled = false;
+            if (btnFinalizar) btnFinalizar.disabled = false;
+        }, 1200);
     }
 }
     async function handleEliminarVaca(vacaId) {
@@ -691,80 +727,6 @@ async function handleGuardarVaca(cerrarAlFinalizar) {
     } catch (error) {
         contenidoEl.innerHTML = `<p class="text-red-500">Error al cargar el historial: ${error.message}</p>`;
     }
-}
-// --- FUNCIONES AUXILIARES PARA EL MODAL DE VACAS ---
-function cerrarModalVaca() {
-    const modal = document.getElementById('modal-agregar-vaca');
-    if (modal) modal.classList.add('hidden');
-    document.removeEventListener('keydown', onKeyDownModalVaca);
-}
-
-function onKeyDownModalVaca(e) {
-    if (e.key === 'Escape') cerrarModalVaca();
-}
-
-function calcularEdadVaca() {
-    const nacimientoInput = document.getElementById('vaca-nacimiento');
-    const edadInput = document.getElementById('vaca-edad');
-    if (!nacimientoInput || !edadInput) return;
-    if (!nacimientoInput.value) { edadInput.value = ''; return; }
-    
-    const birthDate = new Date(nacimientoInput.value);
-    const today = new Date();
-    let years = today.getFullYear() - birthDate.getFullYear();
-    let months = today.getMonth() - birthDate.getMonth();
-    if (today.getDate() < birthDate.getDate()) months--;
-    if (months < 0) { years--; months += 12; }
-    edadInput.value = (years > 0 ? `${years} años, ` : '') + `${months} meses`;
-}
-
-function conectarAyudantesFormVaca() {
-    // Conecta cálculo de edad
-    const nacimientoInput = document.getElementById('vaca-nacimiento');
-    if (nacimientoInput) nacimientoInput.onchange = calcularEdadVaca;
-
-    // Conecta selector de sexo
-    const sexoSelector = document.getElementById('sexo-selector');
-    const sexoInput = document.getElementById('vaca-sexo');
-    if (sexoSelector && sexoInput) {
-        sexoSelector.querySelectorAll('button').forEach(btn => {
-            btn.onclick = () => {
-                sexoSelector.querySelectorAll('button').forEach(b => {
-                    b.classList.remove('bg-brand-green', 'text-white');
-                    b.setAttribute('aria-pressed', 'false');
-                });
-                btn.classList.add('bg-brand-green', 'text-white');
-                btn.setAttribute('aria-pressed', 'true');
-                sexoInput.value = btn.dataset.value;
-            };
-        });
-    }
-
-    // Conecta input de foto
-    const fotoInput = document.getElementById('vaca-foto');
-    if (fotoInput) {
-        fotoInput.onchange = () => {
-            const display = document.getElementById('file-name-display');
-            if (fotoInput.files && fotoInput.files.length > 0) display.textContent = fotoInput.files[0].name;
-            else display.textContent = '';
-        };
-    }
-
-    // Conecta autocompletado de raza
-    crearAutocompletado('vaca-raza', 'sugerencias-vaca-raza-container', (typeof RAZAS_BOVINAS !== 'undefined') ? RAZAS_BOVINAS : []);
-
-    // Conecta 'Escape' para cerrar
-    document.addEventListener('keydown', onKeyDownModalVaca);
-}
-
-// Toast de notificación
-function showToast(msg, duration = 2000) {
-    const t = document.getElementById('vaca-toast');
-    if (!t) return;
-    t.textContent = msg;
-    t.classList.remove('hidden');
-    clearTimeout(t._timer);
-    t._timer = setTimeout(() => t.classList.add('hidden'), duration);
 }
 
     async function renderizarVistaEstadisticas() {
