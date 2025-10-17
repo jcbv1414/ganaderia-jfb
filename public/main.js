@@ -2630,5 +2630,105 @@ function conectarAyudantesFormVaca() {
         };
     }
 }
+// =================================================================
+// FUNCIÓN PARA GUARDAR O ACTUALIZAR VACA (¡LA QUE FALTABA!)
+// =================================================================
+window.handleGuardarVaca = async function(cerrarAlFinalizar) {
+    const form = document.getElementById('form-agregar-vaca');
+    const btnSiguiente = document.getElementById('btn-guardar-siguiente-vaca');
+    const btnFinalizar = document.getElementById('btn-finalizar-registro-vaca');
+
+    if (btnSiguiente) btnSiguiente.disabled = true;
+    if (btnFinalizar) btnFinalizar.disabled = true;
+
+    const nombre = form.querySelector('#vaca-nombre').value;
+    const siniiga = form.querySelector('#vaca-siniiga').value;
+
+    if (!nombre || !siniiga) {
+        mostrarMensaje('vaca-mensaje', 'Nombre y SINIIGA son obligatorios.');
+        if (btnSiguiente) btnSiguiente.disabled = false;
+        if (btnFinalizar) btnFinalizar.disabled = false;
+        return;
+    }
+
+    const vacaId = form.querySelector('#vaca-id-input').value;
+    const isUpdating = vacaId && vacaId !== '';
+
+    // --- Creamos el paquete de envío (FormData) ---
+    const formData = new FormData();
+    formData.append('nombre', nombre);
+    formData.append('siniiga', siniiga);
+    formData.append('pierna', form.querySelector('#vaca-pierna').value);
+    formData.append('lote', form.querySelector('#vaca-lote').value);
+    formData.append('raza', form.querySelector('#vaca-raza').value);
+    formData.append('nacimiento', form.querySelector('#vaca-nacimiento').value);
+    formData.append('padre', form.querySelector('#vaca-padre').value);
+    formData.append('madre', form.querySelector('#vaca-madre').value);
+    formData.append('origen', form.querySelector('#vaca-origen').value);
+    formData.append('sexo', form.querySelector('#vaca-sexo').value);
+    
+    // Añadimos la foto, si es que hay una seleccionada
+    const fotoInput = form.querySelector('#vaca-foto');
+    if (fotoInput.files[0]) {
+        formData.append('fotoVaca', fotoInput.files[0]);
+    }
+
+    // Añadimos los datos de sesión (solo si es CREACIÓN)
+    if (!isUpdating) {
+        if (!currentUser?.id || !currentUser.ranchos?.[0]?.id) {
+            mostrarMensaje('vaca-mensaje', 'Error: Sesión de usuario no encontrada. Recarga la página.');
+            if (btnSiguiente) btnSiguiente.disabled = false;
+            if (btnFinalizar) btnFinalizar.disabled = false;
+            return;
+        }
+        formData.append('propietarioId', currentUser.id);
+        formData.append('ranchoId', currentUser.ranchos[0].id);
+    }
+    // --- Fin del paquete ---
+
+    const method = isUpdating ? 'PUT' : 'POST';
+    const url = isUpdating ? `/api/vacas/${vacaId}` : '/api/vacas';
+    const debeCerrar = isUpdating || cerrarAlFinalizar;
+
+    try {
+        const res = await fetch(url, { method: method, body: formData });
+        const respuesta = await res.json();
+        if (!res.ok) throw new Error(respuesta.message);
+
+        mostrarMensaje('vaca-mensaje', `¡Animal ${isUpdating ? 'actualizado' : 'guardado'}!`, false);
+
+        if (debeCerrar) {
+            setTimeout(() => {
+                document.getElementById('modal-agregar-vaca')?.classList.add('hidden');
+                renderizarVistaMisVacas(); // Recargamos la lista
+            }, 1200);
+        } else {
+            // Si es "Guardar y Siguiente", limpiamos el form
+            setTimeout(() => {
+                form.reset();
+                const fileNameDisplay = document.getElementById('file-name-display');
+                if (fileNameDisplay) {
+                    fileNameDisplay.innerHTML = '<span class="font-semibold">Click para subir</span> o arrastra';
+                    fileNameDisplay.classList.add('text-gray-500');
+                    fileNameDisplay.classList.remove('text-brand-green', 'font-semibold');
+                }
+                const edadInput = document.getElementById('vaca-edad');
+                if (edadInput) edadInput.value = '';
+                const sexoSelector = document.getElementById('sexo-selector');
+                sexoSelector.querySelector('.bg-brand-green')?.classList.remove('bg-brand-green', 'text-white');
+                form.querySelector('#vaca-nombre').focus();
+                mostrarMensaje('vaca-mensaje', 'Listo para el siguiente animal.', false);
+            }, 1200);
+        }
+
+    } catch (error) {
+        mostrarMensaje('vaca-mensaje', error.message || 'Error inesperado', true);
+    } finally {
+        setTimeout(() => {
+            if (btnSiguiente) btnSiguiente.disabled = false;
+            if (btnFinalizar) btnFinalizar.disabled = false;
+        }, 1200);
+    }
+}
     initApp();
 });
