@@ -533,15 +533,17 @@ function abrirModalVaca() {
     document.getElementById('vaca-id-input').value = '';
     const btnCerrar = modal.querySelector('#btn-cerrar-modal-vaca');
     if (btnCerrar) btnCerrar.onclick = () => modal.classList.add('hidden');
-    modal.querySelector('h2').textContent = 'Registrar Nuevo Animal';
 
-    // --- CONECTA LOS NUEVOS BOTONES ---
+    // --- CONFIGURACIÓN PARA "CREAR" ---
+    modal.querySelector('h2').textContent = 'Registrar Nuevo Animal';
+    document.getElementById('btn-guardar-siguiente-vaca').style.display = 'flex'; // Muestra el botón "Siguiente"
+    document.getElementById('btn-finalizar-registro-vaca').textContent = 'Finalizar'; // Texto para "Crear"
+
     const btnGuardarSiguiente = document.getElementById('btn-guardar-siguiente-vaca');
     const btnFinalizar = document.getElementById('btn-finalizar-registro-vaca');
 
-    if (btnGuardarSiguiente) btnGuardarSiguiente.onclick = () => handleGuardarVaca(false); // false = no cerrar modal
-    if (btnFinalizar) btnFinalizar.onclick = () => handleGuardarVaca(true); // true = sí cerrar modal
-
+    if (btnGuardarSiguiente) btnGuardarSiguiente.onclick = () => handleGuardarVaca(false); // false = no cerrar
+    if (btnFinalizar) btnFinalizar.onclick = () => handleGuardarVaca(true); // true = sí cerrar
     
 
     // --- TODA TU LÓGICA ANTERIOR (INTACTA) ---
@@ -2116,6 +2118,16 @@ window.handleEditarVaca = function(vaca) {
     sexoSelector.querySelector('.bg-brand-green')?.classList.remove('bg-brand-green', 'text-white');
     sexoSelector.querySelector(`[data-value="${sexo}"]`)?.classList.add('bg-brand-green', 'text-white');
 
+    // --- CONFIGURACIÓN PARA "EDITAR" ---
+    modal.querySelector('h2').textContent = 'Editar Animal';
+    document.getElementById('btn-guardar-siguiente-vaca').style.display = 'none'; // Oculta el botón "Siguiente"
+
+    const btnFinalizar = document.getElementById('btn-finalizar-registro-vaca');
+    btnFinalizar.textContent = 'Actualizar Cambios'; // Cambia el texto del botón
+    btnFinalizar.onclick = () => handleGuardarVaca(true); // Siempre cierra al editar
+
+    const btnCerrar = modal.querySelector('#btn-cerrar-modal-vaca');
+    if (btnCerrar) btnCerrar.onclick = () => modal.classList.add('hidden');
 
     // Cambiar el título del modal
     modal.querySelector('h2').textContent = 'Editar Animal';
