@@ -848,7 +848,8 @@ window.handleEditarVaca = function(vaca) {
             alert(error.message || 'Error inesperado');
         }
     }
-   window.verHistorialVaca = async function(vacaId, vacaNombre) {
+  // Reemplaza window.verHistorialVaca
+window.verHistorialVaca = async function(vacaId, vacaNombre) {
     const modalHistorial = document.getElementById('modal-historial-vaca');
     if (!modalHistorial) return;
 
@@ -863,9 +864,15 @@ window.handleEditarVaca = function(vaca) {
     modalHistorial.classList.remove('hidden');
 
     try {
-        const res = await fetch(`/api/actividades/vaca/${vacaId}`);
-        if (!res.ok) throw new Error('No se pudo cargar el historial.');
-        const historial = await res.json();
+        // --- CAMBIO: Usar Supabase directo ---
+        const { data: historial, error } = await sb
+            .from('actividades')
+            .select('descripcion, fecha_actividad, tipo_actividad, usuarios (nombre)')
+            .eq('id_vaca', vacaId)
+            .order('fecha_actividad', { ascending: false });
+
+        if (error) throw error;
+        // --- FIN DEL CAMBIO ---
 
         if (historial.length === 0) {
             contenidoEl.innerHTML = '<p class="text-gray-500">No hay actividades registradas para este animal.</p>';
@@ -873,36 +880,33 @@ window.handleEditarVaca = function(vaca) {
         }
 
         contenidoEl.innerHTML = historial.map(item => {
-            // ----- INICIO DE LA CORRECCIÓN CLAVE -----
-            // 1. Preparamos una variable para los detalles.
             let detalles = item.descripcion || {};
-
-            // 2. Si los detalles son un texto (string), intentamos "traducirlos" a un objeto.
             if (typeof detalles === 'string') {
                 try {
                     detalles = JSON.parse(detalles);
                 } catch (e) {
-                    // Si no se puede traducir (porque es un texto simple), lo mostramos como una nota.
                     detalles = { 'Nota': detalles };
                 }
             }
             
-            // 3. Ahora sí, creamos el HTML a partir del objeto ya corregido.
             const detallesHtml = Object.entries(detalles)
                 .map(([key, value]) => `<p><strong class="font-medium text-gray-600">${prettyLabel(key)}:</strong> ${value}</p>`)
                 .join('');
-            // ----- FIN DE LA CORRECCIÓN CLAVE -----
+            
+            // Usamos item.usuarios?.nombre, que viene de la relación SELECT
+            const mvzNombre = item.usuarios?.nombre || 'Desconocido';
 
             return `
             <div class="bg-gray-50 p-3 rounded-lg border mb-2">
                 <p class="font-bold text-brand-green">${item.tipo_actividad}</p>
                 <p class="text-xs text-gray-500 mb-2">
-                    ${new Date(item.fecha_actividad + 'T00:00:00Z').toLocaleDateString('es-MX', { timeZone: 'UTC' })} por ${item.usuarios?.nombre || 'Desconocido'}
+                    ${new Date(item.fecha_actividad + 'T00:00:00Z').toLocaleDateString('es-MX', { timeZone: 'UTC' })} por ${mvzNombre}
                 </p>
                 <div class="text-sm space-y-1">${detallesHtml}</div>
             </div>
             `;
         }).join('');
+
     } catch (error) {
         contenidoEl.innerHTML = `<p class="text-red-500">Error al cargar el historial: ${error.message}</p>`;
     }
@@ -2289,16 +2293,26 @@ window.handleEditarVaca = function(vaca) {
     modal.classList.remove('hidden');
 }
 
+// Reemplaza window.handleEliminarVaca
 window.handleEliminarVaca = async function(vacaId) {
     if (!confirm('¿Estás seguro de que quieres eliminar este animal? Esta acción no se puede deshacer.')) return;
+    
     try {
-        const res = await fetch(`/api/vacas/${vacaId}`, { method: 'DELETE' });
-        if (!res.ok) throw new Error('No se pudo eliminar la vaca.');
+        // --- CAMBIO: Usar Supabase directo ---
+        const { error } = await sb
+            .from('vacas')
+            .delete()
+            .eq('id', vacaId); // RLS verifica si eres el dueño y si puedes borrar
+            
+        if (error) throw error;
+        // --- FIN DEL CAMBIO ---
 
-        // Recarga la lista de vacas para que desaparezca la eliminada
-        renderizarVistaMisVacas(); 
+        // Actualizamos la lista local eliminando la vaca borrada
+        listaCompletaDeVacas = listaCompletaDeVacas.filter(v => v.id !== vacaId);
+        aplicarFiltrosDeGanado();
+        
     } catch (error) {
-        alert(error.message || 'Error inesperado');
+        alert(error.message || 'Error inesperado al eliminar la vaca.');
     }
 }
 async function renderizarVistaCalendarioPropietario() {
