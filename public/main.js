@@ -406,7 +406,7 @@ async function cargarDashboardMVZ() {
     // =================================================================
     // Reemplaza tu 'handleLogin' existente con esta nueva versión
 // Reemplaza tu 'handleRegister' existente con esta nueva versión
-async function handleRegister(e) {
+window.handleRegister = async function(e) {
     e.preventDefault();
     const form = e.target;
     const btn = form.querySelector('button[type="submit"]');
@@ -471,22 +471,61 @@ async function handleRegister(e) {
     }
 }
 
-    async function handleRegister(e) {
-        e.preventDefault();
-        const form = e.target;
-        const formData = new FormData(form);
-        try {
-            // Enviamos FormData (multipart) para soportar distintos navegadores/inputs
-            const res = await fetch(`/api/register`, { method: 'POST', body: formData });
-            const respuesta = await res.json();
-            if (!res.ok) throw new Error(respuesta.message || 'Error en registro');
-            mostrarMensaje('registro-mensaje', '¡Registro exitoso! Serás redirigido al login.', false);
-            setTimeout(() => navigateTo('login'), 1200);
-        } catch (err) {
-            mostrarMensaje('registro-mensaje', err.message || 'Error inesperado');
+    // =================================================================
+// FUNCIÓN DE LOGIN (VERSIÓN SUPABASE DIRECTO Y GLOBAL)
+// =================================================================
+window.handleLogin = async function(e) {
+    e.preventDefault();
+    const btn = e.target.querySelector('button[type="submit"]');
+    if (btn) { btn.classList.add('loading'); btn.disabled = true; }
+
+    const email = document.getElementById('login-email').value.trim().toLowerCase();
+    const password = document.getElementById('login-password').value;
+
+    try {
+        // 1. Intentamos iniciar sesión con Supabase Auth
+        const { data, error } = await sb.auth.signInWithPassword({
+            email: email,
+            password: password,
+        });
+
+        if (error) throw error; // Falla si las credenciales son inválidas
+
+        // 2. Si el login es exitoso, buscamos el perfil completo en 'usuarios'
+        const { data: userData, error: userError } = await sb
+            .from('usuarios')
+            .select('*')
+            .eq('id', data.user.id) // Usamos el ID de Supabase Auth
+            .single();
+
+        if (userError) throw userError; // Falla si no encuentra el perfil
+
+        // 3. Si es propietario, cargamos sus ranchos asociados
+        if (userData.rol === 'propietario') {
+            const { data: ranchosData, error: ranchoError } = await sb
+                .from('ranchos')
+                .select('*')
+                .eq('propietario_id', userData.id);
+
+            if (ranchoError) throw ranchoError;
+            userData.ranchos = ranchosData || [];
         }
+
+        // 4. Guardamos el perfil completo en la sesión
+        currentUser = userData;
+        sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
+
+        // 5. Navegamos al dashboard correspondiente
+        iniciarSesion();
+
+    } catch (err) {
+        // Mostramos el error (ej. "Invalid login credentials")
+        mostrarMensaje('login-mensaje', err.message || 'Error inesperado');
+    } finally {
+        if (btn) { btn.classList.remove('loading'); btn.disabled = false; }
     }
-    
+}
+// =================================================================
 
 
 async function renderizarVistaMiMvz() {
