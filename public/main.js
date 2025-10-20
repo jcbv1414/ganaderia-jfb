@@ -2222,6 +2222,12 @@ function aplicarFiltrosDeGanado() {
     if (btnLote) btnLote.classList.toggle('activo', !!lote);
     if (btnRaza) btnRaza.classList.toggle('activo', !!raza);
 
+    // --- AÑADE ESTE BLOQUE CLAVE ---
+    const totalVacasEl = document.getElementById('total-vacas-header');
+    if (totalVacasEl) {
+        // Actualizamos el contador con el número exacto de vacas filtradas
+        totalVacasEl.textContent = vacasFiltradas.length;
+    }
     // ¡¡AQUÍ ESTÁ LA CORRECCIÓN!! El nombre de la función es renderizarListaDeVacas
     renderizarListaDeVacas(vacasFiltradas);
 }
