@@ -405,56 +405,69 @@ async function cargarDashboardMVZ() {
     // MANEJADORES DE AUTENTICACIÓN
     // =================================================================
     // Reemplaza tu 'handleLogin' existente con esta nueva versión
-async function handleLogin(e) {
+// Reemplaza tu 'handleRegister' existente con esta nueva versión
+async function handleRegister(e) {
     e.preventDefault();
-    const btn = e.target.querySelector('button[type="submit"]');
-    if (btn) { btn.classList.add('loading'); btn.disabled = true; }
-    
-    const email = document.getElementById('login-email').value.trim().toLowerCase();
-    const password = document.getElementById('login-password').value;
+    const form = e.target;
+    const btn = form.querySelector('button[type="submit"]');
+    btn.disabled = true;
+
+    // Obtenemos los datos del formulario
+    const nombre = form.querySelector('[name="nombre"]').value;
+    const email = form.querySelector('[name="email"]').value.trim().toLowerCase();
+    const password = form.querySelector('[name="password"]').value;
+    const rol = form.querySelector('[name="rol"]').value;
+    const ranchoNombre = form.querySelector('[name="rancho_nombre"]').value;
 
     try {
         // --- ¡AQUÍ ESTÁ EL CAMBIO! ---
-        // Ya no usamos fetch('/api/login'), usamos el cliente de Supabase
-        const { data, error } = await sb.auth.signInWithPassword({
+        
+        // 1. Creamos el usuario en la sección 'Authentication'
+        const { data: authData, error: authError } = await sb.auth.signUp({
             email: email,
-            password: password,
+            password: password
         });
 
-        if (error) throw error; // Si falla el login, Supabase nos da un error claro
-        
-        // ¡Éxito! Ahora necesitamos cargar el perfil completo del usuario desde la tabla 'usuarios'
-        const { data: userData, error: userError } = await sb
-            .from('usuarios')
-            .select('*')
-            .eq('id', data.user.id) // Buscamos el perfil usando el ID que nos dio 'auth'
-            .single(); // Esperamos solo un resultado
+        if (authError) throw authError;
 
-        if (userError) throw userError;
-        
-        // Si es propietario, cargamos sus ranchos (esto sigue siendo útil para el dashboard)
-        if (userData.rol === 'propietario') {
-            const { data: ranchosData, error: ranchoError } = await sb
-                .from('ranchos')
-                .select('*')
-                .eq('propietario_id', userData.id);
+        // Si el usuario se creó en Auth (authData.user.id),
+        // procedemos a crear su perfil en nuestra tabla 'usuarios'
+        if (authData.user) {
+            const { error: profileError } = await sb
+                .from('usuarios')
+                .insert({
+                    id: authData.user.id, // ¡Usamos el MISMO ID de Auth!
+                    nombre: nombre,
+                    email: email,
+                    rol: rol
+                    // Ya no guardamos la contraseña aquí
+                });
             
-            if (ranchoError) throw ranchoError;
-            userData.ranchos = ranchosData || [];
-        }
+            if (profileError) throw profileError;
 
-        // Guardamos el perfil COMPLETO (con los ranchos)
-        currentUser = userData;
-        sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
-        
-        iniciarSesion(); // Esta función ya la tienes y nos lleva al dashboard
+            // 2. Si es propietario, creamos su rancho (como antes)
+            if (rol === 'propietario') {
+                const codigoRancho = Math.random().toString(36).substring(2, 8).toUpperCase();
+                const { error: ranchoError } = await sb
+                    .from('ranchos')
+                    .insert({
+                        nombre: ranchoNombre || `${nombre.split(' ')[0]}'s Rancho`,
+                        codigo: codigoRancho,
+                        propietario_id: authData.user.id // Usamos el ID de Auth
+                    });
+                
+                if (ranchoError) throw ranchoError;
+            }
+        }
         // --- FIN DEL CAMBIO ---
 
+        mostrarMensaje('registro-mensaje', '¡Registro exitoso! Serás redirigido al login.', false);
+        setTimeout(() => navigateTo('login'), 1500);
+
     } catch (err) {
-        // Los errores de Supabase son más claros (ej. "Invalid login credentials")
-        mostrarMensaje('login-mensaje', err.message || 'Error inesperado');
+        mostrarMensaje('registro-mensaje', err.message || 'Error inesperado');
     } finally {
-        if (btn) { btn.classList.remove('loading'); btn.disabled = false; }
+        btn.disabled = false;
     }
 }
 
