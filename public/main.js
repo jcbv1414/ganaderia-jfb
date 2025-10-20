@@ -501,15 +501,16 @@ window.handleLogin = async function(e) {
         if (userError) throw userError; // Falla si no encuentra el perfil
 
         // 3. Si es propietario, cargamos sus ranchos asociados
-        if (userData.rol === 'propietario') {
-            const { data: ranchosData, error: ranchoError } = await sb
-                .from('ranchos')
-                .select('*')
-                .eq('propietario_id', userData.id);
+        //if (userData.rol === 'propietario') {
+          //  const { data: ranchosData, error: ranchoError } = await sb
+            //    .from('ranchos')
+             //   .select('*')
+              //  .eq('propietario_id', userData.id);
+//
+  //          if (ranchoError) throw ranchoError;
+    //        userData.ranchos = ranchosData || [];
+      //  }
 
-            if (ranchoError) throw ranchoError;
-            userData.ranchos = ranchosData || [];
-        }
 
         // 4. Guardamos el perfil completo en la sesión
         currentUser = userData;
