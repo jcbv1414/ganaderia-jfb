@@ -338,25 +338,34 @@ async function cargarDashboardMVZ() {
     if (fechaEl) fechaEl.textContent = new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
 
     const avatarEl = document.getElementById('dash-mvz-avatar');
-    // Usar la URL de avatar que ahora guardamos en currentUser
     if (avatarEl) avatarEl.src = currentUser.avatar_url || 'assets/avatar_mvz_default.png';
 
-    // --- TEMPORAL: Mantener contadores de actividades en fetch ---
-    // Dejaremos la carga de los contadores en FETCH por ahora, 
-    // ya que requiere migrar el endpoint del server a RPC.
+    // 1. Cargamos contadores de actividades usando RPC (Simulación de llamada a función DB)
+    const resumenVisitasEl = document.getElementById('resumen-visitas');
+    const resumenAlertasEl = document.getElementById('resumen-alertas-mvz');
+    if (resumenVisitasEl) resumenVisitasEl.textContent = '--';
+    if (resumenAlertasEl) resumenAlertasEl.textContent = '--';
+
     try {
+        // En un escenario real, usarías Supabase RPC para una función que haga el conteo:
+        /*
+        const { data: stats, error: statsError } = await sb.rpc('get_mvz_dashboard_stats', { mvz_id: currentUser.id });
+        if (statsError) throw statsError;
+        if (resumenVisitasEl) resumenVisitasEl.textContent = stats.actividades_hoy || 0;
+        if (resumenAlertasEl) resumenAlertasEl.textContent = stats.alertas || 0;
+        */
+        
+        // TEMPORAL: Mantener el contador en FETCH hasta que migremos el endpoint de servidor
         const resDash = await fetch(`/api/dashboard/mvz/${currentUser.id}`);
-        if (resDash.ok) {
-            const dataDash = await resDash.json();
-            const resumenVisitasEl = document.getElementById('resumen-visitas');
-            if (resumenVisitasEl) resumenVisitasEl.textContent = dataDash.actividadesHoy || 0;
-            const resumenAlertasEl = document.getElementById('resumen-alertas-mvz');
-            if (resumenAlertasEl) resumenAlertasEl.textContent = dataDash.alertas || 0;
-        }
-    } catch(e) { /* Si falla el fetch, no pasa nada grave */ }
-    // --- FIN TEMPORAL ---
+        const dataDash = resDash.ok ? await resDash.json() : { actividadesHoy: 0, alertas: 0 };
+        if (resumenVisitasEl) resumenVisitasEl.textContent = dataDash.actividadesHoy || 0;
+        if (resumenAlertasEl) resumenAlertasEl.textContent = dataDash.alertas || 0;
+        
+    } catch(e) {
+        console.error("Error al cargar contadores MVZ:", e);
+    }
     
-    // --- Cargar Eventos Pendientes: Usando Supabase DIRECTO ---
+    // 2. Cargamos eventos pendientes y próximos - Usando Supabase DIRECTO
     const eventosContainer = document.getElementById('lista-eventos');
     const pendientesContainer = document.getElementById('lista-pendientes');
     const hoy = new Date();
@@ -364,10 +373,11 @@ async function cargarDashboardMVZ() {
     if (pendientesContainer) pendientesContainer.innerHTML = '<div class="bg-white p-4 rounded-xl shadow-md"><p class="text-sm text-gray-500">Cargando pendientes...</p></div>';
     if (eventosContainer) eventosContainer.innerHTML = '<div class="bg-white p-4 rounded-xl shadow-md"><p class="text-sm text-gray-500">Cargando eventos...</p></div>';
 
+
     try {
         const { data: eventos, error: eventosError } = await sb
             .from('eventos')
-            .select('*, ranchos (nombre)') // Usamos la relación 'ranchos' para obtener el nombre
+            .select('*, ranchos (nombre)')
             .eq('mvz_id', currentUser.id)
             .eq('completado', false)
             .gte('fecha_evento', hoy.toISOString())
@@ -375,7 +385,7 @@ async function cargarDashboardMVZ() {
         
         if (eventosError) throw eventosError;
 
-        // Lógica de filtrado de eventos por fecha (basada en tu código anterior)
+        // Lógica de filtrado de eventos (basada en tu código anterior)
         const eventosHoy = eventos.filter(e => {
             const fechaEvento = new Date(e.fecha_evento);
             return fechaEvento.toDateString() === hoy.toDateString();
@@ -384,33 +394,37 @@ async function cargarDashboardMVZ() {
         const eventosProximos = eventos.filter(e => !eventosHoy.includes(e));
 
         // Renderizar Pendientes HOY
-        if (eventosHoy.length > 0) {
-            pendientesContainer.innerHTML = eventosHoy.map((e, i) => {
-                const rancho = e.nombre_rancho_texto || e.ranchos?.nombre || 'General';
-                return `<div class="bg-white p-3 rounded-lg shadow-sm mb-3"><p><strong>${i+1}.</strong> ${e.titulo} <em class="text-gray-500">(${rancho})</em></p><div class="flex justify-end space-x-2 mt-2"><button onclick="handleCancelarEvento(${e.id})" class="text-xs text-red-600 font-semibold px-2 py-1">Cancelar</button><button onclick="handleCompletarEvento(${e.id})" class="text-xs bg-green-600 text-white font-semibold px-3 py-1 rounded-full">Completar</button></div></div>`;
-            }).join('');
-        } else {
-            pendientesContainer.innerHTML = '<div class="bg-white p-4 rounded-xl shadow-md"><p class="text-sm text-gray-500">No hay pendientes para hoy.</p></div>';
+        if (pendientesContainer) {
+            if (eventosHoy.length > 0) {
+                pendientesContainer.innerHTML = eventosHoy.map((e, i) => {
+                    const rancho = e.nombre_rancho_texto || e.ranchos?.nombre || 'General';
+                    return `<div class="bg-white p-3 rounded-lg shadow-sm mb-3"><p><strong>${i+1}.</strong> ${e.titulo} <em class="text-gray-500">(${rancho})</em></p><div class="flex justify-end space-x-2 mt-2"><button onclick="handleCancelarEvento(${e.id})" class="text-xs text-red-600 font-semibold px-2 py-1">Cancelar</button><button onclick="handleCompletarEvento(${e.id})" class="text-xs bg-green-600 text-white font-semibold px-3 py-1 rounded-full">Completar</button></div></div>`;
+                }).join('');
+            } else {
+                pendientesContainer.innerHTML = '<div class="bg-white p-4 rounded-xl shadow-md"><p class="text-sm text-gray-500">No hay pendientes para hoy.</p></div>';
+            }
         }
 
         // Renderizar Próximos Eventos
-        if (eventosProximos.length > 0) {
-            eventosContainer.innerHTML = eventosProximos.slice(0, 3).map(e => {
-                const fecha = new Date(e.fecha_evento);
-                const manana = new Date(); manana.setDate(new Date().getDate() + 1);
-                let textoFecha = fecha.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
-                if (fecha.toDateString() === manana.toDateString()) textoFecha = 'Mañana';
-                const rancho = e.nombre_rancho_texto || e.ranchos?.nombre || 'General';
-                return `<div class="bg-white p-4 rounded-xl shadow-md mb-3"><div class="flex justify-between items-center"><p><i class="fa-solid fa-calendar-alt text-brand-green mr-2"></i><strong>${textoFecha}:</strong> ${e.titulo} <em>(${rancho})</em></p><i class="fa-solid fa-chevron-right text-gray-400"></i></div></div>`;
-            }).join('');
-        } else {
-            eventosContainer.innerHTML = '<div class="bg-white p-4 rounded-xl shadow-md"><p class="text-sm text-gray-500">No hay más eventos programados.</p></div>';
+        if (eventosContainer) {
+            if (eventosProximos.length > 0) {
+                eventosContainer.innerHTML = eventosProximos.slice(0, 3).map(e => {
+                    const fecha = new Date(e.fecha_evento);
+                    const manana = new Date(); manana.setDate(new Date().getDate() + 1);
+                    let textoFecha = fecha.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
+                    if (fecha.toDateString() === manana.toDateString()) textoFecha = 'Mañana';
+                    const rancho = e.nombre_rancho_texto || e.ranchos?.nombre || 'General';
+                    return `<div class="bg-white p-4 rounded-xl shadow-md mb-3"><div class="flex justify-between items-center"><p><i class="fa-solid fa-calendar-alt text-brand-green mr-2"></i><strong>${textoFecha}:</strong> ${e.titulo} <em>(${rancho})</em></p><i class="fa-solid fa-chevron-right text-gray-400"></i></div></div>`;
+                }).join('');
+            } else {
+                eventosContainer.innerHTML = '<div class="bg-white p-4 rounded-xl shadow-md"><p class="text-sm text-gray-500">No hay más eventos programados.</p></div>';
+            }
         }
 
     } catch (error) {
         console.error("Error al cargar eventos MVZ:", error);
-        pendientesContainer.innerHTML = '<p class="text-red-500">Error.</p>';
-        eventosContainer.innerHTML = '<p class="text-red-500">Error.</p>';
+        if (pendientesContainer) pendientesContainer.innerHTML = '<p class="text-red-500">Error al cargar datos.</p>';
+        if (eventosContainer) eventosContainer.innerHTML = '<p class="text-red-500">Error al cargar datos.</p>';
     }
 }
     // =================================================================
@@ -1832,30 +1846,40 @@ async function handleGuardarEvento(e) {
    // ----- REEMPLAZA LAS DOS ÚLTIMAS FUNCIONES CON ESTE BLOQUE -----
 
 // Hacemos la función global añadiendo "window." al principio
+// Reemplaza window.handleCompletarEvento
 window.handleCompletarEvento = async function(eventoId) {
     try {
-        const res = await fetch(`/api/eventos/${eventoId}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ completado: true })
-        });
-        if (!res.ok) throw new Error('No se pudo completar el evento.');
-        cargarDashboardMVZ(); // Recarga el dashboard para que el evento desaparezca
-    } catch (error) { alert(error.message); }
+        // --- CAMBIO: Usar Supabase directo ---
+        const { error } = await sb
+            .from('eventos')
+            .update({ completado: true })
+            .eq('id', eventoId);
+            
+        if (error) throw error;
+        // --- FIN DEL CAMBIO ---
+        cargarDashboardMVZ(); // Recarga el dashboard
+    } catch (error) { 
+        alert(error.message || 'No se pudo completar el evento.'); 
+    }
 }
 
-// Hacemos también esta función global
+// Reemplaza window.handleCancelarEvento
 window.handleCancelarEvento = async function(eventoId) {
     if (!confirm('¿Estás seguro de que quieres cancelar este evento?')) return;
     try {
-        const res = await fetch(`/api/eventos/${eventoId}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ borrar: true })
-        });
-        if (!res.ok) throw new Error('No se pudo cancelar el evento.');
-        cargarDashboardMVZ(); // Recarga el dashboard para que el evento desaparezca
-    } catch (error) { alert(error.message); }
+        // --- CAMBIO: Usar Supabase directo ---
+        // Simplemente borramos la fila, ya que es un evento
+        const { error } = await sb
+            .from('eventos')
+            .delete()
+            .eq('id', eventoId);
+            
+        if (error) throw error;
+        // --- FIN DEL CAMBIO ---
+        cargarDashboardMVZ(); // Recarga el dashboard
+    } catch (error) { 
+        alert(error.message || 'No se pudo cancelar el evento.'); 
+    }
 }
 
 // ... la función initApp(); debe quedar debajo de esto
