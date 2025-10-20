@@ -130,37 +130,98 @@ console.log('Cliente de Supabase inicializado');
     // =================================================================
     // LÓGICA DEL PROPIETARIO
     // =================================================================
- async function cargarDatosDashboardPropietario() {
+ // Reemplaza tu función existente con esta
+async function cargarDatosDashboardPropietario() {
     if (!currentUser || currentUser.rol !== 'propietario') return;
 
-    const ranchoPrincipal = currentUser.ranchos?.[0];
+    // --- INICIO DEL CAMBIO ---
+    // 1. Verifica si los ranchos ya están cargados
+    let ranchoPrincipal = currentUser.ranchos?.[0];
+
+    // 2. Si no están cargados, los buscamos AHORA
+    if (!ranchoPrincipal) {
+        console.log('Ranchos no encontrados en currentUser, buscando en Supabase...');
+        try {
+            const { data: ranchosData, error: ranchoError } = await sb
+                .from('ranchos')
+                .select('*')
+                .eq('propietario_id', currentUser.id); // Busca los ranchos del usuario actual
+
+            if (ranchoError) throw ranchoError;
+
+            // Guardamos los ranchos encontrados en currentUser y en sessionStorage
+            currentUser.ranchos = ranchosData || [];
+            sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
+            ranchoPrincipal = currentUser.ranchos?.[0]; // Actualizamos la variable
+            console.log('Ranchos cargados y guardados:', currentUser.ranchos);
+
+        } catch (error) {
+            console.error("Error cargando ranchos para el dashboard:", error);
+            // Mostramos un error si no se pueden cargar los ranchos
+            const ranchoNombreEl = document.getElementById('dash-rancho-nombre');
+            if (ranchoNombreEl) ranchoNombreEl.textContent = 'Error al cargar rancho';
+            const lotesPlaceholder = document.getElementById('lotes-placeholder');
+             if (lotesPlaceholder) lotesPlaceholder.textContent = 'No se pudo cargar la información del rancho.';
+            // Detenemos la función aquí si no hay rancho
+            return;
+        }
+    }
+    // --- FIN DEL CAMBIO ---
+
     const ranchoId = ranchoPrincipal?.id;
 
-    // --- PARTE 1: Actualiza el encabezado ---
+    // --- El resto de tu función sigue igual ---
+    // PARTE 1: Actualiza el encabezado
     const nombreEl = document.getElementById('dash-nombre-propietario');
     if (nombreEl) nombreEl.textContent = currentUser.nombre.split(' ')[0];
-    
+
     const ranchoNombreEl = document.getElementById('dash-rancho-nombre');
-    if (ranchoNombreEl) ranchoNombreEl.textContent = ranchoPrincipal?.nombre || 'Mi Rancho';
+    if (ranchoNombreEl) ranchoNombreEl.textContent = ranchoPrincipal?.nombre || 'Mi Rancho'; // Ahora debería tener nombre
 
     const avatarEl = document.getElementById('dash-propietario-avatar');
+    // CORRECCIÓN: Usar logo_url del rancho, no del usuario
     if (avatarEl) avatarEl.src = ranchoPrincipal?.logo_url || 'assets/logo.png';
-    
+
     const fechaEl = document.getElementById('dash-fecha-actual');
     if (fechaEl) fechaEl.textContent = new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
 
-    // Si no hay rancho, muestra un error y se detiene.
+    // Si después de intentar cargar, sigue sin haber ranchoId...
     if (!ranchoId) {
-        const lotesContainer = document.getElementById('lotes-container-scroll');
-        if (lotesContainer) lotesContainer.innerHTML = '<p class="text-red-500">No se encontró un rancho asociado.</p>';
+        console.log("No se encontró ID de rancho principal.");
+        const lotesPlaceholder = document.getElementById('lotes-placeholder');
+        if (lotesPlaceholder) lotesPlaceholder.textContent = 'No se encontró un rancho asociado.';
+        // Limpiamos los resúmenes si no hay rancho
+         document.getElementById('resumen-total-vacas').textContent = '--';
+         document.getElementById('resumen-vacas-gestantes').textContent = '--';
+         document.getElementById('resumen-alertas').textContent = '--';
+         document.getElementById('ultimas-noticias').innerHTML = '<p class="text-sm text-gray-500">No hay rancho asociado.</p>';
+         document.getElementById('proximos-eventos').innerHTML = '<p class="text-sm text-gray-500">No hay rancho asociado.</p>';
         return;
     }
+    console.log(`Cargando datos del dashboard para rancho ID: ${ranchoId}`);
 
-    // --- PARTE 2: Carga de Estadísticas y Lotes ---
+
+    // PARTE 2: Carga de Estadísticas y Lotes (¡AHORA USAREMOS SUPABASE DIRECTO!)
+    const lotesContainer = document.getElementById('lotes-container-scroll'); // ID correcto
+    const lotesPlaceholder = document.getElementById('lotes-placeholder');
+    if (lotesPlaceholder) lotesPlaceholder.textContent = 'Cargando lotes...';
+
     try {
-        const resStats = await fetch(`/api/rancho/${ranchoId}/estadisticas`);
-        if (!resStats.ok) throw new Error('No se pudieron cargar las estadísticas.');
-        const stats = await resStats.json();
+        // --- ¡NUEVA LLAMADA DIRECTA A SUPABASE! ---
+        // Asumiendo que tienes una función RPC 'get_rancho_stats' o similar.
+        // Si no la tienes, podemos adaptarlo para calcularlo aquí como antes.
+        // Por ahora, usaremos un placeholder fetch (CAMBIAR ESTO POR RPC)
+         console.log(`Intentando fetch a /api/rancho/${ranchoId}/estadisticas (ESTO DEBE CAMBIARSE A RPC)`);
+         // TEMPORALMENTE LLAMAREMOS AL VIEJO ENDPOINT HASTA QUE MIGREMOS A RPC
+         const resStats = await fetch(`/api/rancho/${ranchoId}/estadisticas`);
+         if (!resStats.ok) {
+             const errorData = await resStats.text(); // Leer el error como texto
+             console.error("Error en fetch stats:", errorData);
+             throw new Error('No se pudieron cargar las estadísticas.');
+         }
+         const stats = await resStats.json();
+         console.log("Estadísticas recibidas:", stats);
+        // --- FIN DE LA LLAMADA ---
 
         let totalVacas = 0, totalGestantes = 0;
         Object.values(stats).forEach(lote => {
@@ -168,46 +229,58 @@ console.log('Cliente de Supabase inicializado');
             totalGestantes += lote.estados?.Gestante || 0;
         });
 
-        const totalVacasEl = document.getElementById('resumen-total-vacas');
-        if (totalVacasEl) totalVacasEl.textContent = totalVacas;
-        const gestantesEl = document.getElementById('resumen-vacas-gestantes');
-        if (gestantesEl) gestantesEl.textContent = totalGestantes;
-        const alertasEl = document.getElementById('resumen-alertas');
-        if (alertasEl) alertasEl.textContent = 0; // Placeholder para futuras alertas
+        document.getElementById('resumen-total-vacas').textContent = totalVacas;
+        document.getElementById('resumen-vacas-gestantes').textContent = totalGestantes;
+        document.getElementById('resumen-alertas').textContent = 0; // Placeholder
 
-        const lotesContainer = document.getElementById('lotes-container-scroll');
         if (lotesContainer) {
-            if (Object.keys(stats).length === 0) {
-                lotesContainer.innerHTML = '<p class="text-gray-500">No hay lotes con datos.</p>';
-            } else {
-                lotesContainer.innerHTML = Object.entries(stats).map(([numeroLote, datosLote]) => {
-                    const vacasEnLote = datosLote.totalVacas || 0;
-                    const gestantesEnLote = datosLote.estados?.Gestante || 0;
-                    const porcentaje = vacasEnLote > 0 ? Math.round((gestantesEnLote / vacasEnLote) * 100) : 0;
-                    const nombreLote = numeroLote === 'Sin Lote' ? 'Animales sin Lote' : `Lote ${numeroLote}`;
-                    return `<div class="flex-shrink-0 w-72 bg-white p-4 rounded-xl shadow-md flex items-center justify-between"><div class="flex items-center"><div class="progress-ring mr-4" style="--value: ${porcentaje}; --color: #22c55e;"><span class="progress-ring-percent">${porcentaje}%</span></div><div><p class="font-semibold">${nombreLote}</p><p class="text-sm text-gray-500">Gestación</p></div></div><i class="fa-solid fa-chevron-right text-gray-400"></i></div>`;
-                }).join('');
-            }
+             if (Object.keys(stats).length === 0) {
+                 if(lotesPlaceholder) lotesPlaceholder.textContent = 'No hay lotes con datos.';
+                 lotesContainer.innerHTML = ''; // Limpiar por si acaso
+             } else {
+                 if(lotesPlaceholder) lotesPlaceholder.style.display = 'none'; // Ocultar "Cargando..."
+                 lotesContainer.innerHTML = Object.entries(stats).map(([numeroLote, datosLote]) => {
+                     const vacasEnLote = datosLote.totalVacas || 0;
+                     const gestantesEnLote = datosLote.estados?.Gestante || 0;
+                     const porcentaje = vacasEnLote > 0 ? Math.round((gestantesEnLote / vacasEnLote) * 100) : 0;
+                     const nombreLote = numeroLote === 'Sin Lote' ? 'Animales sin Lote' : `Lote ${numeroLote}`;
+                     // Usamos el diseño con flex-shrink-0
+                     return `<div class="flex-shrink-0 w-72 bg-white p-4 rounded-xl shadow-md flex items-center justify-between"><div class="flex items-center"><div class="progress-ring mr-4" style="--value: ${porcentaje}; --color: #22c55e;"><span class="progress-ring-percent">${porcentaje}%</span></div><div><p class="font-semibold">${nombreLote}</p><p class="text-sm text-gray-500">Gestación</p></div></div><i class="fa-solid fa-chevron-right text-gray-400"></i></div>`;
+                 }).join('');
+             }
         }
+
     } catch (error) {
-        console.error("Error en estadísticas del propietario:", error);
-        const lotesContainer = document.getElementById('lotes-container-scroll');
-        if (lotesContainer) lotesContainer.innerHTML = `<p class="text-red-500">No se pudieron cargar los lotes.</p>`;
+        console.error("Error procesando estadísticas del propietario:", error);
+        if (lotesPlaceholder) lotesPlaceholder.textContent = 'Error al cargar lotes.';
+        if (lotesContainer) lotesContainer.innerHTML = '';
     }
 
-    // --- PARTE 3: Carga de "Últimas Noticias" ---
+    // --- PARTE 3 Y 4: Carga de Noticias y Eventos (¡TAMBIÉN CON SUPABASE DIRECTO!) ---
     const noticiasContainer = document.getElementById('ultimas-noticias');
+    const eventosContainer = document.getElementById('proximos-eventos');
+
     if (noticiasContainer) {
+        noticiasContainer.innerHTML = '<p class="text-sm text-gray-500">Cargando...</p>';
         try {
-            const resNoticias = await fetch(`/api/rancho/${ranchoId}/actividades-recientes`);
-            const noticias = await resNoticias.json();
+            // Nueva llamada directa
+            const { data: noticias, error: noticiasError } = await sb
+                .from('actividades')
+                .select('created_at, tipo_actividad, usuarios (nombre)') // Pedimos el nombre del usuario relacionado
+                .eq('rancho_id', ranchoId)
+                .order('created_at', { ascending: false })
+                .limit(5);
+
+            if (noticiasError) throw noticiasError;
+
             if (noticias.length === 0) {
                 noticiasContainer.innerHTML = '<p class="text-sm text-gray-500">No hay actividades recientes en el rancho.</p>';
             } else {
                 noticiasContainer.innerHTML = noticias.map(act => {
                     const fecha = new Date(act.created_at).toLocaleDateString('es-MX', { day: 'numeric', month: 'long' });
+                    // Accedemos al nombre a través del objeto 'usuarios'
                     const mvzNombre = act.usuarios?.nombre || 'Un veterinario';
-                    return `<p class="text-sm text-gray-600 pb-2 border-b border-gray-100 mb-2">${mvzNombre} registró una ${act.tipo_actividad} el ${fecha}.</p>`;
+                    return `<p class="text-sm text-gray-600 pb-2 border-b border-gray-100 mb-2">${mvzNombre} registró ${act.tipo_actividad} el ${fecha}.</p>`;
                 }).join('');
             }
         } catch (error) {
@@ -216,12 +289,21 @@ console.log('Cliente de Supabase inicializado');
         }
     }
 
-    // --- PARTE 4: Carga de "Próximos Eventos" ---
-    const eventosContainer = document.getElementById('proximos-eventos');
     if (eventosContainer) {
+        eventosContainer.innerHTML = '<p class="text-sm text-gray-500">Cargando...</p>';
         try {
-            const resEventos = await fetch(`/api/rancho/${ranchoId}/eventos-proximos`);
-            const eventos = await resEventos.json();
+            // Nueva llamada directa
+            const { data: eventos, error: eventosError } = await sb
+                .from('eventos')
+                .select('*')
+                .eq('rancho_id', ranchoId)
+                .eq('completado', false)
+                .gte('fecha_evento', new Date().toISOString()) // Solo futuros
+                .order('fecha_evento', { ascending: true })
+                .limit(3);
+
+            if (eventosError) throw eventosError;
+
             if (eventos.length === 0) {
                 eventosContainer.innerHTML = '<p class="text-sm text-gray-500">No hay eventos programados para este rancho.</p>';
             } else {
@@ -239,7 +321,7 @@ console.log('Cliente de Supabase inicializado');
             eventosContainer.innerHTML = '<p class="text-red-500">Error al cargar eventos.</p>';
         }
     }
-}
+} // Fin de la función cargarDatosDashboardPropietario
 
     // =================================================================
     // LÓGICA DEL MVZ
@@ -488,39 +570,26 @@ window.handleLogin = async function(e) {
             email: email,
             password: password,
         });
+        if (error) throw error;
 
-        if (error) throw error; // Falla si las credenciales son inválidas
-
-        // 2. Si el login es exitoso, buscamos el perfil completo en 'usuarios'
+        // 2. Buscamos el perfil completo en 'usuarios'
         const { data: userData, error: userError } = await sb
             .from('usuarios')
             .select('*')
-            .eq('id', data.user.id) // Usamos el ID de Supabase Auth
+            .eq('id', data.user.id)
             .single();
+        if (userError) throw userError;
 
-        if (userError) throw userError; // Falla si no encuentra el perfil
+        // 3. NO cargamos los ranchos aquí
 
-        // 3. Si es propietario, cargamos sus ranchos asociados
-        //if (userData.rol === 'propietario') {
-          //  const { data: ranchosData, error: ranchoError } = await sb
-            //    .from('ranchos')
-             //   .select('*')
-              //  .eq('propietario_id', userData.id);
-//
-  //          if (ranchoError) throw ranchoError;
-    //        userData.ranchos = ranchosData || [];
-      //  }
-
-
-        // 4. Guardamos el perfil completo en la sesión
+        // 4. Guardamos el perfil SIN los ranchos
         currentUser = userData;
         sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
 
-        // 5. Navegamos al dashboard correspondiente
+        // 5. Navegamos al dashboard
         iniciarSesion();
 
     } catch (err) {
-        // Mostramos el error (ej. "Invalid login credentials")
         mostrarMensaje('login-mensaje', err.message || 'Error inesperado');
     } finally {
         if (btn) { btn.classList.remove('loading'); btn.disabled = false; }
