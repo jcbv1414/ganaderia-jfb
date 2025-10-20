@@ -2855,6 +2855,7 @@ window.handleGuardarVaca = async function(cerrarAlFinalizar) {
 
     const vacaId = form.querySelector('#vaca-id-input').value;
     const isUpdating = vacaId && vacaId !== '';
+    const debeCerrar = isUpdating || cerrarAlFinalizar;
     let fotoUrl = null; // Variable para la URL de la foto
 
     try {
