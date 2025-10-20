@@ -669,8 +669,18 @@ async function renderizarVistaMisVacas() {
 
     const container = document.getElementById('lista-vacas-container');
     container.innerHTML = '<p class="text-center text-gray-500 mt-8">Cargando ganado...</p>';
-    const fab = document.getElementById('btn-abrir-modal-vaca');
     if (fab) fab.onclick = () => abrirModalVaca(); // Esto sigue igual
+
+    // --- AÑADE ESTAS LÍNEAS DE DEBUG ---
+    const fab = document.getElementById('btn-abrir-modal-vaca');
+    if (fab) {
+        console.log("DEBUG: Botón '+' (#btn-abrir-modal-vaca) encontrado en el DOM."); // <<< NUEVA LÍNEA
+        fab.onclick = () => abrirModalVaca(); // Esta línea asigna la función
+        console.log("DEBUG: Se asignó la función 'abrirModalVaca' al onclick del botón '+'."); // <<< NUEVA LÍNEA
+    } else {
+        console.error("DEBUG: ¡ERROR CRÍTICO! No se encontró el botón '+' (#btn-abrir-modal-vaca)."); // <<< NUEVA LÍNEA
+    }
+    // --- FIN DE LÍNEAS DE DEBUG ---
 
     try {
         // --- ¡AQUÍ ESTÁ EL CAMBIO PRINCIPAL! ---
