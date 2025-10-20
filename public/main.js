@@ -702,12 +702,17 @@ async function renderizarVistaMisVacas() {
         container.innerHTML = `<p class="text-center text-red-500 mt-8">Error al cargar el ganado: ${error.message}</p>`;
     }
 }   
-// REEMPLAZA TU FUNCIÓN 'abrirModalVaca' CON ESTA VERSIÓN FINAL
+
 // REEMPLAZA tu función 'abrirModalVaca' (la que está por la línea 1530) con esta:
 function abrirModalVaca() {
-    const modal = document.getElementById('modal-agregar-vaca');
-    const form = document.getElementById('form-agregar-vaca');
-    if (!modal || !form) return;
+    console.log("DEBUG: Botón + presionado. Intentando abrir modal..."); // <<< AÑADE ESTA
+
+    const modal = document.getElementById('modal-agregar-vaca');
+    const form = document.getElementById('form-agregar-vaca');
+    if (!modal || !form) {
+         console.error("DEBUG: ¡Error! No se encontró el elemento #modal-agregar-vaca o #form-agregar-vaca."); // <<< AÑADE ESTA
+         return; // Detiene la función si falta algo
+    }
 
     form.reset();
     document.getElementById('vaca-id-input').value = '';
@@ -748,6 +753,12 @@ function abrirModalVaca() {
 
     // ¡Conecta las funciones auxiliares! (Esto arregla el bug)
     conectarAyudantesFormVaca();
+
+// Justo antes de mostrar el modal
+    console.log("DEBUG: Formulario preparado. Mostrando modal..."); // <<< AÑADE ESTA
+    modal.classList.remove('hidden');
+    console.log("DEBUG: Modal debería estar visible ahora."); // <<< AÑADE ESTA
+
 
     modal.classList.remove('hidden');
 }
