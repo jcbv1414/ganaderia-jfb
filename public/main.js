@@ -598,10 +598,19 @@ window.handleLogin = async function(e) {
 // =================================================================
 
 
+// Reemplaza tu función renderizarVistaMiMvz existente con esta
 async function renderizarVistaMiMvz() {
-    // --- Muestra el código de acceso ---
     const ranchoPrincipal = currentUser.ranchos?.[0];
+    const ranchoId = ranchoPrincipal?.id;
     const codigoContainer = document.getElementById('codigo-acceso-container');
+    const container = document.getElementById('lista-mvz-container');
+
+    if (!ranchoId) {
+         container.innerHTML = '<p class="text-red-500 text-center">No hay un rancho principal asociado.</p>';
+         return;
+    }
+
+    // --- Muestra el código de acceso ---
     if (ranchoPrincipal && codigoContainer) {
         codigoContainer.innerHTML = `
             <h3 class="text-lg font-semibold mb-2">Código de Acceso</h3>
@@ -611,13 +620,17 @@ async function renderizarVistaMiMvz() {
     }
 
     // --- Carga y muestra la lista de veterinarios ---
-    const container = document.getElementById('lista-mvz-container');
     container.innerHTML = '<p class="text-gray-500">Cargando...</p>';
 
     try {
-        const res = await fetch(`/api/rancho/${ranchoPrincipal.id}/mvz`);
-        if (!res.ok) throw new Error('Error al cargar veterinarios');
-        const mvzList = await res.json();
+        // --- CAMBIO: Usar Supabase directo ---
+        const { data: mvzList, error } = await sb
+            .from('rancho_mvz_permisos')
+            .select(`id, permisos, usuarios ( id, nombre, email )`) // Seleccionamos el perfil del MVZ
+            .eq('rancho_id', ranchoId);
+            
+        if (error) throw error;
+        // --- FIN DEL CAMBIO ---
 
         if (!mvzList || mvzList.length === 0) {
             container.innerHTML = '<p class="text-gray-500 text-center">Aún no tienes veterinarios asociados a tu rancho.</p>';
@@ -625,6 +638,9 @@ async function renderizarVistaMiMvz() {
         }
 
         container.innerHTML = mvzList.map(item => {
+            // Verificamos que el perfil de usuario exista
+            if (!item.usuarios) return ''; 
+            
             const permisoActual = item.permisos || 'basico';
             return `
             <div class="bg-white p-4 rounded-xl shadow-md">
@@ -652,7 +668,8 @@ async function renderizarVistaMiMvz() {
             </div>`;
         }).join('');
     } catch (error) {
-        container.innerHTML = '<p class="text-red-500 text-center">No se pudo cargar la lista de veterinarios.</p>';
+        console.error("Error cargando MVZ:", error);
+        container.innerHTML = `<p class="text-red-500 text-center">Error al cargar la lista de veterinarios: ${error.message}</p>`;
     }
 }
 
@@ -2055,25 +2072,41 @@ async function inicializarCalendarioVisual() {
     }
 }
 // --- PEGA ESTAS DOS NUEVAS FUNCIONES al final de tu main.js, antes de initApp() ---
+// Reemplaza window.handleRevocarAccesoMvz
 window.handleRevocarAccesoMvz = async function(permisoId) {
     if (!confirm('¿Estás seguro de que quieres revocar el acceso a este veterinario?')) return;
     try {
-        const res = await fetch(`/api/rancho/mvz/${permisoId}`, { method: 'DELETE' });
-        if (!res.ok) throw new Error('No se pudo revocar el acceso.');
+        // --- CAMBIO: Usar Supabase directo ---
+        const { error } = await sb
+            .from('rancho_mvz_permisos')
+            .delete()
+            .eq('id', permisoId);
+            
+        if (error) throw error;
+        // --- FIN DEL CAMBIO ---
+        
         renderizarVistaMiMvz(); // Recarga la lista
-    } catch (error) { alert(error.message); }
+    } catch (error) { 
+        alert(error.message || 'Error al revocar el acceso.'); 
+    }
 }
 
+// Reemplaza window.handleCambiarPermisoMvz
 window.handleCambiarPermisoMvz = async function(permisoId, nuevoPermiso) {
     try {
-        const res = await fetch(`/api/rancho/mvz/${permisoId}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ permisos: nuevoPermiso })
-        });
-        if (!res.ok) throw new Error('No se pudo actualizar el permiso.');
+        // --- CAMBIO: Usar Supabase directo ---
+        const { error } = await sb
+            .from('rancho_mvz_permisos')
+            .update({ permisos: nuevoPermiso })
+            .eq('id', permisoId);
+            
+        if (error) throw error;
+        // --- FIN DEL CAMBIO ---
+        
         // Opcional: mostrar un mensaje de éxito
-    } catch (error) { alert(error.message); }
+    } catch (error) { 
+        alert(error.message || 'Error al actualizar el permiso.'); 
+    }
 }
 // =================================================================
 // FUNCIONES PARA FILTRAR LA LISTA DE GANADO (VERSIÓN CORREGIDA)
