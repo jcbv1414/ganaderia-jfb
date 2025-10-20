@@ -1,4 +1,16 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Pega esto en main.js, cerca de tus variables globales
+// =================================================================
+// CLIENTE OFICIAL DE SUPABASE
+// =================================================================
+const SUPABASE_URL = 'https://jzjwvvbtlitibngnhjjh.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp6and2dmJ0bGl0aWJuZ25oampoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk0OTk2MDEsImV4cCI6MjA3NTA3NTYwMX0.keTPwPtIxoSNrzJ2La6ARvwgBmdUPiMuWXpXD0w9cwU';
+
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+console.log('Cliente de Supabase inicializado');
+// =================================================================
     // =================================================================
     // ESTADO GLOBAL Y CONFIGURACIÓN
     // =================================================================
