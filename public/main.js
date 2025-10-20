@@ -326,8 +326,11 @@ async function cargarDatosDashboardPropietario() {
     // =================================================================
     // LÓGICA DEL MVZ
     // =================================================================
+// Reemplaza tu función cargarDashboardMVZ
 async function cargarDashboardMVZ() {
-    // Actualiza el saludo, la fecha y LA FOTO DE PERFIL del MVZ
+    if (!currentUser || currentUser.rol !== 'mvz') return;
+
+    // Actualiza el saludo, la fecha y la foto de perfil del MVZ
     const nombreEl = document.getElementById('dash-nombre-mvz');
     if (nombreEl) nombreEl.textContent = currentUser.nombre.split(' ')[0];
     
@@ -335,8 +338,12 @@ async function cargarDashboardMVZ() {
     if (fechaEl) fechaEl.textContent = new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
 
     const avatarEl = document.getElementById('dash-mvz-avatar');
+    // Usar la URL de avatar que ahora guardamos en currentUser
     if (avatarEl) avatarEl.src = currentUser.avatar_url || 'assets/avatar_mvz_default.png';
 
+    // --- TEMPORAL: Mantener contadores de actividades en fetch ---
+    // Dejaremos la carga de los contadores en FETCH por ahora, 
+    // ya que requiere migrar el endpoint del server a RPC.
     try {
         const resDash = await fetch(`/api/dashboard/mvz/${currentUser.id}`);
         if (resDash.ok) {
@@ -346,53 +353,64 @@ async function cargarDashboardMVZ() {
             const resumenAlertasEl = document.getElementById('resumen-alertas-mvz');
             if (resumenAlertasEl) resumenAlertasEl.textContent = dataDash.alertas || 0;
         }
+    } catch(e) { /* Si falla el fetch, no pasa nada grave */ }
+    // --- FIN TEMPORAL ---
+    
+    // --- Cargar Eventos Pendientes: Usando Supabase DIRECTO ---
+    const eventosContainer = document.getElementById('lista-eventos');
+    const pendientesContainer = document.getElementById('lista-pendientes');
+    const hoy = new Date();
 
-        // Cargar eventos del calendario
-        const resEventos = await fetch(`/api/eventos/mvz/${currentUser.id}`);
-        const eventos = (await resEventos.json()).filter(e => !e.completado);
+    if (pendientesContainer) pendientesContainer.innerHTML = '<div class="bg-white p-4 rounded-xl shadow-md"><p class="text-sm text-gray-500">Cargando pendientes...</p></div>';
+    if (eventosContainer) eventosContainer.innerHTML = '<div class="bg-white p-4 rounded-xl shadow-md"><p class="text-sm text-gray-500">Cargando eventos...</p></div>';
+
+    try {
+        const { data: eventos, error: eventosError } = await sb
+            .from('eventos')
+            .select('*, ranchos (nombre)') // Usamos la relación 'ranchos' para obtener el nombre
+            .eq('mvz_id', currentUser.id)
+            .eq('completado', false)
+            .gte('fecha_evento', hoy.toISOString())
+            .order('fecha_evento', { ascending: true });
         
-        const eventosContainer = document.getElementById('lista-eventos');
-        const pendientesContainer = document.getElementById('lista-pendientes');
+        if (eventosError) throw eventosError;
 
-        const hoy = new Date();
-        const hoyAnio = hoy.getFullYear();
-        const hoyMes = hoy.getMonth();
-        const hoyDia = hoy.getDate();
-
+        // Lógica de filtrado de eventos por fecha (basada en tu código anterior)
         const eventosHoy = eventos.filter(e => {
             const fechaEvento = new Date(e.fecha_evento);
-            return fechaEvento.getFullYear() === hoyAnio && fechaEvento.getMonth() === hoyMes && fechaEvento.getDate() === hoyDia;
+            return fechaEvento.toDateString() === hoy.toDateString();
         });
 
         const eventosProximos = eventos.filter(e => !eventosHoy.includes(e));
 
-        if (pendientesContainer) {
-             if (eventosHoy.length > 0) {
-                pendientesContainer.innerHTML = eventosHoy.map((e, i) => {
-                     const rancho = e.nombre_rancho_texto || e.ranchos?.nombre || 'General';
-                    return `<div class="bg-white p-3 rounded-lg shadow-sm mb-3"><p><strong>${i+1}.</strong> ${e.titulo} <em class="text-gray-500">(${rancho})</em></p><div class="flex justify-end space-x-2 mt-2"><button onclick="handleCancelarEvento(${e.id})" class="text-xs text-red-600 font-semibold px-2 py-1">Cancelar</button><button onclick="handleCompletarEvento(${e.id})" class="text-xs bg-green-600 text-white font-semibold px-3 py-1 rounded-full">Completar</button></div></div>`;
-                }).join('');
-            } else {
-                 pendientesContainer.innerHTML = '<div class="bg-white p-4 rounded-xl shadow-md"><p class="text-sm text-gray-500">No hay pendientes para hoy.</p></div>';
-            }
+        // Renderizar Pendientes HOY
+        if (eventosHoy.length > 0) {
+            pendientesContainer.innerHTML = eventosHoy.map((e, i) => {
+                const rancho = e.nombre_rancho_texto || e.ranchos?.nombre || 'General';
+                return `<div class="bg-white p-3 rounded-lg shadow-sm mb-3"><p><strong>${i+1}.</strong> ${e.titulo} <em class="text-gray-500">(${rancho})</em></p><div class="flex justify-end space-x-2 mt-2"><button onclick="handleCancelarEvento(${e.id})" class="text-xs text-red-600 font-semibold px-2 py-1">Cancelar</button><button onclick="handleCompletarEvento(${e.id})" class="text-xs bg-green-600 text-white font-semibold px-3 py-1 rounded-full">Completar</button></div></div>`;
+            }).join('');
+        } else {
+            pendientesContainer.innerHTML = '<div class="bg-white p-4 rounded-xl shadow-md"><p class="text-sm text-gray-500">No hay pendientes para hoy.</p></div>';
         }
 
-        if (eventosContainer) {
-            if (eventosProximos.length > 0) {
-                 eventosContainer.innerHTML = eventosProximos.slice(0, 3).map(e => {
-                    const fecha = new Date(e.fecha_evento);
-                    const manana = new Date(); manana.setDate(new Date().getDate() + 1);
-                    let textoFecha = fecha.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
-                    if (fecha.toDateString() === manana.toDateString()) textoFecha = 'Mañana';
-                    const rancho = e.nombre_rancho_texto || e.ranchos?.nombre || 'General';
-                    return `<div class="bg-white p-4 rounded-xl shadow-md mb-3"><div class="flex justify-between items-center"><p><i class="fa-solid fa-calendar-alt text-brand-green mr-2"></i><strong>${textoFecha}:</strong> ${e.titulo} <em>(${rancho})</em></p><i class="fa-solid fa-chevron-right text-gray-400"></i></div></div>`;
-                }).join('');
-            } else {
-                eventosContainer.innerHTML = '<div class="bg-white p-4 rounded-xl shadow-md"><p class="text-sm text-gray-500">No hay más eventos programados.</p></div>';
-            }
+        // Renderizar Próximos Eventos
+        if (eventosProximos.length > 0) {
+            eventosContainer.innerHTML = eventosProximos.slice(0, 3).map(e => {
+                const fecha = new Date(e.fecha_evento);
+                const manana = new Date(); manana.setDate(new Date().getDate() + 1);
+                let textoFecha = fecha.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
+                if (fecha.toDateString() === manana.toDateString()) textoFecha = 'Mañana';
+                const rancho = e.nombre_rancho_texto || e.ranchos?.nombre || 'General';
+                return `<div class="bg-white p-4 rounded-xl shadow-md mb-3"><div class="flex justify-between items-center"><p><i class="fa-solid fa-calendar-alt text-brand-green mr-2"></i><strong>${textoFecha}:</strong> ${e.titulo} <em>(${rancho})</em></p><i class="fa-solid fa-chevron-right text-gray-400"></i></div></div>`;
+            }).join('');
+        } else {
+            eventosContainer.innerHTML = '<div class="bg-white p-4 rounded-xl shadow-md"><p class="text-sm text-gray-500">No hay más eventos programados.</p></div>';
         }
-    } catch (error) { 
-        console.error("Error cargando dashboard MVZ:", error); 
+
+    } catch (error) {
+        console.error("Error al cargar eventos MVZ:", error);
+        pendientesContainer.innerHTML = '<p class="text-red-500">Error.</p>';
+        eventosContainer.innerHTML = '<p class="text-red-500">Error.</p>';
     }
 }
     // =================================================================
@@ -2485,6 +2503,7 @@ function renderizarVistaAjustesPropietario() {
     if (btnCambiarPassword) btnCambiarPassword.onclick = () => mostrarAlerta('info', 'Funcionalidad de cambio de contraseña', 'Esta funcionalidad aún no está implementada. ¡Pronto estará disponible!'); // Placeholder
 }
 
+// Reemplaza tu función handleGuardarAjustesPropietario
 async function handleGuardarAjustesPropietario() {
     const btnGuardar = document.getElementById('btn-guardar-ajustes-propietario');
     btnGuardar.disabled = true;
@@ -2495,66 +2514,90 @@ async function handleGuardarAjustesPropietario() {
     const ranchoId = currentUser.ranchos?.[0]?.id;
 
     try {
-        // Promesas para todas las actualizaciones
         const updates = [];
+        let logoUrl = currentUser.ranchos?.[0]?.logo_url;
 
         // 1. Actualizar el nombre del usuario
-        updates.push(fetch(`/api/usuarios/${currentUser.id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nombre: nuevoNombre })
-        }).then(res => {
-            if (!res.ok) throw new Error('No se pudo actualizar el perfil.');
-            return res.json();
-        }));
+        updates.push(sb
+            .from('usuarios')
+            .update({ nombre: nuevoNombre })
+            .eq('id', currentUser.id)
+            .select()
+            .single()
+        );
 
         // 2. Actualizar el nombre del rancho
         if (ranchoId) {
-            updates.push(fetch(`/api/ranchos/${ranchoId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ nombre: nuevoNombreRancho })
-            }).then(res => {
-                if (!res.ok) throw new Error('No se pudo actualizar el rancho.');
-                return res.json();
-            }));
+            updates.push(sb
+                .from('ranchos')
+                .update({ nombre: nuevoNombreRancho })
+                .eq('id', ranchoId)
+                .select()
+                .single()
+            );
         }
 
         // 3. Subir y actualizar el logo del rancho (si se seleccionó un nuevo archivo)
         if (selectedRanchoLogoFile && ranchoId) {
-            const formData = new FormData();
-            formData.append('logo', selectedRanchoLogoFile);
+            const file = selectedRanchoLogoFile;
+            const filePath = `logos/${ranchoId}/${Date.now()}_${file.name}`;
 
-            updates.push(fetch(`/api/ranchos/${ranchoId}/upload-logo`, {
-                method: 'POST',
-                body: formData // No Content-Type cuando usas FormData, el navegador lo añade
-            }).then(res => {
-                if (!res.ok) throw new Error('No se pudo subir el logo.');
-                return res.json();
-            }).then(data => {
-                currentUser.ranchos[0].logo_url = data.logo_url; // Actualizar URL en currentUser
-            }));
+            // Subir archivo al Storage
+            const { error: uploadError } = await sb.storage
+                .from('ranchos_logos')
+                .upload(filePath, file);
+
+            if (uploadError) throw new Error(`Error al subir logo: ${uploadError.message}`);
+            
+            // Obtener URL
+            const { data: urlData } = sb.storage
+                .from('ranchos_logos')
+                .getPublicUrl(filePath);
+            
+            logoUrl = urlData.publicUrl;
+
+            // Actualizar la URL en la tabla 'ranchos'
+            updates.push(sb
+                .from('ranchos')
+                .update({ logo_url: logoUrl })
+                .eq('id', ranchoId)
+                .select()
+                .single()
+            );
         }
 
-        // Esperar a que todas las actualizaciones se completen
+        // Esperar a que todas las promesas se completen
         const results = await Promise.all(updates);
 
-        // Actualizar la información local del currentUser si es necesario (ya se hizo para logo_url)
-        const usuarioActualizado = results.find(r => r.usuario)?.usuario;
-        const ranchoActualizado = results.find(r => r.rancho)?.rancho;
-
-        if (usuarioActualizado) currentUser.nombre = usuarioActualizado.nombre;
-        if (ranchoActualizado) currentUser.ranchos[0].nombre = ranchoActualizado.nombre;
+        // Procesar resultados y actualizar currentUser
+        let usuarioActualizado, ranchoActualizado;
+        for (const res of results) {
+            if (res.data && res.data.nombre === nuevoNombre) {
+                usuarioActualizado = res.data;
+            } else if (res.data && res.data.nombre === nuevoNombreRancho) {
+                ranchoActualizado = res.data;
+            } else if (res.data && res.data.logo_url) {
+                 ranchoActualizado = ranchoActualizado || currentUser.ranchos[0];
+                 ranchoActualizado.logo_url = logoUrl;
+            }
+        }
+        
+        // Actualizar datos locales
+        currentUser.nombre = usuarioActualizado?.nombre || currentUser.nombre;
+        if (ranchoId) {
+            currentUser.ranchos[0] = { ...currentUser.ranchos[0], ...ranchoActualizado };
+        }
         sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
-
-        // Limpiar el archivo seleccionado después de subirlo
         selectedRanchoLogoFile = null;
 
         mostrarMensaje('ajustes-mensaje', '¡Cambios guardados con éxito!', false);
+        
+        // Refrescar el dashboard para ver los cambios de nombre/logo
+        setTimeout(() => navigateTo('inicio-propietario'), 1000);
 
     } catch (error) {
         console.error("Error al guardar ajustes:", error);
-        mostrarMensaje('ajustes-mensaje', error.message, true);
+        mostrarMensaje('ajustes-mensaje', error.message || 'Error de permisos al guardar.', true);
     } finally {
         btnGuardar.disabled = false;
         btnGuardar.textContent = 'Guardar Cambios';
