@@ -404,26 +404,59 @@ async function cargarDashboardMVZ() {
     // =================================================================
     // MANEJADORES DE AUTENTICACIÓN
     // =================================================================
-    async function handleLogin(e) {
-        e.preventDefault();
-        const btn = e.target.querySelector('button[type="submit"]');
-        if (btn) { btn.classList.add('loading'); btn.disabled = true; }
+    // Reemplaza tu 'handleLogin' existente con esta nueva versión
+async function handleLogin(e) {
+    e.preventDefault();
+    const btn = e.target.querySelector('button[type="submit"]');
+    if (btn) { btn.classList.add('loading'); btn.disabled = true; }
+    
+    const email = document.getElementById('login-email').value.trim().toLowerCase();
+    const password = document.getElementById('login-password').value;
+
+    try {
+        // --- ¡AQUÍ ESTÁ EL CAMBIO! ---
+        // Ya no usamos fetch('/api/login'), usamos el cliente de Supabase
+        const { data, error } = await sb.auth.signInWithPassword({
+            email: email,
+            password: password,
+        });
+
+        if (error) throw error; // Si falla el login, Supabase nos da un error claro
         
-        const email = document.getElementById('login-email').value;
-        const password = document.getElementById('login-password').value;
-        try {
-            const res = await fetch(`/api/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
-            const respuesta = await res.json();
-            if (!res.ok) throw new Error(respuesta.message || 'Error en login');
-            currentUser = respuesta.user;
-            sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
-            iniciarSesion();
-        } catch (err) {
-            mostrarMensaje('login-mensaje', err.message || 'Error inesperado');
-        } finally {
-            if (btn) { btn.classList.remove('loading'); btn.disabled = false; }
+        // ¡Éxito! Ahora necesitamos cargar el perfil completo del usuario desde la tabla 'usuarios'
+        const { data: userData, error: userError } = await sb
+            .from('usuarios')
+            .select('*')
+            .eq('id', data.user.id) // Buscamos el perfil usando el ID que nos dio 'auth'
+            .single(); // Esperamos solo un resultado
+
+        if (userError) throw userError;
+        
+        // Si es propietario, cargamos sus ranchos (esto sigue siendo útil para el dashboard)
+        if (userData.rol === 'propietario') {
+            const { data: ranchosData, error: ranchoError } = await sb
+                .from('ranchos')
+                .select('*')
+                .eq('propietario_id', userData.id);
+            
+            if (ranchoError) throw ranchoError;
+            userData.ranchos = ranchosData || [];
         }
+
+        // Guardamos el perfil COMPLETO (con los ranchos)
+        currentUser = userData;
+        sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
+        
+        iniciarSesion(); // Esta función ya la tienes y nos lleva al dashboard
+        // --- FIN DEL CAMBIO ---
+
+    } catch (err) {
+        // Los errores de Supabase son más claros (ej. "Invalid login credentials")
+        mostrarMensaje('login-mensaje', err.message || 'Error inesperado');
+    } finally {
+        if (btn) { btn.classList.remove('loading'); btn.disabled = false; }
     }
+}
 
     async function handleRegister(e) {
         e.preventDefault();
