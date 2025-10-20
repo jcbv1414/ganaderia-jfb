@@ -656,40 +656,52 @@ async function renderizarVistaMiMvz() {
     }
 }
 
-   async function renderizarVistaMisVacas() {
-    const ranchoId = currentUser.ranchos?.[0]?.id;
-    if (!ranchoId) return;
+ // Reemplaza tu función renderizarVistaMisVacas existente con esta
+async function renderizarVistaMisVacas() {
+    // 1. Obtenemos el ranchoId directamente de currentUser
+    const ranchoId = currentUser?.ranchos?.[0]?.id;
+    if (!ranchoId) {
+        console.error("No se encontró ranchoId en currentUser para Mi Ganado.");
+        const container = document.getElementById('lista-vacas-container');
+        if(container) container.innerHTML = '<p class="text-center text-red-500 mt-8">Error: No se encontró un rancho asociado.</p>';
+        return;
+    }
 
     const container = document.getElementById('lista-vacas-container');
     container.innerHTML = '<p class="text-center text-gray-500 mt-8">Cargando ganado...</p>';
-    
     const fab = document.getElementById('btn-abrir-modal-vaca');
-    if (fab) fab.onclick = () => abrirModalVaca();
+    if (fab) fab.onclick = () => abrirModalVaca(); // Esto sigue igual
 
     try {
-        const res = await fetch(`/api/vacas/rancho/${ranchoId}`);
-        if (!res.ok) throw new Error('Error al obtener vacas');
-        listaCompletaDeVacas = await res.json(); // Guardamos la lista completa
+        // --- ¡AQUÍ ESTÁ EL CAMBIO PRINCIPAL! ---
+        // Ya no usamos fetch, usamos el cliente 'sb'
+        console.log(`Buscando vacas para rancho ID: ${ranchoId} directamente desde Supabase...`);
+        const { data: vacasData, error } = await sb
+            .from('vacas')
+            .select('*') // Seleccionamos todas las columnas
+            .eq('rancho_id', ranchoId); // RLS se encargará de verificar el permiso
+
+        if (error) {
+            console.error("Error de Supabase al obtener vacas:", error);
+            throw error; // Lanzamos el error para que lo capture el catch
+        }
+        console.log("Vacas recibidas de Supabase:", vacasData);
+        // --- FIN DEL CAMBIO ---
+
+        listaCompletaDeVacas = vacasData || []; // Guardamos la lista completa
 
         const totalVacasEl = document.getElementById('total-vacas-header');
-        if(totalVacasEl) totalVacasEl.textContent = (listaCompletaDeVacas && listaCompletaDeVacas.length) || 0;
+        if(totalVacasEl) totalVacasEl.textContent = listaCompletaDeVacas.length || 0;
 
-        // Preparamos los menús de filtros con los datos reales
-        popularFiltrosDeGanado(listaCompletaDeVacas);
-
-        // Conectamos los controles a la función de filtrado
-        document.getElementById('filtro-busqueda-ganado').addEventListener('input', aplicarFiltrosDeGanado);
-        document.getElementById('filtro-sexo').addEventListener('change', aplicarFiltrosDeGanado);
-        document.getElementById('filtro-lote').addEventListener('change', aplicarFiltrosDeGanado);
-        document.getElementById('filtro-raza').addEventListener('change', aplicarFiltrosDeGanado);
-
-        // Mostramos la lista inicial (sin filtrar)
-        aplicarFiltrosDeGanado();
+        // Las funciones de filtro y renderizado siguen igual
+        setupFiltrosDeGanado();
+        aplicarFiltrosDeGanado(); // Muestra la lista inicial
 
     } catch (error) {
-        container.innerHTML = '<p class="text-center text-red-500 mt-8">Error al cargar el ganado.</p>';
+        console.error("Error completo en renderizarVistaMisVacas:", error);
+        container.innerHTML = `<p class="text-center text-red-500 mt-8">Error al cargar el ganado: ${error.message}</p>`;
     }
-}    
+}   
 // REEMPLAZA TU FUNCIÓN 'abrirModalVaca' CON ESTA VERSIÓN FINAL
 // REEMPLAZA tu función 'abrirModalVaca' (la que está por la línea 1530) con esta:
 function abrirModalVaca() {
