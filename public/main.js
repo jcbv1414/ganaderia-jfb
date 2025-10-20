@@ -736,7 +736,7 @@ async function renderizarVistaMisVacas() {
         listaCompletaDeVacas = vacasData || []; // Guardamos la lista completa
 
         const totalVacasEl = document.getElementById('total-vacas-header');
-        if(totalVacasEl) totalVacasEl.textContent = listaCompletaDeVacas.length || 0;
+        if(totalVacasEl) totalVacasEl.textContent = listaCompletaDeVacas.length;
 
         // Las funciones de filtro y renderizado siguen igual
         setupFiltrosDeGanado();
