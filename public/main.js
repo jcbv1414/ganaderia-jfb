@@ -2812,6 +2812,7 @@ function conectarAyudantesFormVaca() {
 // =================================================================
 // FUNCIÓN PARA GUARDAR O ACTUALIZAR VACA (¡LA QUE FALTABA!)
 // =================================================================
+// Reemplaza tu función window.handleGuardarVaca con esta nueva versión
 window.handleGuardarVaca = async function(cerrarAlFinalizar) {
     const form = document.getElementById('form-agregar-vaca');
     const btnSiguiente = document.getElementById('btn-guardar-siguiente-vaca');
@@ -2819,6 +2820,7 @@ window.handleGuardarVaca = async function(cerrarAlFinalizar) {
 
     if (btnSiguiente) btnSiguiente.disabled = true;
     if (btnFinalizar) btnFinalizar.disabled = true;
+    mostrarMensaje('vaca-mensaje', 'Procesando...', false); // Mensaje inicial
 
     const nombre = form.querySelector('#vaca-nombre').value;
     const siniiga = form.querySelector('#vaca-siniiga').value;
@@ -2832,67 +2834,146 @@ window.handleGuardarVaca = async function(cerrarAlFinalizar) {
 
     const vacaId = form.querySelector('#vaca-id-input').value;
     const isUpdating = vacaId && vacaId !== '';
-
-    // --- Creamos el paquete de envío (FormData) ---
-    const formData = new FormData();
-    formData.append('nombre', nombre);
-    formData.append('siniiga', siniiga);
-    formData.append('pierna', form.querySelector('#vaca-pierna').value);
-    formData.append('lote', form.querySelector('#vaca-lote').value);
-    formData.append('raza', form.querySelector('#vaca-raza').value);
-    formData.append('nacimiento', form.querySelector('#vaca-nacimiento').value);
-    formData.append('padre', form.querySelector('#vaca-padre').value);
-    formData.append('madre', form.querySelector('#vaca-madre').value);
-    formData.append('origen', form.querySelector('#vaca-origen').value);
-    formData.append('sexo', form.querySelector('#vaca-sexo').value);
-    
-    // Añadimos la foto, si es que hay una seleccionada
-    const fotoInput = form.querySelector('#vaca-foto');
-    if (fotoInput.files[0]) {
-        formData.append('fotoVaca', fotoInput.files[0]);
-    }
-
-    // Añadimos los datos de sesión (solo si es CREACIÓN)
-    if (!isUpdating) {
-        if (!currentUser?.id || !currentUser.ranchos?.[0]?.id) {
-            mostrarMensaje('vaca-mensaje', 'Error: Sesión de usuario no encontrada. Recarga la página.');
-            if (btnSiguiente) btnSiguiente.disabled = false;
-            if (btnFinalizar) btnFinalizar.disabled = false;
-            return;
-        }
-        formData.append('propietarioId', currentUser.id);
-        formData.append('ranchoId', currentUser.ranchos[0].id);
-    }
-    // --- Fin del paquete ---
-
-    const method = isUpdating ? 'PUT' : 'POST';
-    const url = isUpdating ? `/api/vacas/${vacaId}` : '/api/vacas';
-    const debeCerrar = isUpdating || cerrarAlFinalizar;
+    let fotoUrl = null; // Variable para la URL de la foto
 
     try {
-        const res = await fetch(url, { method: method, body: formData });
-        const respuesta = await res.json();
-        if (!res.ok) throw new Error(respuesta.message);
+        // --- ¡AQUÍ ESTÁ EL CAMBIO! ---
+
+        // PASO 1: Subir la foto (SI HAY UNA NUEVA)
+        const fotoInput = form.querySelector('#vaca-foto');
+        const file = fotoInput.files[0];
+        if (file) {
+            console.log('Intentando subir foto a Supabase Storage...');
+            // Nombre único para el archivo en Storage
+            const filePath = `vacas/${currentUser.id}_${Date.now()}`;
+
+            // Subimos directo al bucket 'fotos-ganado' (debe ser privado y tener políticas)
+            const { error: uploadError } = await sb.storage
+                .from('fotos-ganado')
+                .upload(filePath, file);
+
+            if (uploadError) {
+                console.error("Error de Supabase Storage al subir foto:", uploadError);
+                throw new Error(`Error al subir foto: ${uploadError.message}`);
+            }
+
+            // Obtenemos la URL pública para guardarla en la tabla 'vacas'
+            const { data: urlData } = sb.storage
+                .from('fotos-ganado')
+                .getPublicUrl(filePath);
+
+            fotoUrl = urlData.publicUrl;
+            console.log('Foto subida, URL:', fotoUrl);
+        } else {
+            console.log('No se seleccionó foto nueva.');
+            // Si estamos editando y no hay foto nueva, mantenemos la URL existente (si la hay)
+            if (isUpdating) {
+                // Necesitamos obtener la URL actual de la vaca que estamos editando
+                const vacaActual = listaCompletaDeVacas.find(v => v.id == vacaId);
+                fotoUrl = vacaActual?.foto_url; // Mantiene la URL si ya existía
+            }
+        }
+
+        // PASO 2: Preparar los datos para la TABLA 'vacas'
+        const datosVaca = {
+            nombre: nombre,
+            numero_siniiga: siniiga,
+            numero_pierna: form.querySelector('#vaca-pierna').value || null,
+            sexo: form.querySelector('#vaca-sexo').value || null,
+            raza: form.querySelector('#vaca-raza').value || null,
+            fecha_nacimiento: form.querySelector('#vaca-nacimiento').value || null,
+            padre: form.querySelector('#vaca-padre').value || null,
+            madre: form.querySelector('#vaca-madre').value || null,
+            origen: form.querySelector('#vaca-origen').value || null,
+            lote: form.querySelector('#vaca-lote').value || null,
+            // Incluimos la fotoUrl SOLO si tenemos una (nueva o existente)
+            ...(fotoUrl && { foto_url: fotoUrl })
+        };
+
+        // Si es una NUEVA vaca, añadimos los IDs de propietario y rancho
+        if (!isUpdating) {
+            datosVaca.id_usuario = currentUser.id; // RLS usará esto
+            datosVaca.rancho_id = currentUser.ranchos?.[0]?.id; // RLS usará esto
+            // Asegurarnos de que rancho_id no sea undefined
+             if (!datosVaca.rancho_id) {
+                 throw new Error("No se pudo determinar el rancho para la nueva vaca.");
+             }
+        }
+
+        // PASO 3: Guardar los datos en la TABLA 'vacas'
+        let dbResult;
+        console.log(`Intentando ${isUpdating ? 'actualizar' : 'insertar'} datos en tabla 'vacas':`, datosVaca);
+        if (isUpdating) {
+            // Si es ACTUALIZACIÓN
+            dbResult = await sb
+                .from('vacas')
+                .update(datosVaca)
+                .eq('id', vacaId) // RLS verificará permiso sobre este ID
+                .select() // Pedimos que nos devuelva la fila actualizada
+                .single(); // Esperamos solo un resultado
+        } else {
+            // Si es CREACIÓN
+            dbResult = await sb
+                .from('vacas')
+                .insert(datosVaca) // RLS verificará permiso para insertar
+                .select() // Pedimos que nos devuelva la fila insertada
+                .single(); // Esperamos solo un resultado
+        }
+
+        const { data: vacaGuardada, error: dbError } = dbResult;
+
+        if (dbError) {
+             console.error(`Error de Supabase al ${isUpdating ? 'actualizar' : 'insertar'} vaca:`, dbError);
+            throw dbError; // Falla si RLS lo prohíbe o hay otro error DB
+        }
+        console.log(`Vaca ${isUpdating ? 'actualizada' : 'guardada'} con éxito:`, vacaGuardada);
+        // --- FIN DEL CAMBIO ---
+
 
         mostrarMensaje('vaca-mensaje', `¡Animal ${isUpdating ? 'actualizado' : 'guardado'}!`, false);
 
+        // Lógica para cerrar modal o limpiar formulario (sigue igual)
         if (debeCerrar) {
             setTimeout(() => {
                 document.getElementById('modal-agregar-vaca')?.classList.add('hidden');
-                renderizarVistaMisVacas(); // Recargamos la lista
+                // IMPORTANTE: Ya no llamamos a renderizarVistaMisVacas() aquí
+                // En su lugar, actualizamos la lista local y redibujamos
+                if (isUpdating) {
+                    // Reemplazar vaca en la lista local
+                    const index = listaCompletaDeVacas.findIndex(v => v.id == vacaId);
+                    if (index > -1) listaCompletaDeVacas[index] = vacaGuardada;
+                } else {
+                    // Añadir nueva vaca al inicio de la lista local
+                    listaCompletaDeVacas.unshift(vacaGuardada);
+                }
+                aplicarFiltrosDeGanado(); // Redibuja la lista con los datos actualizados
+                 // Actualiza el contador en el header
+                 const totalVacasEl = document.getElementById('total-vacas-header');
+                 if(totalVacasEl) totalVacasEl.textContent = listaCompletaDeVacas.length || 0;
+
             }, 1200);
         } else {
-            // Si es "Guardar y Siguiente", limpiamos el form
+            // Si es "Guardar y Siguiente"
+             // Añadir nueva vaca al inicio de la lista local
+             listaCompletaDeVacas.unshift(vacaGuardada);
+             aplicarFiltrosDeGanado(); // Redibuja la lista con los datos actualizados
+             // Actualiza el contador en el header
+             const totalVacasEl = document.getElementById('total-vacas-header');
+             if(totalVacasEl) totalVacasEl.textContent = listaCompletaDeVacas.length || 0;
+
             setTimeout(() => {
                 form.reset();
+                // Limpiar display foto
                 const fileNameDisplay = document.getElementById('file-name-display');
-                if (fileNameDisplay) {
-                    fileNameDisplay.innerHTML = '<span class="font-semibold">Click para subir</span> o arrastra';
-                    fileNameDisplay.classList.add('text-gray-500');
-                    fileNameDisplay.classList.remove('text-brand-green', 'font-semibold');
-                }
+                 if (fileNameDisplay) {
+                     fileNameDisplay.innerHTML = '<span class="font-semibold">Click para subir</span> o arrastra';
+                     fileNameDisplay.classList.add('text-gray-500');
+                     fileNameDisplay.classList.remove('text-brand-green', 'font-semibold');
+                 }
+                // Limpiar edad
                 const edadInput = document.getElementById('vaca-edad');
                 if (edadInput) edadInput.value = '';
+                // Limpiar sexo
                 const sexoSelector = document.getElementById('sexo-selector');
                 sexoSelector.querySelector('.bg-brand-green')?.classList.remove('bg-brand-green', 'text-white');
                 form.querySelector('#vaca-nombre').focus();
@@ -2901,12 +2982,14 @@ window.handleGuardarVaca = async function(cerrarAlFinalizar) {
         }
 
     } catch (error) {
+        console.error("Error completo en handleGuardarVaca:", error);
         mostrarMensaje('vaca-mensaje', error.message || 'Error inesperado', true);
     } finally {
+        // Habilitar botones de nuevo
         setTimeout(() => {
             if (btnSiguiente) btnSiguiente.disabled = false;
             if (btnFinalizar) btnFinalizar.disabled = false;
-        }, 1200);
+        }, 1200); // Dar tiempo a que se muestre el mensaje
     }
 }
     initApp();
