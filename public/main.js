@@ -967,7 +967,8 @@ window.verHistorialVaca = async function(vacaId, vacaNombre) {
     }
 }
 
-    async function renderizarVistaEstadisticas() {
+// Reemplaza tu función renderizarVistaEstadisticas
+async function renderizarVistaEstadisticas() {
     const ranchoId = currentUser?.ranchos?.[0]?.id;
     if (!ranchoId) return;
 
@@ -975,17 +976,60 @@ window.verHistorialVaca = async function(vacaId, vacaNombre) {
     contenidoContainer.innerHTML = '<p class="text-center text-gray-500">Cargando datos...</p>';
 
     try {
-        const res = await fetch(`/api/rancho/${ranchoId}/estadisticas`);
-        if (!res.ok) throw new Error('No se pudieron cargar las estadísticas del servidor.');
+        // 1. Obtener todas las vacas del rancho
+        const { data: vacas, error: vacasError } = await sb
+            .from('vacas')
+            .select('id, lote, raza');
+        if (vacasError) throw vacasError;
 
-        datosEstadisticasCompletos = await res.json();
-        const lotes = Object.keys(datosEstadisticasCompletos);
-
-        if (lotes.length === 0) {
+        if (!vacas || vacas.length === 0) {
             contenidoContainer.innerHTML = '<p class="text-center text-gray-500">No hay datos suficientes para mostrar estadísticas.</p>';
             return;
         }
 
+        // 2. Obtener la última palpación de todas las vacas (PLANC B DE CALCULO MANUAL)
+        const cowIds = vacas.map(v => v.id);
+        const { data: todasLasActividades, error: actError } = await sb
+            .from('actividades')
+            .select('id_vaca, descripcion, tipo_actividad')
+            .in('id_vaca', cowIds)
+            .eq('tipo_actividad', 'Palpación')
+            .order('fecha_actividad', { ascending: false });
+
+        if (actError) throw actError;
+
+        // 3. Procesamiento manual de estadísticas (simulando la lógica del servidor)
+        const estadoMap = new Map();
+        (todasLasActividades || []).forEach(act => {
+            if (!estadoMap.has(act.id_vaca)) {
+                let desc = act.descripcion || {};
+                if (typeof desc === 'string') { try { desc = JSON.parse(desc); } catch (e) { desc = {}; } }
+                estadoMap.set(act.id_vaca, desc);
+            }
+        });
+
+        const stats = vacas.reduce((acc, vaca) => {
+            const lote = vaca.lote || 'Sin Lote';
+            acc[lote] = acc[lote] || { totalVacas: 0, estados: { Gestante: 0, Estatica: 0, Ciclando: 0 }, razas: {} };
+            acc[lote].totalVacas++;
+
+            const ultimoEstado = estadoMap.get(vaca.id);
+            if (ultimoEstado) {
+                if (ultimoEstado.gestante === 'Sí') acc[lote].estados.Gestante++;
+                if (ultimoEstado.estatica === 'Sí') acc[lote].estados.Estatica++;
+                if (ultimoEstado.ciclando === 'Sí') acc[lote].estados.Ciclando++;
+            }
+            const raza = vaca.raza || 'Desconocida';
+            acc[lote].razas[raza] = (acc[lote].razas[raza] || 0) + 1;
+            return acc;
+        }, {});
+        
+        datosEstadisticasCompletos = stats; // Guardamos para el renderizado del gráfico
+        // --- FIN DEL CÁLCULO MIGRADO ---
+
+
+        // 4. Renderizado de pestañas (no cambia)
+        const lotes = Object.keys(datosEstadisticasCompletos);
         const tabsContainer = document.getElementById('tabs-lotes-container');
         tabsContainer.innerHTML = '';
 
@@ -1010,7 +1054,8 @@ window.verHistorialVaca = async function(vacaId, vacaNombre) {
         }
 
     } catch (error) {
-        contenidoContainer.innerHTML = `<p class="text-center text-red-500">${error.message || 'Error'}</p>`;
+        console.error("Error al cargar estadísticas:", error);
+        contenidoContainer.innerHTML = `<p class="text-center text-red-500">${error.message || 'Error al cargar estadísticas.'}</p>`;
     }
 }
     
@@ -1304,6 +1349,7 @@ if (actividadLoteEl) {
 
 }
 
+// Reemplaza tu función handleFinalizarYReportar
 async function handleFinalizarYReportar() {
     const btn = document.getElementById('btn-finalizar-actividad-modal');
     if (btn) {
@@ -1311,8 +1357,6 @@ async function handleFinalizarYReportar() {
         btn.textContent = 'Procesando...';
     }
 
-    // --- INICIO DE LA CORRECCIÓN CLAVE ---
-    // 1. Verificamos explícitamente que tenemos un rancho activo antes de continuar.
     if (!currentRancho) {
         alert('Error: No se ha definido un rancho de trabajo. Por favor, reinicia la actividad.');
         if (btn) {
@@ -1321,7 +1365,6 @@ async function handleFinalizarYReportar() {
         }
         return;
     }
-    // --- FIN DE LA CORRECCIÓN CLAVE ---
 
     if (loteActividadActual.length === 0) {
         alert("No hay actividades en el lote para reportar. Guarda al menos un animal antes de finalizar.");
@@ -1331,15 +1374,45 @@ async function handleFinalizarYReportar() {
         }
         return;
     }
+    
+    // Asignamos una UUID de sesión única para todos los registros del lote
+    const sesionId = crypto.randomUUID(); // Asumimos que la librería 'crypto' está disponible, si no, lo ajustaremos.
+    const nombreDelRancho = currentRancho.id === null
+        ? document.getElementById('rancho-independiente-nombre')?.value?.trim() || 'Independiente'
+        : currentRancho.nombre;
 
+    // 1. Preparamos los datos para la inserción en Supabase
+    const actividadesParaInsertar = loteActividadActual.map(item => ({
+        tipo_actividad: item.tipoLabel,
+        // Almacenamos los detalles como objeto JSON en la columna 'descripcion'
+        descripcion: item.detalles, 
+        fecha_actividad: item.fecha,
+        id_vaca: item.vacaId || null,
+        id_usuario: currentUser?.id,
+        sesion_id: sesionId,
+        rancho_id: currentRancho.id, 
+        // Usamos extra_data para datos que el PDF necesita: arete, raza, lote y nombre del rancho
+        extra_data: { arete: item.areteVaca, raza: item.raza, lote: item.loteNumero, rancho_nombre: nombreDelRancho }
+    }));
+    
     try {
-        const nombreDelRancho = currentRancho.id === null
-            ? document.getElementById('rancho-independiente-nombre')?.value?.trim() || 'Independiente'
-            : currentRancho.nombre;
+        // --- CAMBIO CLAVE 1: Insertar en la base de datos (MVZ puede insertar en actividades) ---
+        const { error: insertError } = await sb
+            .from('actividades')
+            .insert(actividadesParaInsertar);
 
-        const payload = {
+        if (insertError) {
+             console.error("Error al insertar actividades en Supabase:", insertError);
+             throw new Error(insertError.message || 'Error de permisos al guardar actividades.');
+        }
+        // --- FIN CAMBIO CLAVE 1 ---
+
+
+        // --- CAMBIO CLAVE 2: Llamar al servidor antiguo para generar el PDF (Temporal) ---
+        // Se mantiene esta llamada FETCH porque el server.js contiene la lógica del PDF.
+        const payloadPDF = {
             mvzId: currentUser?.id,
-            ranchoId: currentRancho.id, // Ahora usamos el ID que ya verificamos que existe
+            ranchoId: currentRancho.id,
             loteActividad: loteActividadActual,
             mvzNombre: currentUser?.nombre || '',
             ranchoNombre: nombreDelRancho
@@ -1348,18 +1421,15 @@ async function handleFinalizarYReportar() {
         const res = await fetch('/api/actividades', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            body: JSON.stringify(payloadPDF)
         });
 
         if (!res.ok) {
-            try {
-                const errData = await res.json();
-                throw new Error(errData.message || 'Error en el servidor al generar el reporte.');
-            } catch (e) {
-                throw new Error(res.statusText);
-            }
+            const errData = await res.json().catch(() => ({ message: res.statusText }));
+            throw new Error(errData.message || 'Error en el servidor al generar el reporte.');
         }
 
+        // Procesa y descarga el PDF (mantiene la lógica anterior)
         const blob = await res.blob();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -1369,15 +1439,17 @@ async function handleFinalizarYReportar() {
         a.click();
         a.remove();
         window.URL.revokeObjectURL(url);
-        
+        // --- FIN CAMBIO CLAVE 2 ---
+
+        // Limpieza y actualización de UI
         loteActividadActual = [];
         const loteInfoEl = document.getElementById('lote-info');
         if (loteInfoEl) loteInfoEl.textContent = `0 vacas`;
-        renderizarHistorialMVZ();
+        renderizarHistorialMVZ(); // Llama a la función ya migrada
 
     } catch (err) {
         console.error("Error al finalizar y generar PDF:", err);
-        alert(err.message || 'Hubo un error inesperado.');
+        alert(err.message || 'Hubo un error inesperado al guardar o generar el PDF.');
     } finally {
         if (btn) {
             btn.disabled = false;
@@ -1453,42 +1525,45 @@ async function renderizarHistorialMVZ() {
     }
 }
 
-    async function handleGenerarPdfDeHistorial() {
-        const checkboxes = document.querySelectorAll('#historial-actividades-mvz input[type="checkbox"]:checked');
-        const sesionesSeleccionadas = Array.from(checkboxes).map(cb => cb.dataset.sesionId);
+    // Reemplaza tu función handleGenerarPdfDeHistorial
+async function handleGenerarPdfDeHistorial() {
+    const checkboxes = document.querySelectorAll('#historial-actividades-mvz input[type="checkbox"]:checked');
+    const sesionesSeleccionadas = Array.from(checkboxes).map(cb => cb.dataset.sesionId);
 
-        if (sesionesSeleccionadas.length === 0) {
-            alert('Por favor, selecciona al menos una actividad del historial para generar el reporte.');
-            return;
-        }
-
-        try {
-            const res = await fetch('/api/historial/pdf', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sesion_ids: sesionesSeleccionadas, mvzNombre: currentUser?.nombre || '' })
-            });
-
-            if (!res.ok) {
-                const txt = await res.text().catch(()=>null);
-                throw new Error(txt || 'El servidor no pudo generar el PDF.');
-            }
-            
-            const blob = await res.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `reporte_historial_${new Date().toISOString().split('T')[0]}.pdf`;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            window.URL.revokeObjectURL(url);
-
-        } catch (err) {
-            console.error("Error al generar PDF de historial:", err);
-            alert('Hubo un error al generar el reporte.');
-        }
+    if (sesionesSeleccionadas.length === 0) {
+        alert('Por favor, selecciona al menos una actividad del historial para generar el reporte.');
+        return;
     }
+    
+    // --- Mantenemos la llamada FETCH porque el servidor contiene la lógica PDF ---
+    try {
+        const res = await fetch('/api/historial/pdf', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sesion_ids: sesionesSeleccionadas, mvzNombre: currentUser?.nombre || '' })
+        });
+
+        if (!res.ok) {
+            const txt = await res.text().catch(()=>null);
+            throw new Error(txt || 'El servidor no pudo generar el PDF.');
+        }
+        
+        // Procesa y descarga el PDF (lógica que ya existía)
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `reporte_historial_${new Date().toISOString().split('T')[0]}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+
+    } catch (err) {
+        console.error("Error al generar PDF de historial:", err);
+        alert('Hubo un error al generar el reporte.');
+    }
+}
     
  function renderizarCamposProcedimiento(tipo) {
     const container = document.getElementById('campos-dinamicos-procedimiento');
@@ -2780,108 +2855,69 @@ function renderizarVistaAjustesMvz() {
     if (btnCambiarPassword) btnCambiarPassword.onclick = () => { alert('Funcionalidad de cambio de contraseña en construcción.'); };
 }
 
+// Reemplaza tu función handleGuardarAjustesMvz
 async function handleGuardarAjustesMvz() {
     const btnGuardar = document.getElementById('btn-guardar-ajustes-mvz');
     btnGuardar.disabled = true;
     btnGuardar.textContent = 'Guardando...';
 
     try {
-        const updates = [];
-
-        // 1. Actualizar datos de texto
+        let avatarUrl = currentUser.avatar_url; // URL actual
         const nuevoNombre = document.getElementById('ajustes-nombre-mvz').value;
         const nuevaCedula = document.getElementById('ajustes-cedula-mvz').value;
         const nuevaEspecialidad = document.getElementById('ajustes-especialidad-mvz').value;
         const infoProfesional = { cedula: nuevaCedula, especialidad: nuevaEspecialidad };
-        
-        // PEGA ESTA VERSIÓN MIGRADA:
 
-// 1. Actualizar el nombre del usuario (Supabase)
-updates.push(sb
-    .from('usuarios')
-    .update({ nombre: nuevoNombre })
-    .eq('id', currentUser.id)
-    .select()
-    .single()
-);
-
-        // 2. Subir nueva foto de perfil si existe
+        // 1. Subir nueva foto de perfil si existe (directo a Supabase Storage)
         if (selectedMvzAvatarFile) {
-            const formData = new FormData();
-            formData.append('avatar', selectedMvzAvatarFile);
-            updates.push(fetch(`/api/usuarios/${currentUser.id}/upload-avatar`, {
-                method: 'POST',
-                body: formData
-            }).then(res => res.json()));
+            const file = selectedMvzAvatarFile;
+            const filePath = `avatars/usuario_${currentUser.id}_${Date.now()}`;
+
+            const { error: uploadError } = await sb.storage
+                .from('avatars') // Asumiendo que el bucket 'avatars' tiene política INSERT
+                .upload(filePath, file);
+            
+            if (uploadError) throw new Error(`Error al subir avatar: ${uploadError.message}`);
+
+            const { data: urlData } = sb.storage
+                .from('avatars')
+                .getPublicUrl(filePath);
+            
+            avatarUrl = urlData.publicUrl;
         }
 
-        const results = await Promise.all(updates);
+        // 2. Actualizar datos de texto y la URL del avatar en la tabla 'usuarios'
+        const updatePayload = { 
+            nombre: nuevoNombre, 
+            info_profesional: infoProfesional, 
+            avatar_url: avatarUrl 
+        };
 
-        // Actualizar currentUser con todos los datos nuevos
-        results.forEach(result => {
-            if (result.usuario) {
-                currentUser.nombre = result.usuario.nombre;
-                currentUser.info_profesional = result.usuario.info_profesional;
-            }
-            if (result.avatar_url) {
-                currentUser.avatar_url = result.avatar_url;
-            }
-        });
+        const { data: usuarioActualizado, error: userError } = await sb
+            .from('usuarios')
+            .update(updatePayload)
+            .eq('id', currentUser.id)
+            .select()
+            .single();
+
+        if (userError) throw userError;
+
+        // 3. Actualizar currentUser y limpiar
+        currentUser = { ...currentUser, ...usuarioActualizado };
         sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
-        selectedMvzAvatarFile = null; // Limpiar
+        selectedMvzAvatarFile = null; 
 
         mostrarMensaje('ajustes-mvz-mensaje', '¡Cambios guardados con éxito!', false);
 
     } catch (error) {
-        mostrarMensaje('ajustes-mvz-mensaje', error.message, true);
+        console.error("Error al guardar ajustes MVZ:", error);
+        mostrarMensaje('ajustes-mvz-mensaje', error.message || 'Error de permisos al guardar.', true);
     } finally {
         btnGuardar.disabled = false;
         btnGuardar.textContent = 'Guardar Cambios';
     }
 }
 
-async function handleGuardarAjustesMvz() {
-    const btnGuardar = document.getElementById('btn-guardar-ajustes-mvz');
-    btnGuardar.disabled = true;
-    btnGuardar.textContent = 'Guardando...';
-
-    const nuevoNombre = document.getElementById('ajustes-nombre-mvz').value;
-    const nuevaCedula = document.getElementById('ajustes-cedula-mvz').value;
-    const nuevaEspecialidad = document.getElementById('ajustes-especialidad-mvz').value;
-
-    const infoProfesional = {
-        cedula: nuevaCedula,
-        especialidad: nuevaEspecialidad
-    };
-
-    try {
-        // Reutilizamos la ruta de actualización de usuario que ya existe
-        const res = await fetch(`/api/usuarios/${currentUser.id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                nombre: nuevoNombre,
-                info_profesional: infoProfesional
-            })
-        });
-
-        if (!res.ok) throw new Error('No se pudo actualizar el perfil.');
-        const { usuario: usuarioActualizado } = await res.json();
-
-        // Actualizar la información local para que se refleje en toda la app
-        currentUser.nombre = usuarioActualizado.nombre;
-        currentUser.info_profesional = usuarioActualizado.info_profesional;
-        sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
-
-        mostrarMensaje('ajustes-mvz-mensaje', '¡Cambios guardados con éxito!', false);
-
-    } catch (error) {
-        mostrarMensaje('ajustes-mvz-mensaje', error.message, true);
-    } finally {
-        btnGuardar.disabled = false;
-        btnGuardar.textContent = 'Guardar Cambios';
-    }
-}
 // =================================================================
 // LÓGICA PARA LA PANTALLA DE AJUSTES DEL MVZ
 // =================================================================
@@ -2929,62 +2965,6 @@ function renderizarVistaAjustesMvz() {
     if (btnCambiarPassword) btnCambiarPassword.onclick = () => { alert('Funcionalidad de cambio de contraseña en construcción.'); };
 }
 
-async function handleGuardarAjustesMvz() {
-    const btnGuardar = document.getElementById('btn-guardar-ajustes-mvz');
-    btnGuardar.disabled = true;
-    btnGuardar.textContent = 'Guardando...';
-
-    try {
-        const updates = [];
-        let avatarUrl = currentUser.avatar_url; // URL actual
-
-        // 1. Subir nueva foto de perfil si existe
-        if (selectedMvzAvatarFile) {
-            const formData = new FormData();
-            formData.append('avatar', selectedMvzAvatarFile);
-
-            const resAvatar = await fetch(`/api/usuarios/${currentUser.id}/upload-avatar`, {
-                method: 'POST',
-                body: formData
-            });
-            if (!resAvatar.ok) throw new Error('No se pudo subir la foto.');
-            const { usuario } = await resAvatar.json();
-            avatarUrl = usuario.avatar_url; // Obtenemos la nueva URL
-        }
-
-        // 2. Actualizar datos de texto
-        const nuevoNombre = document.getElementById('ajustes-nombre-mvz').value;
-        const nuevaCedula = document.getElementById('ajustes-cedula-mvz').value;
-        const nuevaEspecialidad = document.getElementById('ajustes-especialidad-mvz').value;
-        const infoProfesional = { cedula: nuevaCedula, especialidad: nuevaEspecialidad };
-
-        const resUser = await fetch(`/api/usuarios/${currentUser.id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                nombre: nuevoNombre, 
-                info_profesional: infoProfesional,
-                avatar_url: avatarUrl // Guardamos la URL de la foto (nueva o la que ya estaba)
-            })
-        });
-        if (!resUser.ok) throw new Error('No se pudo actualizar el perfil.');
-
-        const { usuario: usuarioActualizado } = await resUser.json();
-
-        // 3. Actualizar currentUser con todos los datos nuevos
-        currentUser = { ...currentUser, ...usuarioActualizado };
-        sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
-        selectedMvzAvatarFile = null; // Limpiar
-
-        mostrarMensaje('ajustes-mvz-mensaje', '¡Cambios guardados con éxito!', false);
-
-    } catch (error) {
-        mostrarMensaje('ajustes-mvz-mensaje', error.message, true);
-    } finally {
-        btnGuardar.disabled = false;
-        btnGuardar.textContent = 'Guardar Cambios';
-    }
-}
 // Pega esta función en CUALQUIER LUGAR de tu main.js (afuera de otra función)
 function conectarAyudantesFormVaca() {
     // 1. Conectar selector de SEXO
