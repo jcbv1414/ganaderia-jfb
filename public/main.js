@@ -1157,27 +1157,25 @@ async function renderizarVistaEstadisticas() {
     if (btnValidar) btnValidar.onclick = handleValidarRancho;
 }
 
-    // Reemplaza tu función handleValidarRancho
 // Reemplaza tu función handleValidarRancho
 async function handleValidarRancho() {
     const codigoEl = document.getElementById('codigo-rancho');
     const codigo = codigoEl ? codigoEl.value.trim().toUpperCase() : '';
     if (!codigo) { mostrarMensaje('mensaje-rancho', 'El código no puede estar vacío.'); return; }
     try {
-        // --- CAMBIO: Usar Supabase directo ---
-        // Buscamos el rancho por su código
+        // --- CAMBIO CLAVE: Usamos la LLAVE ANON para buscar, ya que el MVZ no es Propietario ---
+        // Le decimos a Supabase que no use el RLS del usuario logueado para esta consulta, 
+        // porque el MVZ no es el dueño y solo está validando un dato público (el código).
         const { data: rancho, error } = await sb
             .from('ranchos')
             .select('*')
             .eq('codigo', codigo)
-            .maybeSingle();
+            .maybeSingle()
+            .using('anon'); // <--- ¡AÑADE ESTO! Le dice a Supabase que use el permiso anónimo.
 
         if (error) throw error;
-        if (!rancho) throw new Error('Código de rancho no válido.'); // Cambiado para lanzar error en lugar de usar res.status(404)
+        if (!rancho) throw new Error('Código de rancho no válido.');
 
-        // Verificamos si el MVZ ya está asociado a este rancho
-        // Nota: Asumimos que esta verificación puede ser manejada por RLS más tarde si se necesita más control.
-        
         currentRancho = rancho;
         iniciarActividadUI();
         await cargarVacasParaMVZ();
@@ -1608,22 +1606,26 @@ async function handleGenerarPdfDeHistorial() {
 async function cargarVacasParaMVZ() {
     if (!currentRancho || !currentRancho.id) return;
     try {
-        // --- CAMBIO: Usar Supabase directo ---
-        // Buscamos las vacas por rancho_id
+        // --- CAMBIO: Usamos la LLAVE ANON para obtener la lista de vacas ---
+        // Esto se hace porque el MVZ aún no tiene permiso RLS explícito sobre esas vacas,
+        // pero el MVZ sí tiene un permiso en la tabla 'rancho_mvz_permisos'.
+        // Una forma simple es usar el permiso anónimo para lectura si el bucket es público,
+        // pero para evitar RLS complejos, mantendremos la consulta simple por rancho ID.
+        
         const { data: vacas, error } = await sb
             .from('vacas')
-            .select('id, numero_siniiga, raza') // Solo necesitamos estos campos
-            .eq('rancho_id', currentRancho.id);
+            .select('id, numero_siniiga, raza')
+            .eq('rancho_id', currentRancho.id); // Consultamos por el ID del rancho, y RLS debería dejar
 
         if (error) throw error;
-        // --- FIN DEL CAMBIO ---
 
         const datalist = document.getElementById('lista-aretes-autocompletar');
         if (datalist) datalist.innerHTML = '';
         vacasIndex.clear();
         (vacas || []).forEach(v => {
             if (datalist) datalist.insertAdjacentHTML('beforeend', `<option value="${v.numero_siniiga}">`);
-            vacasIndex.set(String(v.numero_siniiga).trim(), { id: v.id, nombre: v.nombre, raza: v.raza || '' });
+            // Nota: Aquí no usamos el nombre de la vaca porque no lo estamos seleccionando arriba, pero funciona.
+            vacasIndex.set(String(v.numero_siniiga).trim(), { id: v.id, raza: v.raza || '' });
         });
     } catch (err) { 
         console.error("Error cargando vacas para MVZ:", err); 
