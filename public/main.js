@@ -2534,6 +2534,7 @@ function renderizarVistaAjustesPropietario() {
 }
 
 // Reemplaza tu función handleGuardarAjustesPropietario
+// Reemplaza tu función handleGuardarAjustesPropietario
 async function handleGuardarAjustesPropietario() {
     const btnGuardar = document.getElementById('btn-guardar-ajustes-propietario');
     btnGuardar.disabled = true;
@@ -2546,6 +2547,7 @@ async function handleGuardarAjustesPropietario() {
     try {
         const updates = [];
         let logoUrl = currentUser.ranchos?.[0]?.logo_url;
+        let ranchoActualizado = currentUser.ranchos?.[0];
 
         // 1. Actualizar el nombre del usuario
         updates.push(sb
@@ -2570,23 +2572,24 @@ async function handleGuardarAjustesPropietario() {
         // 3. Subir y actualizar el logo del rancho (si se seleccionó un nuevo archivo)
         if (selectedRanchoLogoFile && ranchoId) {
             const file = selectedRanchoLogoFile;
-            const filePath = `logos/${ranchoId}/${Date.now()}_${file.name}`;
+            // Usamos el ID del rancho en la ruta del archivo
+            const filePath = `logos/${ranchoId}/logo_${Date.now()}_${file.name}`;
 
-            // Subir archivo al Storage
+            // 3a. Subir archivo al Storage (bucket 'ranchos_logos')
             const { error: uploadError } = await sb.storage
-                .from('ranchos_logos')
+                .from('ranchos_logos') // ¡Asegúrate de que este bucket tenga política INSERT!
                 .upload(filePath, file);
 
             if (uploadError) throw new Error(`Error al subir logo: ${uploadError.message}`);
             
-            // Obtener URL
+            // 3b. Obtener URL pública
             const { data: urlData } = sb.storage
                 .from('ranchos_logos')
                 .getPublicUrl(filePath);
             
             logoUrl = urlData.publicUrl;
 
-            // Actualizar la URL en la tabla 'ranchos'
+            // 3c. Actualizar la URL en la tabla 'ranchos'
             updates.push(sb
                 .from('ranchos')
                 .update({ logo_url: logoUrl })
@@ -2596,26 +2599,28 @@ async function handleGuardarAjustesPropietario() {
             );
         }
 
-        // Esperar a que todas las promesas se completen
+        // Esperar a que todas las promesas de actualización se completen
         const results = await Promise.all(updates);
 
         // Procesar resultados y actualizar currentUser
-        let usuarioActualizado, ranchoActualizado;
+        let usuarioActualizado = {};
         for (const res of results) {
-            if (res.data && res.data.nombre === nuevoNombre) {
-                usuarioActualizado = res.data;
-            } else if (res.data && res.data.nombre === nuevoNombreRancho) {
-                ranchoActualizado = res.data;
-            } else if (res.data && res.data.logo_url) {
-                 ranchoActualizado = ranchoActualizado || currentUser.ranchos[0];
-                 ranchoActualizado.logo_url = logoUrl;
+            if (res.data) {
+                // Si la fila actualizada tiene columna 'rol' (es un usuario)
+                if (res.data.rol) {
+                    usuarioActualizado = res.data;
+                } 
+                // Si la fila actualizada tiene columna 'propietario_id' (es un rancho)
+                else if (res.data.propietario_id) {
+                    ranchoActualizado = { ...ranchoActualizado, ...res.data };
+                }
             }
         }
         
         // Actualizar datos locales
-        currentUser.nombre = usuarioActualizado?.nombre || currentUser.nombre;
+        currentUser.nombre = usuarioActualizado.nombre || currentUser.nombre;
         if (ranchoId) {
-            currentUser.ranchos[0] = { ...currentUser.ranchos[0], ...ranchoActualizado };
+            currentUser.ranchos[0] = ranchoActualizado;
         }
         sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
         selectedRanchoLogoFile = null;
@@ -2695,11 +2700,16 @@ async function handleGuardarAjustesMvz() {
         const nuevaEspecialidad = document.getElementById('ajustes-especialidad-mvz').value;
         const infoProfesional = { cedula: nuevaCedula, especialidad: nuevaEspecialidad };
         
-        updates.push(fetch(`/api/usuarios/${currentUser.id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nombre: nuevoNombre, info_profesional: infoProfesional })
-        }).then(res => res.json()));
+        // PEGA ESTA VERSIÓN MIGRADA:
+
+// 1. Actualizar el nombre del usuario (Supabase)
+updates.push(sb
+    .from('usuarios')
+    .update({ nombre: nuevoNombre })
+    .eq('id', currentUser.id)
+    .select()
+    .single()
+);
 
         // 2. Subir nueva foto de perfil si existe
         if (selectedMvzAvatarFile) {
