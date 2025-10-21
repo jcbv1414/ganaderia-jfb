@@ -1171,8 +1171,7 @@ async function handleValidarRancho() {
             .select('*')
             .eq('codigo', codigo)
             .maybeSingle()
-            .using('anon'); // <--- ¡AÑADE ESTO! Le dice a Supabase que use el permiso anónimo.
-
+            
         if (error) throw error;
         if (!rancho) throw new Error('Código de rancho no válido.');
 
