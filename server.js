@@ -292,25 +292,6 @@ app.post('/api/actividades', async (req, res) => {
         }
         console.log(`[INSPECTOR] Lote de actividad tiene ${loteActividad.length} registros.`);
 
-        const sesionId = crypto.randomUUID();
-        const actividadesParaInsertar = loteActividad.map(item => ({
-            tipo_actividad: item.tipoLabel,
-            descripcion: item.detalles || {},
-            fecha_actividad: item.fecha,
-            id_vaca: item.vacaId || null,
-            id_usuario: mvzId,
-            sesion_id: sesionId,
-            rancho_id: ranchoId,
-            extra_data: { arete: item.areteVaca, raza: item.raza, lote: item.loteNumero, rancho_nombre: ranchoNombre }
-        }));
-        console.log('[INSPECTOR] Datos listos para insertar en la base de datos.');
-
-        const { error } = await supabase.from('actividades').insert(actividadesParaInsertar);
-        if (error) {
-            console.error('[INSPECTOR] ¡ERROR DE SUPABASE AL INSERTAR!', error);
-            throw error;
-        }
-        console.log('[INSPECTOR] Datos guardados en Supabase correctamente.');
         console.log('[INSPECTOR] Iniciando la creación del PDF...');
 
         res.setHeader('Content-Type', 'application/pdf');
