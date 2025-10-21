@@ -1660,11 +1660,26 @@ async function cargarVacasParaMVZ() {
 
         const formData = new FormData(form);
         const detalles = {};
-        for (const [key, value] of formData.entries()) {
-            if (!['actividad-lote', 'actividad-arete', 'raza'].includes(key) && value) {
-                detalles[key] = value;
+    const camposDinamicos = document.getElementById('campos-dinamicos-procedimiento');
+    if (camposDinamicos) {
+        // Obtenemos todos los inputs, selects y textareas dentro del contenedor dinámico
+        camposDinamicos.querySelectorAll('input, select, textarea').forEach(el => {
+            const key = el.name;
+            if (!key) return; // Ignorar si no tiene nombre
+
+            if (el.type === 'checkbox') {
+                // Para checkboxes, guardamos "Sí" solo si está marcado
+                if (el.checked) {
+                    detalles[key] = 'Sí';
+                }
+                // Si no está marcado, no lo incluimos o ponemos "No" (opcional)
+                // else { detalles[key] = 'No'; } 
+            } else if (el.value) {
+                // Para otros campos (text, select, textarea, date), guardamos el valor si no está vacío
+                detalles[key] = el.value;
             }
-        }
+        });
+    }
         
          loteActividadActual.push({
         vacaId: idDeLaVaca,
