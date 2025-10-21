@@ -348,28 +348,27 @@ async function cargarDashboardMVZ() {
 
     // 1. Cargamos contadores de actividades usando RPC (Simulación de llamada a función DB)
     const resumenVisitasEl = document.getElementById('resumen-visitas');
-    const resumenAlertasEl = document.getElementById('resumen-alertas-mvz');
+const resumenAlertasEl = document.getElementById('resumen-alertas-mvz');
+const hoyString = new Date().toISOString().slice(0, 10); // Obtiene 'YYYY-MM-DD'
+
+try {
+    // a) Conteo de actividades HOY
+    const { count: actividadesHoy, error: actError } = await sb
+        .from('actividades')
+        .select('*', { count: 'exact', head: true })
+        .eq('id_usuario', currentUser.id)
+        .eq('fecha_actividad', hoyString);
+
+    if (actError) throw actError;
+
+    if (resumenVisitasEl) resumenVisitasEl.textContent = actividadesHoy || 0;
+    if (resumenAlertasEl) resumenAlertasEl.textContent = 0; // Alertas sigue como placeholder 0
+
+} catch(e) {
+    console.error("Error al cargar contadores MVZ:", e);
     if (resumenVisitasEl) resumenVisitasEl.textContent = '--';
     if (resumenAlertasEl) resumenAlertasEl.textContent = '--';
-
-    try {
-        // En un escenario real, usarías Supabase RPC para una función que haga el conteo:
-        /*
-        const { data: stats, error: statsError } = await sb.rpc('get_mvz_dashboard_stats', { mvz_id: currentUser.id });
-        if (statsError) throw statsError;
-        if (resumenVisitasEl) resumenVisitasEl.textContent = stats.actividades_hoy || 0;
-        if (resumenAlertasEl) resumenAlertasEl.textContent = stats.alertas || 0;
-        */
-        
-        // TEMPORAL: Mantener el contador en FETCH hasta que migremos el endpoint de servidor
-        const resDash = await fetch(`/api/dashboard/mvz/${currentUser.id}`);
-        const dataDash = resDash.ok ? await resDash.json() : { actividadesHoy: 0, alertas: 0 };
-        if (resumenVisitasEl) resumenVisitasEl.textContent = dataDash.actividadesHoy || 0;
-        if (resumenAlertasEl) resumenAlertasEl.textContent = dataDash.alertas || 0;
-        
-    } catch(e) {
-        console.error("Error al cargar contadores MVZ:", e);
-    }
+}
     
     // 2. Cargamos eventos pendientes y próximos - Usando Supabase DIRECTO
     const eventosContainer = document.getElementById('lista-eventos');
