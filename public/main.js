@@ -1486,6 +1486,7 @@ async function renderizarHistorialMVZ() {
 
     try {
         // --- CAMBIO: Usar Supabase RPC (Llamada a función de BD) ---
+        // Llamamos a la función 'get_sesiones_actividad_mvz' que ya tienes en Supabase
         const { data: sesiones, error } = await sb
             .rpc('get_sesiones_actividad_mvz', { mvz_id: currentUser.id }); 
             
@@ -1510,7 +1511,7 @@ async function renderizarHistorialMVZ() {
                     <div>
                         <p class="font-bold text-gray-800">${sesion.tipo_actividad} en <em>${sesion.rancho_nombre}</em></p>
                         <p class="text-sm text-gray-500">${sesion.conteo} animales - ${fecha}</p>
-                    </div>
+            --- 1 ---
                 </div>
                 <button data-sesion-id="${sesion.sesion_id}" class="btn-eliminar-sesion text-red-400 hover:text-red-600 px-2">
                     <i class="fa-solid fa-trash-can text-xl"></i>
@@ -1519,7 +1520,7 @@ async function renderizarHistorialMVZ() {
             `;
         }).join('');
         
-        // --- RECONECTAR BOTONES DE ELIMINAR (SIMPLIFICADO Y MIGRADO) ---
+        // --- RECONECTAR BOTONES DE ELIMINAR (MIGRADO A SUPABASE) ---
         const botonesEliminar = historialContainer.querySelectorAll('.btn-eliminar-sesion');
         console.log(`DEBUG: Encontrados ${botonesEliminar.length} botones para reconectar.`); 
 
@@ -1539,11 +1540,11 @@ async function renderizarHistorialMVZ() {
                         .from('actividades')
                         .delete()
                         .eq('sesion_id', sesionId);
-                    
+                     
                     if (deleteError) throw deleteError;
                     
                     renderizarHistorialMVZ(); // Recarga la lista
-                } catch (error) {
+             } catch (error) {
                     console.error("DEBUG: Error al eliminar sesión:", error); 
                     alert(error.message || 'Error al eliminar la sesión.');
                     button.addEventListener('click', clickListener); 
