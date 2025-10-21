@@ -939,68 +939,61 @@ window.handleEditarVaca = function(vaca) {
             alert(error.message || 'Error inesperado');
         }
     }
-  // Reemplaza window.verHistorialVaca
+// Reemplaza window.verHistorialVaca
 window.verHistorialVaca = async function(vacaId, vacaNombre) {
-    const modalHistorial = document.getElementById('modal-historial-vaca');
-    if (!modalHistorial) return;
+    const modalHistorial = document.getElementById('modal-historial-vaca');
+    if (!modalHistorial) return;
 
-    const prettyLabel = (k) => String(k || '').replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+    const prettyLabel = (k) => String(k || '').replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
 
-    const btnCerrarModalHistorial = document.getElementById('btn-cerrar-modal-historial');
-    if(btnCerrarModalHistorial) btnCerrarModalHistorial.onclick = () => modalHistorial.classList.add('hidden');
+    const btnCerrarModalHistorial = document.getElementById('btn-cerrar-modal-historial');
+    if(btnCerrarModalHistorial) btnCerrarModalHistorial.onclick = () => modalHistorial.classList.add('hidden');
 
-    document.getElementById('modal-historial-nombre-vaca').textContent = vacaNombre;
-    const contenidoEl = document.getElementById('modal-historial-contenido');
-    contenidoEl.innerHTML = '<p class="text-gray-500">Cargando...</p>';
-    modalHistorial.classList.remove('hidden');
+    document.getElementById('modal-historial-nombre-vaca').textContent = vacaNombre;
+    const contenidoEl = document.getElementById('modal-historial-contenido');
+    contenidoEl.innerHTML = '<p class="text-gray-500">Cargando...</p>';
+    modalHistorial.classList.remove('hidden');
 
-    try {
-        // --- CAMBIO: Usar Supabase directo ---
-        const { data: historial, error } = await sb
-            .from('actividades')
-            .select('descripcion, fecha_actividad, tipo_actividad, usuarios (nombre)')
-            .eq('id_vaca', vacaId)
-            .order('fecha_actividad', { ascending: false });
+    try {
+        // Esta consulta funcionará gracias a la Política 2
+        const { data: historial, error } = await sb
+            .from('actividades')
+            .select('descripcion, fecha_actividad, tipo_actividad, usuarios (nombre)')
+            .eq('id_vaca', vacaId)
+            .order('fecha_actividad', { ascending: false });
 
-        if (error) throw error;
-        // --- FIN DEL CAMBIO ---
+        if (error) throw error;
 
-        if (historial.length === 0) {
-            contenidoEl.innerHTML = '<p class="text-gray-500">No hay actividades registradas para este animal.</p>';
-            return;
-        }
+        if (historial.length === 0) {
+            contenidoEl.innerHTML = '<p class="text-gray-500">No hay actividades registradas para este animal.</p>';
+            return;
+        }
 
-        contenidoEl.innerHTML = historial.map(item => {
-            let detalles = item.descripcion || {};
-            if (typeof detalles === 'string') {
-                try {
-                    detalles = JSON.parse(detalles);
-                } catch (e) {
-                    detalles = { 'Nota': detalles };
-                }
-            }
-            
-            const detallesHtml = Object.entries(detalles)
-                .map(([key, value]) => `<p><strong class="font-medium text-gray-600">${prettyLabel(key)}:</strong> ${value}</p>`)
-                .join('');
-            
-            // Usamos item.usuarios?.nombre, que viene de la relación SELECT
-            const mvzNombre = item.usuarios?.nombre || 'Desconocido';
+        contenidoEl.innerHTML = historial.map(item => {
+            let detalles = item.descripcion || {};
+            if (typeof detalles === 'string') {
+                try { detalles = JSON.parse(detalles); } catch (e) { detalles = { 'Nota': detalles }; }
+            }
+            
+            const detallesHtml = Object.entries(detalles)
+                .map(([key, value]) => `<p><strong class="font-medium text-gray-600">${prettyLabel(key)}:</strong> ${value}</p>`)
+                .join('');
+            
+            const mvzNombre = item.usuarios?.nombre || 'Desconocido';
 
-            return `
-            <div class="bg-gray-50 p-3 rounded-lg border mb-2">
-                <p class="font-bold text-brand-green">${item.tipo_actividad}</p>
-                <p class="text-xs text-gray-500 mb-2">
-                    ${new Date(item.fecha_actividad + 'T00:00:00Z').toLocaleDateString('es-MX', { timeZone: 'UTC' })} por ${mvzNombre}
-                </p>
-                <div class="text-sm space-y-1">${detallesHtml}</div>
-            </div>
-            `;
-        }).join('');
-
-    } catch (error) {
-        contenidoEl.innerHTML = `<p class="text-red-500">Error al cargar el historial: ${error.message}</p>`;
-    }
+            return `
+            <div class="bg-gray-50 p-3 rounded-lg border mb-2">
+                <p class="font-bold text-brand-green">${item.tipo_actividad}</p>
+                <p class="text-xs text-gray-500 mb-2">
+  Misma fecha               ${new Date(item.fecha_actividad + 'T00:00:00Z').toLocaleDateString('es-MX', { timeZone: 'UTC' })} por ${mvzNombre}
+                </p>
+                <div class="text-sm space-y-1">${detallesHtml}</div>
+            </div>
+            `;
+        }).join('');
+  } catch (error) {
+        contenidoEl.innerHTML = `<p class="text-red-500">Error al cargar el historial: ${error.message}</p>`; // ✅ CORREGIDO
+    }
 }
 
 // Reemplaza tu función renderizarVistaEstadisticas
@@ -1194,22 +1187,47 @@ async function renderizarVistaEstadisticas() {
     if (btnValidar) btnValidar.onclick = handleValidarRancho;
 }
 
-// Reemplaza tu función handleValidarRancho
+// Reemplaza handleValidarRancho
 async function handleValidarRancho() {
     const codigoEl = document.getElementById('codigo-rancho');
     const codigo = codigoEl ? codigoEl.value.trim().toUpperCase() : '';
     if (!codigo) { mostrarMensaje('mensaje-rancho', 'El código no puede estar vacío.'); return; }
+    
     try {
-        // Buscamos el rancho por su código (RLS debe permitir lecturas públicas o de MVZ)
-        const { data: rancho, error } = await sb
+        // 1. Buscamos el rancho por su código (RLS debe permitir lecturas públicas)
+        const { data: rancho, error: ranchoError } = await sb
             .from('ranchos')
             .select('*')
             .eq('codigo', codigo)
             .maybeSingle();
 
-        if (error) throw error;
+        if (ranchoError) throw ranchoError;
         if (!rancho) throw new Error('Código de rancho no válido.');
 
+        // 2. ¡LA CONEXIÓN! Verificamos si el permiso ya existe
+        const { data: permisoExistente, error: permisoError } = await sb
+            .from('rancho_mvz_permisos')
+            .select('id')
+            .eq('rancho_id', rancho.id)
+            .eq('mvz_id', currentUser.id)
+            .maybeSingle();
+
+        if (permisoError) throw permisoError;
+
+        // 3. Si el permiso NO existe, lo creamos (RLS lo permite gracias a la Política 3)
+        if (!permisoExistente) {
+            console.log("Creando enlace de permiso MVZ-Rancho...");
+            const { error: insertPermisoError } = await sb
+                .from('rancho_mvz_permisos')
+                .insert({
+                    rancho_id: rancho.id,
+                    mvz_id: currentUser.id,
+                    permisos: 'basico' // Asignamos permiso básico por defecto
+                });
+            if (insertPermisoError) throw insertPermisoError;
+        }
+
+        // 4. Continuamos (ahora RLS nos dejará leer las vacas)
         currentRancho = rancho;
         iniciarActividadUI();
         await cargarVacasParaMVZ(); // Llama a la carga de vacas
@@ -1320,29 +1338,22 @@ function iniciarActividadUI() {
     renderizarHistorialMVZ();
 }
 
-// REEMPLAZA tu función abrirModalActividad con este bloque completo
+// REEMPLAZA tu función abrirModalActividad
 function abrirModalActividad(tipo) {
     const modal = document.getElementById('modal-actividad');
     const form = document.getElementById('form-actividad-vaca');
     if (!modal || !form) return;
 
-    // 1. Limpieza inicial del formulario
     form.reset(); 
     form.querySelectorAll('select').forEach(select => { select.selectedIndex = -1; }); 
-
-    // 2. Generar los campos específicos del procedimiento (Palpación, etc.)
-    renderizarCamposProcedimiento(tipo);
-
-    // 3. Mostrar el modal
+    renderCamposProcedimiento(tipo);
     modal.classList.remove('hidden');
 
-    // 4. Poner el título correcto (Palpación, Inseminación, etc.)
     const tituloEl = document.getElementById('modal-actividad-titulo');
     if (tituloEl && PROCEDIMIENTOS[tipo]) {
         tituloEl.textContent = PROCEDIMIENTOS[tipo].titulo;
     }
-    
-    // 5. Llenar el select de Lote (opciones 1-10)
+    
     const actividadLoteEl = document.getElementById('actividad-lote');
     if (actividadLoteEl) {
         actividadLoteEl.innerHTML = ''; 
@@ -1351,7 +1362,6 @@ function abrirModalActividad(tipo) {
         }
     }
 
-    // 6. Conectar los botones de acción del modal
     const btnCerrar = document.getElementById('btn-cerrar-modal-actividad');
     if (btnCerrar) btnCerrar.onclick = () => modal.classList.add('hidden');
 
@@ -1367,17 +1377,13 @@ function abrirModalActividad(tipo) {
         modal.classList.add('hidden');
     };
      
-    // --- 7. LÓGICA DE AUTOCOMPLETADO (CORREGIDA) ---
-    // 7a. Conecta la búsqueda parcial para Arete (lista flotante)
+    // --- LÓGICA DE AUTOCOMPLETADO (CORREGIDA) ---
     crearAutocompletadoParcial('actividad-arete', 'sugerencias-arete-container', vacasIndex);
-    
-    // 7b. Conecta la búsqueda normal para Raza (lista flotante)
     crearAutocompletado('actividad-raza', 'sugerencias-raza-container', RAZAS_BOVINAS);
     
-    // 7c. Listener para autocompletar Raza si se escribe el arete COMPLETO manualmente
     const areteInput = document.getElementById('actividad-arete');
     const razaInput = document.getElementById('actividad-raza');
-    if (areteInput && razaInput) {
+    if (areteInput && razaInput) {
         areteInput.addEventListener('input', () => {
             const areteCompleto = areteInput.value.trim();
             const vacaEncontrada = vacasIndex.get(areteCompleto);
@@ -1388,113 +1394,88 @@ function abrirModalActividad(tipo) {
     }
 }
 
-// Reemplaza tu función handleFinalizarYReportar
+// Reemplaza handleFinalizarYReportar
 async function handleFinalizarYReportar() {
-    const btn = document.getElementById('btn-finalizar-actividad-modal');
-    if (btn) {
-        btn.disabled = true;
-        btn.textContent = 'Procesando...';
-    }
+    const btn = document.getElementById('btn-finalizar-actividad-modal');
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Procesando...';
+    }
 
-    if (!currentRancho) {
-        alert('Error: No se ha definido un rancho de trabajo. Por favor, reinicia la actividad.');
-        if (btn) {
-            btn.disabled = false;
-            btn.textContent = 'Finalizar Actividad';
-        }
-        return;
-    }
+    if (!currentRancho) {
+        alert('Error: No se ha definido un rancho de trabajo.');
+        if(btn){ btn.disabled = false; btn.textContent = 'Finalizar Actividad'; }
+        return;
+    }
 
-    if (loteActividadActual.length === 0) {
-        alert("No hay actividades en el lote para reportar. Guarda al menos un animal antes de finalizar.");
-        if (btn) {
-            btn.disabled = false;
-            btn.textContent = 'Finalizar Actividad';
-        }
-        return;
-}
-    
-    // Asignamos una UUID de sesión única para todos los registros del lote
-    const sesionId = crypto.randomUUID(); // Asumimos que la librería 'crypto' está disponible, si no, lo ajustaremos.
-    const nombreDelRancho = currentRancho.id === null
-        ? document.getElementById('rancho-independiente-nombre')?.value?.trim() || 'Independiente'
-        : currentRancho.nombre;
+    if (loteActividadActual.length === 0) {
+        alert("No hay actividades en el lote para reportar.");
+        if(btn){ btn.disabled = false; btn.textContent = 'Finalizar Actividad'; }
+        return;
+    }
+    
+    const sesionId = crypto.randomUUID(); 
+    const nombreDelRancho = currentRancho.id === null
+        ? document.getElementById('rancho-independiente-nombre')?.value?.trim() || 'Independiente'
+        : currentRancho.nombre;
 
-    // 1. Preparamos los datos para la inserción en Supabase
-    const actividadesParaInsertar = loteActividadActual.map(item => ({
-        tipo_actividad: item.tipoLabel,
-        // Almacenamos los detalles como objeto JSON en la columna 'descripcion'
-        descripcion: item.detalles, 
-        fecha_actividad: item.fecha,
-        id_vaca: item.vacaId || null,
-        id_usuario: currentUser?.id,
-        sesion_id: sesionId,
-        rancho_id: currentRancho.id, 
-        // Usamos extra_data para datos que el PDF necesita: arete, raza, lote y nombre del rancho
-        extra_data: { arete: item.areteVaca, raza: item.raza, lote: item.loteNumero, rancho_nombre: nombreDelRancho }
-    }));
-    
-    try {
-        // --- CAMBIO CLAVE 1: Insertar en la base de datos (MVZ puede insertar en actividades) ---
-        const { error: insertError } = await sb
-            .from('actividades')
-            .insert(actividadesParaInsertar);
+    // 1. Preparamos los datos para Supabase
+    const actividadesParaInsertar = loteActividadActual.map(item => ({
+        tipo_actividad: item.tipoLabel,
+        descripcion: item.detalles, // Objeto JSON
+        fecha_actividad: item.fecha,
+        id_vaca: item.vacaId, // UUID de la vaca
+        id_usuario: currentUser.id, // UUID del MVZ
+        sesion_id: sesionId,
+        rancho_id: currentRancho.id, 
+        extra_data: { arete: item.areteVaca, raza: item.raza, lote: item.loteNumero, rancho_nombre: nombreDelRancho }
+    }));
+    
+    try {
+        // 2. Insertamos en Supabase (RLS debe permitir INSERT en actividades)
+        const { error: insertError } = await sb
+            .from('actividades')
+            .insert(actividadesParaInsertar);
 
-        if (insertError) {
-             console.error("Error al insertar actividades en Supabase:", insertError);
-             throw new Error(insertError.message || 'Error de permisos al guardar actividades.');
-        }
-        // --- FIN CAMBIO CLAVE 1 ---
+        if (insertError) throw insertError;
 
+        // 3. MANTENEMOS el fetch al server.js SOLO para el PDF
+        const payloadPDF = {
+            mvzId: currentUser.id, ranchoId: currentRancho.id, loteActividad: loteActividadActual,
+            mvzNombre: currentUser.nombre || '', ranchoNombre: nombreDelRancho
+        };
 
-        // --- CAMBIO CLAVE 2: Llamar al servidor antiguo para generar el PDF (Temporal) ---
-        // Se mantiene esta llamada FETCH porque el server.js contiene la lógica del PDF.
-        const payloadPDF = {
-            mvzId: currentUser?.id,
-            ranchoId: currentRancho.id,
-            loteActividad: loteActividadActual,
-            mvzNombre: currentUser?.nombre || '',
-            ranchoNombre: nombreDelRancho
-        };
+        const res = await fetch('/api/actividades', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payloadPDF)
+        });
+        if (!res.ok) throw new Error('Los datos se guardaron, pero falló la generación del PDF.');
 
-        const res = await fetch('/api/actividades', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payloadPDF)
-        });
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `reporte_${loteActividadActual[0].tipoLabel}_${new Date().toISOString().slice(0,10)}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+        
+        loteActividadActual = [];
+        const loteInfoEl = document.getElementById('lote-info');
+        if (loteInfoEl) loteInfoEl.textContent = `0 vacas`;
+        renderizarHistorialMVZ(); // Recarga el historial del MVZ
 
-        if (!res.ok) {
-            const errData = await res.json().catch(() => ({ message: res.statusText }));
-            throw new Error(errData.message || 'Error en el servidor al generar el reporte.');
-        }
-
-        // Procesa y descarga el PDF (mantiene la lógica anterior)
-        const blob = await res.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `reporte_${loteActividadActual[0].tipoLabel}_${new Date().toISOString().slice(0,10)}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        window.URL.revokeObjectURL(url);
-        // --- FIN CAMBIO CLAVE 2 ---
-
-        // Limpieza y actualización de UI
-        loteActividadActual = [];
-        const loteInfoEl = document.getElementById('lote-info');
-        if (loteInfoEl) loteInfoEl.textContent = `0 vacas`;
-        renderizarHistorialMVZ(); // Llama a la función ya migrada
-
-    } catch (err) {
-        console.error("Error al finalizar y generar PDF:", err);
-        alert(err.message || 'Hubo un error inesperado al guardar o generar el PDF.');
-    } finally {
-        if (btn) {
-            btn.disabled = false;
-            btn.textContent = 'Finalizar Actividad';
-        }
-    }
+    } catch (err) {
+        console.error("Error al finalizar y/o generar PDF:", err);
+        alert(err.message || 'Hubo un error inesperado.');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = 'Finalizar Actividad';
+        }
+    }
 }
 
     // Reemplaza tu función renderizarHistorialMVZ
@@ -1667,11 +1648,11 @@ async function handleGenerarPdfDeHistorial() {
     });
 }
 
-// Reemplaza tu función cargarVacasParaMVZ
+// Reemplaza cargarVacasParaMVZ
 async function cargarVacasParaMVZ() {
     if (!currentRancho || !currentRancho.id) return;
     try {
-        // Consultamos las vacas del rancho activo (RLS debe permitir esto al MVZ)
+        // Ahora esta consulta SÍ FUNCIONARÁ gracias a la Política 1 y al enlace creado en handleValidarRancho
         const { data: vacas, error } = await sb
             .from('vacas')
             .select('id, numero_siniiga, raza')
@@ -1679,13 +1660,10 @@ async function cargarVacasParaMVZ() {
 
         if (error) throw error;
 
-        // Limpiamos el datalist (que ya no usamos)
         const datalist = document.getElementById('lista-aretes-autocompletar');
         if (datalist) datalist.innerHTML = '';
         
-        // Limpiamos y creamos el índice de búsqueda
         vacasIndex.clear();
-        
         (vacas || []).forEach(v => {
             // Poblar el índice (clave para la búsqueda parcial)
             vacasIndex.set(String(v.numero_siniiga).trim(), { id: v.id, raza: v.raza || '' });
@@ -1696,65 +1674,63 @@ async function cargarVacasParaMVZ() {
     }
 }
 
-    function handleAgregarVacaAlLote(tipoActividad, limpiarForm) {
-        const form = document.getElementById('form-actividad-vaca');
-        const areteInput = document.getElementById('actividad-arete');
-        const loteNumero = document.getElementById('actividad-lote')?.value;
-        const arete = areteInput ? areteInput.value.trim() : '';
+// Reemplaza handleAgregarVacaAlLote
+function handleAgregarVacaAlLote(tipoActividad, limpiarForm) {
+    const form = document.getElementById('form-actividad-vaca');
+    const areteInput = document.getElementById('actividad-arete');
+    const loteNumero = document.getElementById('actividad-lote')?.value;
+    const arete = areteInput ? areteInput.value.trim() : '';
 
-        if (!arete) {
-            if (!limpiarForm) return; // Si es el click final y no hay arete, no hacemos nada.
-            mostrarMensaje('mensaje-vaca', 'El número de arete es obligatorio.');
-            return;
-        }
-        const vacaEncontrada = vacasIndex.get(arete);
-    // 2. Extrae el ID numérico de la vaca. Si no se encuentra, será 'null'.
-    const idDeLaVaca = vacaEncontrada ? vacaEncontrada.id : null;
+    if (!arete) {
+        if (!limpiarForm) return; 
+        mostrarMensaje('mensaje-vaca', 'El número de arete es obligatorio.');
+        return;
+    }
+    
+    // Busca la vaca en el índice
+    const vacaEncontrada = vacasIndex.get(arete);
+    // Obtenemos el ID (UUID) de la vaca
+    const idDeLaVaca = vacaEncontrada ? vacaEncontrada.id : null;
 
-        const formData = new FormData(form);
-        const detalles = {};
-    const camposDinamicos = document.getElementById('campos-dinamicos-procedimiento');
-    if (camposDinamicos) {
-        // Obtenemos todos los inputs, selects y textareas dentro del contenedor dinámico
-        camposDinamicos.querySelectorAll('input, select, textarea').forEach(el => {
-            const key = el.name;
-            if (!key) return; // Ignorar si no tiene nombre
+    // --- CONSTRUCCIÓN MANUAL DE DETALLES ---
+    const detalles = {};
+    const camposDinamicos = document.getElementById('campos-dinamicos-procedimiento');
+    if (camposDinamicos) {
+        camposDinamicos.querySelectorAll('input, select, textarea').forEach(el => {
+            const key = el.name;
+            if (!key) return; 
+            if (el.type === 'checkbox') {
+                if (el.checked) {
+                    detalles[key] = 'Sí';
+                }
+            } else if (el.value) {
+                detalles[key] = el.value;
+            }
+        });
+    }
+    // --- FIN CONSTRUCCIÓN MANUAL ---
+        
+    loteActividadActual.push({
+        vacaId: idDeLaVaca, // <-- ID de la vaca (UUID)
+        areteVaca: arete,
+        raza: form.querySelector('#actividad-raza').value.trim() || 'N/A',
+        loteNumero: loteNumero,
+        tipo: tipoActividad,
+        tipoLabel: PROCEDIMIENTOS[tipoActividad].titulo,
+        fecha: new Date().toISOString().split('T')[0],
+        detalles: detalles // Objeto JSON con {gestante: 'Sí'}
+    });
+        
+    mostrarMensaje('mensaje-vaca', `Vaca ${arete} agregada.`, false);
+    const loteInfoEl = document.getElementById('lote-info');
+    if (loteInfoEl) loteInfoEl.textContent = `${loteActividadActual.length} vacas (Lote ${loteNumero})`;
 
-            if (el.type === 'checkbox') {
-                // Para checkboxes, guardamos "Sí" solo si está marcado
-                if (el.checked) {
-                    detalles[key] = 'Sí';
-                }
-                // Si no está marcado, no lo incluimos o ponemos "No" (opcional)
-                // else { detalles[key] = 'No'; } 
-            } else if (el.value) {
-                // Para otros campos (text, select, textarea, date), guardamos el valor si no está vacío
-                detalles[key] = el.value;
-            }
-        });
-    }
-        
-         loteActividadActual.push({
-        vacaId: idDeLaVaca,
-        areteVaca: arete,
-        raza: form.querySelector('#actividad-raza').value.trim() || 'N/A',
-        loteNumero: loteNumero,
-        tipo: tipoActividad,
-        tipoLabel: PROCEDIMIENTOS[tipoActividad].titulo,
-        fecha: new Date().toISOString().split('T')[0],
-        detalles: detalles
-    });
-        
-         mostrarMensaje('mensaje-vaca', `Vaca ${arete} agregada.`, false);
-    const loteInfoEl = document.getElementById('lote-info');
-    if (loteInfoEl) loteInfoEl.textContent = `${loteActividadActual.length} vacas (Lote ${loteNumero})`;
-
-    if (limpiarForm && form) {
-        form.reset();
-        form.querySelectorAll('select').forEach(select => { select.selectedIndex = -1; });
-        renderizarCamposProcedimiento(tipoActividad);
-        if (areteInput) areteInput.focus();
-    }
+    if (limpiarForm && form) {
+        form.reset();
+        form.querySelectorAll('select').forEach(select => { select.selectedIndex = -1; });
+        renderizarCamposProcedimiento(tipoActividad);
+        if (areteInput) areteInput.focus();
+    }
 }
 // =================================================================
 // LÓGICA COMPLETA DEL CALENDARIO MVZ
