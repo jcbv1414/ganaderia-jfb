@@ -1485,8 +1485,7 @@ async function renderizarHistorialMVZ() {
     historialContainer.innerHTML = '<p class="text-gray-500 text-center">Cargando historial...</p>';
 
     try {
-        // --- CAMBIO: Usar Supabase RPC (Llamada a función de BD) ---
-        // Llamamos a la función 'get_sesiones_actividad_mvz' que ya tienes en Supabase
+        // --- CAMBIO: Usa la función RPC de Supabase que SÍ agrupa ---
         const { data: sesiones, error } = await sb
             .rpc('get_sesiones_actividad_mvz', { mvz_id: currentUser.id }); 
             
@@ -1498,9 +1497,9 @@ async function renderizarHistorialMVZ() {
             return;
         }
         
-        // Dibuja la lista usando los datos de la función RPC
+        // Dibuja la lista (CON AGRUPACIÓN)
         historialContainer.innerHTML = sesiones.map(sesion => {
-            // Corregimos el "Invalid Date": usamos 'fecha_date' y la tratamos como UTC
+            // Corrige el "Invalid Date": usamos 'fecha_date' y la tratamos como UTC
             const fechaObj = new Date(sesion.fecha_date + 'T00:00:00Z'); 
             const fecha = fechaObj.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', timeZone: 'UTC' });
             
@@ -1510,8 +1509,8 @@ async function renderizarHistorialMVZ() {
                     <input type="checkbox" data-sesion-id="${sesion.sesion_id}" class="h-6 w-6 rounded border-gray-300 mr-4">
                     <div>
                         <p class="font-bold text-gray-800">${sesion.tipo_actividad} en <em>${sesion.rancho_nombre}</em></p>
-                        <p class="text-sm text-gray-500">${sesion.conteo} animales - ${fecha}</p>
-            --- 1 ---
+img                       <p class="text-sm text-gray-500">${sesion.conteo} animales - ${fecha}</p>
+                    </div>
                 </div>
                 <button data-sesion-id="${sesion.sesion_id}" class="btn-eliminar-sesion text-red-400 hover:text-red-600 px-2">
                     <i class="fa-solid fa-trash-can text-xl"></i>
@@ -1521,7 +1520,7 @@ async function renderizarHistorialMVZ() {
         }).join('');
         
         // --- RECONECTAR BOTONES DE ELIMINAR (MIGRADO A SUPABASE) ---
-        const botonesEliminar = historialContainer.querySelectorAll('.btn-eliminar-sesion');
+      const botonesEliminar = historialContainer.querySelectorAll('.btn-eliminar-sesion');
         console.log(`DEBUG: Encontrados ${botonesEliminar.length} botones para reconectar.`); 
 
         botonesEliminar.forEach(button => {
@@ -1529,13 +1528,12 @@ async function renderizarHistorialMVZ() {
                 button.removeEventListener('click', clickListener); 
                 
                 const sesionId = e.currentTarget.dataset.sesionId;
-
-                if (!confirm('¿Estás seguro de que quieres eliminar esta sesión?')) {
+              if (!confirm('¿Estás seguro de que quieres eliminar esta sesión?')) {
                      button.addEventListener('click', clickListener); 
                      return; 
                 }
                 
-                try {
+            try {
                     const { error: deleteError } = await sb
                         .from('actividades')
                         .delete()
@@ -1544,14 +1542,14 @@ async function renderizarHistorialMVZ() {
                     if (deleteError) throw deleteError;
                     
                     renderizarHistorialMVZ(); // Recarga la lista
-             } catch (error) {
+} catch (error) {
                     console.error("DEBUG: Error al eliminar sesión:", error); 
                     alert(error.message || 'Error al eliminar la sesión.');
                     button.addEventListener('click', clickListener); 
                 }
             };
             
-            button.addEventListener('click', clickListener);
+           button.addEventListener('click', clickListener);
         });
         // --- FIN BLOQUE SIMPLIFICADO ---
 
