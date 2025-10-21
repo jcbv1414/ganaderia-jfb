@@ -1478,94 +1478,100 @@ async function handleFinalizarYReportar() {
     }
 }
 
-    // Reemplaza tu función renderizarHistorialMVZ
+// ✅ REEMPLAZA CON ESTE BLOQUE MIGRADO
 async function renderizarHistorialMVZ() {
-    const historialContainer = document.getElementById('historial-actividades-mvz');
-    if (!historialContainer) return;
-    historialContainer.innerHTML = '<p class="text-gray-500 text-center">Cargando historial...</p>';
+    const historialContainer = document.getElementById('historial-actividades-mvz');
+    if (!historialContainer) return;
+    historialContainer.innerHTML = '<p class="text-gray-500 text-center">Cargando historial...</p>';
 
-    try {
-        // --- CAMBIO: Usar Supabase RPC (Llamada a función de BD) ---
-        // Llamamos a la función que ya tienes creada en la base de datos para agrupar por sesión
-        const { data: sesiones, error } = await sb
-            .rpc('get_sesiones_actividad_mvz', { mvz_id: currentUser.id }); 
-            
-        if (error) throw error;
-        // --- FIN DEL CAMBIO ---
+    try {
+        // --- CAMBIO: Usar Supabase RPC (Llamada a función de BD) ---
+        // Llamamos a la función 'get_sesiones_actividad_mvz' que ya tienes en Supabase
+        const { data: sesiones, error } = await sb
+            .rpc('get_sesiones_actividad_mvz', { mvz_id: currentUser.id }); 
+            
+        if (error) throw error;
+        // --- FIN DEL CAMBIO ---
 
-        if (!sesiones || sesiones.length === 0) {
-            historialContainer.innerHTML = '<div class="bg-white p-4 rounded-xl text-center text-gray-500"><p>No hay reportes recientes.</p></div>';
-            return;
-        }
-        
-        historialContainer.innerHTML = sesiones.map(sesion => {
-            const fechaObj = new Date(sesion.fecha_date + 'T00:00:00Z'); 
-const fecha = fechaObj.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', timeZone: 'UTC' });
-            // La función de BD ya nos da rancho_nombre, tipo_actividad y conteo
-            return `
-            <div class="bg-white p-3 rounded-xl shadow-sm flex items-center justify-between">
-                <div class="flex items-center">
-                    <input type="checkbox" data-sesion-id="${sesion.sesion_id}" class="h-6 w-6 rounded border-gray-300 mr-4">
-                    <div>
-                        <p class="font-bold text-gray-800">${sesion.tipo_actividad} en <em>${sesion.rancho_nombre}</em></p>
-                        <p class="text-sm text-gray-500">${sesion.conteo} animales - ${fecha}</p>
-                    </div>
-                </div>
-                <button data-sesion-id="${sesion.sesion_id}" class="btn-eliminar-sesion text-red-400 hover:text-red-600 px-2">
-                    <i class="fa-solid fa-trash-can"></i>
-                </button>
-            </div>
-            `;
-        }).join('');
-        
-    // --- RECONECTAR BOTONES DE ELIMINAR (SIMPLIFICADO) ---
-    const botonesEliminar = historialContainer.querySelectorAll('.btn-eliminar-sesion');
-    console.log(`DEBUG: Encontrados ${botonesEliminar.length} botones para reconectar.`); 
+        if (!sesiones || sesiones.length === 0) {
+            historialContainer.innerHTML = '<div class="bg-white p-4 rounded-xl text-center text-gray-500"><p>No hay reportes recientes.</p></div>';
+            return;
+        }
+        
+        // Dibuja la lista usando los datos de la función RPC
+        historialContainer.innerHTML = sesiones.map(sesion => {
+            // Corregimos el "Invalid Date": usamos la columna correcta 'fecha_date'
+            // y la tratamos como UTC para evitar problemas de zona horaria
+            const fechaObj = new Date(sesion.fecha_date + 'T00:00:00Z'); 
+            const fecha = fechaObj.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', timeZone: 'UTC' });
+            
+            return `
+            <div class="bg-white p-3 rounded-xl shadow-sm flex items-center justify-between">
+                <div class="flex items-center">
+                    <input type="checkbox" data-sesion-id="${sesion.sesion_id}" class="h-6 w-6 rounded border-gray-300 mr-4">
+                    <div>
+                        <p class="font-bold text-gray-800">${sesion.tipo_actividad} en <em>${sesion.rancho_nombre}</em></p>
+                        <p class="text-sm text-gray-500">${sesion.conteo} animales - ${fecha}</p>
+                    </div>
+                </div>
+                <button data-sesion-id="${sesion.sesion_id}" class="btn-eliminar-sesion text-red-400 hover:text-red-600 px-2">
+                    <i class="fa-solid fa-trash-can"></i>
+                </button>
+            </div>
+            `;
+        }).join('');
+        
+        // --- RECONECTAR BOTONES DE ELIMINAR (MIGRADO A SUPABASE) ---
 
-    botonesEliminar.forEach(button => {
-        // Creamos una función listener específica para este botón
-        const clickListener = async (e) => {
-            // Prevenir que el listener se ejecute múltiples veces si algo sale mal
-            button.removeEventListener('click', clickListener); 
-            
-            console.log("DEBUG: ¡Clic detectado en botón eliminar!"); 
-            const sesionId = e.currentTarget.dataset.sesionId;
-            console.log("DEBUG: Sesión ID a eliminar:", sesionId); 
 
-            if (!confirm('¿Estás seguro de que quieres eliminar esta sesión?')) {
-                 console.log("DEBUG: Eliminación cancelada.");
-                 // Volvemos a añadir el listener si cancela
-                 button.addEventListener('click', clickListener); 
-                 return; 
-            }
-            
-            try {
-                console.log("DEBUG: Intentando eliminar sesión de Supabase..."); 
-                const { error: deleteError } = await sb
-                    .from('actividades')
-                    .delete()
-                    .eq('sesion_id', sesionId);
-                
-                if (deleteError) throw deleteError;
-                
-                console.log("DEBUG: Eliminación exitosa. Recargando historial..."); 
-                renderizarHistorialMVZ(); // Recarga la lista
-            } catch (error) {
-                console.error("DEBUG: Error al eliminar sesión:", error); 
-                alert(error.message || 'Error al eliminar la sesión.');
-                // Volvemos a añadir el listener si hubo error
-                button.addEventListener('click', clickListener); 
-            }
-        };
-        
-        // Añadimos el listener al botón actual
-        button.addEventListener('click', clickListener);
-    });
-    // --- FIN BLOQUE SIMPLIFICADO ---
-  } catch (error) {
-        console.error("Error al cargar historial MVZ:", error);
-        historialContainer.innerHTML = `<p class="text-red-500 text-center">Error al cargar historial: ${error.message}</p>`;
-    }
+        const botonesEliminar = historialContainer.querySelectorAll('.btn-eliminar-sesion');
+        console.log(`DEBUG: Encontrados ${botonesEliminar.length} botones para reconectar.`); 
+
+        botonesEliminar.forEach(button => {
+            // Creamos una función listener específica para este botón
+            const clickListener = async (e) => {
+                // Prevenir que el listener se ejecute múltiples veces
+                button.removeEventListener('click', clickListener); 
+                
+                console.log("DEBUG: ¡Clic detectado en botón eliminar!"); 
+                const sesionId = e.currentTarget.dataset.sesionId;
+                console.log("DEBUG: Sesión ID a eliminar:", sesionId); 
+
+                if (!confirm('¿Estás seguro de que quieres eliminar esta sesión?')) {
+                     console.log("DEBUG: Eliminación cancelada.");
+                     // Volvemos a añadir el listener si cancela
+                     button.addEventListener('click', clickListener); 
+                     return; 
+                }
+                
+                try {
+                    console.log("DEBUG: Intentando eliminar sesión de Supabase..."); 
+                    const { error: deleteError } = await sb
+                        .from('actividades')
+                        .delete()
+                        .eq('sesion_id', sesionId);
+                    
+                    if (deleteError) throw deleteError;
+                    
+                    console.log("DEBUG: Eliminación exitosa. Recargando historial..."); 
+                    renderizarHistorialMVZ(); // Recarga la lista
+                } catch (error) {
+                    console.error("DEBUG: Error al eliminar sesión:", error); 
+                    alert(error.message || 'Error al eliminar la sesión.');
+                    // Volvemos a añadir el listener si hubo error
+                    button.addEventListener('click', clickListener); 
+                }
+            };
+            
+            // Añadimos el listener al botón actual
+            button.addEventListener('click', clickListener);
+        });
+        // --- FIN BLOQUE SIMPLIFICADO ---
+
+    } catch (error) {
+        console.error("Error al cargar historial MVZ:", error);
+all.         historialContainer.innerHTML = `<p class="text-red-500 text-center">Error al cargar historial: ${error.message}</p>`;
+    }
 }
 
     // Reemplaza tu función handleGenerarPdfDeHistorial
