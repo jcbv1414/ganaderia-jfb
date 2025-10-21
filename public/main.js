@@ -179,9 +179,15 @@ async function cargarDatosDashboardPropietario() {
     if (ranchoNombreEl) ranchoNombreEl.textContent = ranchoPrincipal?.nombre || 'Mi Rancho'; // Ahora debería tener nombre
 
     const avatarEl = document.getElementById('dash-propietario-avatar');
-    // CORRECCIÓN: Usar logo_url del rancho, no del usuario
-    if (avatarEl) avatarEl.src = ranchoPrincipal?.logo_url || 'assets/logo.png';
-
+const logoUrl = ranchoPrincipal?.logo_url;
+// Usamos el truco del timestamp para evitar el caché del navegador
+if (avatarEl && logoUrl) {
+    avatarEl.src = logoUrl.includes('?') 
+        ? `${logoUrl}&t=${Date.now()}` 
+        : `${logoUrl}?t=${Date.now()}`;
+} else if (avatarEl) {
+    avatarEl.src = 'assets/logo.png';
+}
     const fechaEl = document.getElementById('dash-fecha-actual');
     if (fechaEl) fechaEl.textContent = new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
 
@@ -2503,10 +2509,13 @@ function renderizarVistaAjustesPropietario() {
     if (ranchoInput && currentUser.ranchos?.[0]) {
         ranchoInput.value = currentUser.ranchos[0].nombre || '';
     }
-    if (ranchoLogoPreview && currentUser.ranchos?.[0]?.logo_url) {
-        ranchoLogoPreview.src = currentUser.ranchos[0].logo_url;
-    }
-
+    // Añadimos un timestamp para asegurarnos de que el navegador no use el caché viejo
+if (ranchoLogoPreview && currentUser.ranchos?.[0]?.logo_url) {
+    const originalUrl = currentUser.ranchos[0].logo_url;
+    ranchoLogoPreview.src = originalUrl.includes('?') 
+        ? `${originalUrl}&t=${Date.now()}` 
+        : `${originalUrl}?t=${Date.now()}`;
+}
     // 2. Conectar los eventos para la subida de logo
     if (btnSeleccionarLogo && ranchoLogoInput) {
         btnSeleccionarLogo.onclick = () => ranchoLogoInput.click(); // Al hacer clic en el botón, activa el input de archivo
