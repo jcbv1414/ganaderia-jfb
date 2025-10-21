@@ -772,7 +772,7 @@ async function renderizarVistaMisVacas() {
 
     const container = document.getElementById('lista-vacas-container');
     container.innerHTML = '<p class="text-center text-gray-500 mt-8">Cargando ganado...</p>';
-    if (fab) fab.onclick = () => abrirModalVaca(); // Esto sigue igual
+    
 
     // --- AÑADE ESTAS LÍNEAS DE DEBUG ---
     const fab = document.getElementById('btn-abrir-modal-vaca');
