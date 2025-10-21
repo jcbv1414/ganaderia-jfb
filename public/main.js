@@ -2580,34 +2580,36 @@ async function handleGuardarAjustesPropietario() {
 
         // 3. Subir y actualizar el logo del rancho (si se seleccionó un nuevo archivo)
         if (selectedRanchoLogoFile && ranchoId) {
-            const file = selectedRanchoLogoFile;
-            // Usamos el ID del rancho en la ruta del archivo
-            const filePath = `logos/${ranchoId}/logo_${Date.now()}_${file.name}`;
+    const file = selectedRanchoLogoFile;
+    const filePath = `logos/${ranchoId}/logo_${Date.now()}_${file.name}`;
 
-            // 3a. Subir archivo al Storage (bucket 'ranchos_logos')
-            const { error: uploadError } = await sb.storage
-                .from('ranchos_logos') // ¡Asegúrate de que este bucket tenga política INSERT!
-                .upload(filePath, file);
+    // 3a. Subir archivo al Storage (bucket 'ranchos_logos')
+    const { error: uploadError } = await sb.storage
+        .from('ranchos_logos')
+        .upload(filePath, file);
 
-            if (uploadError) throw new Error(`Error al subir logo: ${uploadError.message}`);
-            
-            // 3b. Obtener URL pública
-            const { data: urlData } = sb.storage
-                .from('ranchos_logos')
-                .getPublicUrl(filePath);
-            
-            logoUrl = urlData.publicUrl;
+    if (uploadError) throw new Error(`Error al subir logo: ${uploadError.message}`);
+    
+    // 3b. Obtener URL pública
+    const { data: urlData } = sb.storage
+        .from('ranchos_logos')
+        .getPublicUrl(filePath);
+    
+    logoUrl = urlData.publicUrl;
+    
+    // <<< 🐛 LÍNEA DE DEBUG CRÍTICA 🐛 >>>
+    console.log("DEBUG: URL de Storage generada:", logoUrl); 
+    // <<< --------------------------- >>>
 
-            // 3c. Actualizar la URL en la tabla 'ranchos'
-            updates.push(sb
-                .from('ranchos')
-                .update({ logo_url: logoUrl })
-                .eq('id', ranchoId)
-                .select()
-                .single()
-            );
-        }
-
+    // 3c. Actualizar la URL en la tabla 'ranchos'
+    updates.push(sb
+        .from('ranchos')
+        .update({ logo_url: logoUrl })
+        .eq('id', ranchoId)
+        .select()
+        .single()
+    );
+}
         // Esperar a que todas las promesas de actualización se completen
         const results = await Promise.all(updates);
 
@@ -2625,6 +2627,9 @@ async function handleGuardarAjustesPropietario() {
                 }
             }
         }
+
+        // <<< 🐛 LÍNEA DE DEBUG CRÍTICA 🐛 >>>
+console.log("DEBUG: Intentando actualizar localmente el logo a:", ranchoActualizado?.logo_url || logoUrl);
         
         // Actualizar datos locales
         currentUser.nombre = usuarioActualizado.nombre || currentUser.nombre;
