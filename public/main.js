@@ -1346,7 +1346,7 @@ function abrirModalActividad(tipo) {
 
     form.reset(); 
     form.querySelectorAll('select').forEach(select => { select.selectedIndex = -1; }); 
-    renderCamposProcedimiento(tipo);
+    renderizarCamposProcedimiento(tipo);
     modal.classList.remove('hidden');
 
     const tituloEl = document.getElementById('modal-actividad-titulo');
