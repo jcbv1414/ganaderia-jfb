@@ -569,117 +569,105 @@ try {
     navigateTo('login');
     navContainer.classList.add('hidden');
 }
-    // =================================================================
-    // MANEJADORES DE AUTENTICACIÓN
-    // =================================================================
-    // Reemplaza tu 'handleLogin' existente con esta nueva versión
-// Reemplaza tu 'handleRegister' existente con esta nueva versión
+
+
+// Reemplaza tu 'handleRegister'
 window.handleRegister = async function(e) {
-    e.preventDefault();
-    const form = e.target;
-    const btn = form.querySelector('button[type="submit"]');
-    btn.disabled = true;
+    e.preventDefault();
+    const form = e.target;
+    const btn = form.querySelector('button[type="submit"]');
+    btn.disabled = true;
 
-    // Obtenemos los datos del formulario
-    const nombre = form.querySelector('[name="nombre"]').value;
-    const email = form.querySelector('[name="email"]').value.trim().toLowerCase();
-    const password = form.querySelector('[name="password"]').value;
-    const rol = form.querySelector('[name="rol"]').value;
-    const ranchoNombre = form.querySelector('[name="rancho_nombre"]').value;
+    const nombre = form.querySelector('[name="nombre"]').value;
+    const email = form.querySelector('[name="email"]').value.trim().toLowerCase();
+    const password = form.querySelector('[name="password"]').value;
+    const rol = form.querySelector('[name="rol"]').value;
+    const ranchoNombre = form.querySelector('[name="rancho_nombre"]').value;
 
-    try {
-        // --- ¡AQUÍ ESTÁ EL CAMBIO! ---
-        
-        // 1. Creamos el usuario en la sección 'Authentication'
-        const { data: authData, error: authError } = await sb.auth.signUp({
-            email: email,
-            password: password
-        });
+    try {
+        // 1. Creamos el usuario en 'Authentication'
+        const { data: authData, error: authError } = await sb.auth.signUp({
+            email: email,
+            password: password
+        });
+        if (authError) throw authError;
 
-        if (authError) throw authError;
+        // 2. Creamos el perfil en 'usuarios'
+        if (authData.user) {
+            const { error: profileError } = await sb
+                .from('usuarios')
+                .insert({
+                    id: authData.user.id, // Usamos el MISMO ID de Auth
+                    nombre: nombre,
+                    email: email,
+                    rol: rol
+                });
+            if (profileError) throw profileError;
 
-        // Si el usuario se creó en Auth (authData.user.id),
-        // procedemos a crear su perfil en nuestra tabla 'usuarios'
-        if (authData.user) {
-            const { error: profileError } = await sb
-                .from('usuarios')
-                .insert({
-                    id: authData.user.id, // ¡Usamos el MISMO ID de Auth!
-                    nombre: nombre,
-                    email: email,
-                    rol: rol
-                    // Ya no guardamos la contraseña aquí
-                });
-            
-            if (profileError) throw profileError;
+            // 3. Creamos el rancho si es propietario
+            if (rol === 'propietario') {
+                const codigoRancho = Math.random().toString(36).substring(2, 8).toUpperCase();
+                const { error: ranchoError } = await sb
+                    .from('ranchos')
+                    .insert({
+                        nombre: ranchoNombre || `${nombre.split(' ')[0]}'s Rancho`,
+                        codigo: codigoRancho,
+                        propietario_id: authData.user.id
+                    });
+                if (ranchoError) throw ranchoError;
+            }
+        }
+        mostrarMensaje('registro-mensaje', '¡Registro exitoso! Serás redirigido al login.', false);
+        setTimeout(() => navigateTo('login'), 1500);
 
-            // 2. Si es propietario, creamos su rancho (como antes)
-            if (rol === 'propietario') {
-                const codigoRancho = Math.random().toString(36).substring(2, 8).toUpperCase();
-                const { error: ranchoError } = await sb
-                    .from('ranchos')
-                    .insert({
-                        nombre: ranchoNombre || `${nombre.split(' ')[0]}'s Rancho`,
-                        codigo: codigoRancho,
-                        propietario_id: authData.user.id // Usamos el ID de Auth
-                    });
-                
-                if (ranchoError) throw ranchoError;
-            }
-        }
-        // --- FIN DEL CAMBIO ---
-
-        mostrarMensaje('registro-mensaje', '¡Registro exitoso! Serás redirigido al login.', false);
-        setTimeout(() => navigateTo('login'), 1500);
-
-    } catch (err) {
-        mostrarMensaje('registro-mensaje', err.message || 'Error inesperado');
-    } finally {
-        btn.disabled = false;
-    }
+    } catch (err) {
+        mostrarMensaje('registro-mensaje', err.message || 'Error inesperado');
+    } finally {
+        btn.disabled = false;
+    }
 }
 
-    // =================================================================
+// =================================================================
 // FUNCIÓN DE LOGIN (VERSIÓN SUPABASE DIRECTO Y GLOBAL)
 // =================================================================
 window.handleLogin = async function(e) {
-    e.preventDefault();
-    const btn = e.target.querySelector('button[type="submit"]');
-    if (btn) { btn.classList.add('loading'); btn.disabled = true; }
+    e.preventDefault();
+    const btn = e.target.querySelector('button[type="submit"]');
+    if (btn) { btn.classList.add('loading'); btn.disabled = true; }
 
-    const email = document.getElementById('login-email').value.trim().toLowerCase();
-    const password = document.getElementById('login-password').value;
+    const email = document.getElementById('login-email').value.trim().toLowerCase();
+    const password = document.getElementById('login-password').value;
 
-    try {
-        // 1. Intentamos iniciar sesión con Supabase Auth
-        const { data, error } = await sb.auth.signInWithPassword({
-            email: email,
-            password: password,
-        });
-        if (error) throw error;
+    try {
+        // 1. Intentamos iniciar sesión con Supabase Auth
+        const { data, error } = await sb.auth.signInWithPassword({
+            email: email,
+            password: password,
+        });
+        if (error) throw error;
 
-        // 2. Buscamos el perfil completo en 'usuarios'
-        const { data: userData, error: userError } = await sb
-            .from('usuarios')
-            .select('*')
-            .eq('id', data.user.id)
-            .single();
-        if (userError) throw userError;
+        // 2. Buscamos el perfil completo en 'usuarios'
+        const { data: userData, error: userError } = await sb
+            .from('usuarios')
+            .select('*')
+            .eq('id', data.user.id)
+            .single();
+        if (userError) throw userError;
 
-        // 3. NO cargamos los ranchos aquí
+        // 3. NO cargamos los ranchos aquí (lo hará el dashboard)
+        
+        // 4. Guardamos el perfil SIN los ranchos
+        currentUser = userData;
+        sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
 
-        // 4. Guardamos el perfil SIN los ranchos
-        currentUser = userData;
-        sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
+        // 5. Navegamos al dashboard
+        iniciarSesion();
 
-        // 5. Navegamos al dashboard
-        iniciarSesion();
-
-    } catch (err) {
-        mostrarMensaje('login-mensaje', err.message || 'Error inesperado');
-    } finally {
-        if (btn) { btn.classList.remove('loading'); btn.disabled = false; }
-    }
+    } catch (err) {
+        mostrarMensaje('login-mensaje', err.message || 'Error inesperado');
+    } finally {
+        if (btn) { btn.classList.remove('loading'); btn.disabled = false; }
+    }
 }
 // =================================================================
 
@@ -1208,28 +1196,26 @@ async function renderizarVistaEstadisticas() {
 
 // Reemplaza tu función handleValidarRancho
 async function handleValidarRancho() {
-    const codigoEl = document.getElementById('codigo-rancho');
-    const codigo = codigoEl ? codigoEl.value.trim().toUpperCase() : '';
-    if (!codigo) { mostrarMensaje('mensaje-rancho', 'El código no puede estar vacío.'); return; }
-    try {
-        // --- CAMBIO CLAVE: Usamos la LLAVE ANON para buscar, ya que el MVZ no es Propietario ---
-        // Le decimos a Supabase que no use el RLS del usuario logueado para esta consulta, 
-        // porque el MVZ no es el dueño y solo está validando un dato público (el código).
-        const { data: rancho, error } = await sb
-            .from('ranchos')
-            .select('*')
-            .eq('codigo', codigo)
-            .maybeSingle()
-            
-        if (error) throw error;
-        if (!rancho) throw new Error('Código de rancho no válido.');
+    const codigoEl = document.getElementById('codigo-rancho');
+    const codigo = codigoEl ? codigoEl.value.trim().toUpperCase() : '';
+    if (!codigo) { mostrarMensaje('mensaje-rancho', 'El código no puede estar vacío.'); return; }
+    try {
+        // Buscamos el rancho por su código (RLS debe permitir lecturas públicas o de MVZ)
+        const { data: rancho, error } = await sb
+            .from('ranchos')
+            .select('*')
+            .eq('codigo', codigo)
+            .maybeSingle();
 
-        currentRancho = rancho;
-        iniciarActividadUI();
-        await cargarVacasParaMVZ();
-    } catch (err) {
-        mostrarMensaje('mensaje-rancho', err.message || 'Error inesperado');
-    }
+        if (error) throw error;
+        if (!rancho) throw new Error('Código de rancho no válido.');
+
+        currentRancho = rancho;
+        iniciarActividadUI();
+        await cargarVacasParaMVZ(); // Llama a la carga de vacas
+    } catch (err) {
+        mostrarMensaje('mensaje-rancho', err.message || 'Error inesperado');
+    }
 }
 
 function iniciarActividadUI() {
@@ -1334,77 +1320,72 @@ function iniciarActividadUI() {
     renderizarHistorialMVZ();
 }
 
-   // REEMPLAZA tu función abrirModalActividad con este bloque completo
+// REEMPLAZA tu función abrirModalActividad con este bloque completo
 function abrirModalActividad(tipo) {
-    const modal = document.getElementById('modal-actividad');
-    const form = document.getElementById('form-actividad-vaca');
-    if (!modal || !form) return;
+    const modal = document.getElementById('modal-actividad');
+    const form = document.getElementById('form-actividad-vaca');
+    if (!modal || !form) return;
 
-    // 1. Limpieza inicial del formulario
-    form.reset(); 
-    form.querySelectorAll('select').forEach(select => { select.selectedIndex = -1; }); 
+    // 1. Limpieza inicial del formulario
+    form.reset(); 
+    form.querySelectorAll('select').forEach(select => { select.selectedIndex = -1; }); 
 
-    // 2. Generar los campos específicos del procedimiento (Palpación, etc.)
-    renderizarCamposProcedimiento(tipo);
+    // 2. Generar los campos específicos del procedimiento (Palpación, etc.)
+    renderizarCamposProcedimiento(tipo);
 
-    // 3. Mostrar el modal
-    modal.classList.remove('hidden');
+    // 3. Mostrar el modal
+    modal.classList.remove('hidden');
 
-    // 4. Poner el título correcto (Palpación, Inseminación, etc.)
-    const tituloEl = document.getElementById('modal-actividad-titulo');
-    if (tituloEl && PROCEDIMIENTOS[tipo]) {
-        tituloEl.textContent = PROCEDIMIENTOS[tipo].titulo;
-    }
-    
-    // 5. Llenar el select de Lote (opciones 1-10)
-    const actividadLoteEl = document.getElementById('actividad-lote');
-    if (actividadLoteEl) {
-        actividadLoteEl.innerHTML = ''; 
-        for (let i = 1; i <= 10; i++) {
-            actividadLoteEl.innerHTML += `<option value="${i}">Lote ${i}</option>`;
-        }
-    }
+    // 4. Poner el título correcto (Palpación, Inseminación, etc.)
+    const tituloEl = document.getElementById('modal-actividad-titulo');
+    if (tituloEl && PROCEDIMIENTOS[tipo]) {
+        tituloEl.textContent = PROCEDIMIENTOS[tipo].titulo;
+    }
+    
+    // 5. Llenar el select de Lote (opciones 1-10)
+    const actividadLoteEl = document.getElementById('actividad-lote');
+    if (actividadLoteEl) {
+        actividadLoteEl.innerHTML = ''; 
+        for (let i = 1; i <= 10; i++) {
+            actividadLoteEl.innerHTML += `<option value="${i}">Lote ${i}</option>`;
+        }
+    }
 
-    // 6. Conectar los botones de acción del modal
-    const btnCerrar = document.getElementById('btn-cerrar-modal-actividad');
-    if (btnCerrar) btnCerrar.onclick = () => modal.classList.add('hidden');
+    // 6. Conectar los botones de acción del modal
+    const btnCerrar = document.getElementById('btn-cerrar-modal-actividad');
+    if (btnCerrar) btnCerrar.onclick = () => modal.classList.add('hidden');
 
-    const btnGuardar = document.getElementById('btn-guardar-siguiente');
-    if (btnGuardar) btnGuardar.onclick = () => handleAgregarVacaAlLote(tipo, true);
+    const btnGuardar = document.getElementById('btn-guardar-siguiente');
+    if (btnGuardar) btnGuardar.onclick = () => handleAgregarVacaAlLote(tipo, true);
 
-    const btnFinalizar = document.getElementById('btn-finalizar-actividad-modal');
-    if (btnFinalizar) btnFinalizar.onclick = async () => {
-        // Asegurarse de agregar la última vaca si el campo Arete no está vacío
-        if (document.getElementById('actividad-arete')?.value.trim()) {
-            handleAgregarVacaAlLote(tipo, false); 
-        }
-        await handleFinalizarYReportar();
-        modal.classList.add('hidden');
-    };
-     
-    // --- 7. LÓGICA DE AUTOCOMPLETADO (CORREGIDA) ---
-
-    // 7a. Conecta la búsqueda parcial para Arete (lista flotante)
-    // Usa la función que busca por los últimos 4 dígitos y rellena raza al seleccionar
-    crearAutocompletadoParcial('actividad-arete', 'sugerencias-arete-container', vacasIndex);
-    
-    // 7b. Conecta la búsqueda normal para Raza (lista flotante)
-    crearAutocompletado('actividad-raza', 'sugerencias-raza-container', RAZAS_BOVINAS);
-    
-    // 7c. Re-añadimos el listener para autocompletar Raza si el MVZ escribe el arete COMPLETO manualmente
-    const areteInput = document.getElementById('actividad-arete');
-    const razaInput = document.getElementById('actividad-raza');
-    if (areteInput && razaInput) {
-        areteInput.addEventListener('input', () => {
-            const areteCompleto = areteInput.value.trim();
-            const vacaEncontrada = vacasIndex.get(areteCompleto);
-            // Si el texto coincide EXACTAMENTE con un arete del índice, rellenamos la raza
-            if (vacaEncontrada) { 
-                razaInput.value = vacaEncontrada.raza || '';
-            }
-        });
-    }
-    // --- FIN LÓGICA DE AUTOCOMPLETADO ---
+    const btnFinalizar = document.getElementById('btn-finalizar-actividad-modal');
+    if (btnFinalizar) btnFinalizar.onclick = async () => {
+        if (document.getElementById('actividad-arete')?.value.trim()) {
+            handleAgregarVacaAlLote(tipo, false); 
+        }
+        await handleFinalizarYReportar();
+        modal.classList.add('hidden');
+    };
+     
+    // --- 7. LÓGICA DE AUTOCOMPLETADO (CORREGIDA) ---
+    // 7a. Conecta la búsqueda parcial para Arete (lista flotante)
+    crearAutocompletadoParcial('actividad-arete', 'sugerencias-arete-container', vacasIndex);
+    
+    // 7b. Conecta la búsqueda normal para Raza (lista flotante)
+    crearAutocompletado('actividad-raza', 'sugerencias-raza-container', RAZAS_BOVINAS);
+    
+    // 7c. Listener para autocompletar Raza si se escribe el arete COMPLETO manualmente
+    const areteInput = document.getElementById('actividad-arete');
+    const razaInput = document.getElementById('actividad-raza');
+    if (areteInput && razaInput) {
+        areteInput.addEventListener('input', () => {
+            const areteCompleto = areteInput.value.trim();
+            const vacaEncontrada = vacasIndex.get(areteCompleto);
+            if (vacaEncontrada) { 
+                razaInput.value = vacaEncontrada.raza || '';
+            }
+        });
+    }
 }
 
 // Reemplaza tu función handleFinalizarYReportar
@@ -1686,33 +1667,33 @@ async function handleGenerarPdfDeHistorial() {
     });
 }
 
-    // Reemplaza tu función cargarVacasParaMVZ
 // Reemplaza tu función cargarVacasParaMVZ
 async function cargarVacasParaMVZ() {
-    if (!currentRancho || !currentRancho.id) return;
-    try {
-        // Consultamos la base de datos por el rancho ID del rancho activo.
-        const { data: vacas, error } = await sb
-            .from('vacas')
-            .select('id, numero_siniiga, raza')
-            .eq('rancho_id', currentRancho.id); 
+    if (!currentRancho || !currentRancho.id) return;
+    try {
+        // Consultamos las vacas del rancho activo (RLS debe permitir esto al MVZ)
+        const { data: vacas, error } = await sb
+            .from('vacas')
+            .select('id, numero_siniiga, raza')
+            .eq('rancho_id', currentRancho.id); 
 
-        if (error) throw error;
+        if (error) throw error;
 
-        // Limpiamos el datalist (aunque ya no lo usaremos, es buena práctica)
-        const datalist = document.getElementById('lista-aretes-autocompletar');
-        if (datalist) datalist.innerHTML = '';
-        
-        // 1. Limpiamos y creamos el índice de búsqueda
-        vacasIndex.clear();
-        
-        (vacas || []).forEach(v => {
-            // 2. Poblar el índice (clave para la búsqueda parcial posterior)
-            vacasIndex.set(String(v.numero_siniiga).trim(), { id: v.id, raza: v.raza || '' });
-        });
-    } catch (err) { 
-        console.error("Error cargando vacas para MVZ:", err); 
-    }
+        // Limpiamos el datalist (que ya no usamos)
+        const datalist = document.getElementById('lista-aretes-autocompletar');
+        if (datalist) datalist.innerHTML = '';
+        
+        // Limpiamos y creamos el índice de búsqueda
+        vacasIndex.clear();
+        
+        (vacas || []).forEach(v => {
+            // Poblar el índice (clave para la búsqueda parcial)
+            vacasIndex.set(String(v.numero_siniiga).trim(), { id: v.id, raza: v.raza || '' });
+        });
+        console.log(`DEBUG: Índice de vacas cargado con ${vacasIndex.size} animales.`);
+    } catch (err) { 
+        console.error("Error cargando vacas para MVZ:", err); 
+    }
 }
 
     function handleAgregarVacaAlLote(tipoActividad, limpiarForm) {
