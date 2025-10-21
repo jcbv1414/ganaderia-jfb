@@ -1330,16 +1330,7 @@ if (actividadLoteEl) {
         await handleFinalizarYReportar();
         modal.classList.add('hidden');
     };
-      const areteInput = document.getElementById('actividad-arete');
-    const razaInput = document.getElementById('actividad-raza');
-    if (areteInput && razaInput) {
-        areteInput.oninput = () => {
-            const vacaEncontrada = vacasIndex.get(areteInput.value.trim());
-            if (vacaEncontrada) {
-                razaInput.value = vacaEncontrada.raza || '';
-            }
-        };
-    }
+     
    // 🚨 Esta es la llamada que implementa la búsqueda parcial 🚨
     crearAutocompletadoParcial('actividad-arete', 'sugerencias-arete-container', vacasIndex);
     
