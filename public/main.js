@@ -1588,8 +1588,8 @@ const fecha = fechaObj.toLocaleDateString('es-MX', { day: 'numeric', month: 'lon
                      
                      if (deleteError) throw deleteError;
                      
-                     console.log("DEBUG: Eliminación exitosa. Recargando historial..."); // <<< DEBUG 5
-                     renderizarHistorialMVZ(); // Recarga la lista
+                     console.log("DEBUG: Eliminación exitosa. Quitando elemento del DOM..."); 
+                     e.currentTarget.closest('.bg-white.p-3').remove(); // Busca el div padre y lo elimina// Recarga la lista
                  } catch (error) {
                      console.error("DEBUG: Error al eliminar sesión:", error); // <<< DEBUG 6
                      alert(error.message || 'Error al eliminar la sesión.');
