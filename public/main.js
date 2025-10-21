@@ -1557,26 +1557,49 @@ const fecha = fechaObj.toLocaleDateString('es-MX', { day: 'numeric', month: 'lon
         }).join('');
         
         // Reconectar los botones de eliminar
-        historialContainer.querySelectorAll('.btn-eliminar-sesion').forEach(button => {
-    button.addEventListener('click', async (e) => {
-        const sesionId = e.currentTarget.dataset.sesionId;
-        if (!confirm('¿Estás seguro de que quieres eliminar esta sesión?')) return;
-        try {
-            // --- CAMBIO: Usar Supabase directo ---
-            const { error: deleteError } = await sb
-                .from('actividades')
-                .delete()
-                .eq('sesion_id', sesionId);
-            
-            if (deleteError) throw deleteError;
-            // --- FIN DEL CAMBIO ---
-            
-            renderizarHistorialMVZ(); // Recarga la lista
-        } catch (error) {
-            alert(error.message || 'Error al eliminar la sesión.');
+       // --- RECONECTAR BOTONES DE ELIMINAR (CON DEBUG) ---
+    const botonesEliminar = historialContainer.querySelectorAll('.btn-eliminar-sesion');
+    
+    // DEBUG: ¿Encontramos los botones?
+    console.log(`DEBUG: Encontrados ${botonesEliminar.length} botones de eliminar.`); 
+
+    botonesEliminar.forEach(button => {
+        // Quitamos listeners viejos por si acaso la función se llama rápido dos veces
+        button.replaceWith(button.cloneNode(true)); 
+        const newButton = historialContainer.querySelector(`[data-sesion-id="${button.dataset.sesionId}"].btn-eliminar-sesion`);
+
+        if (newButton) { // Asegurarnos de que el botón nuevo exista
+             newButton.addEventListener('click', async (e) => {
+                 console.log("DEBUG: ¡Clic detectado en botón eliminar!"); // <<< DEBUG 1
+                 const sesionId = e.currentTarget.dataset.sesionId;
+                 console.log("DEBUG: Sesión ID a eliminar:", sesionId); // <<< DEBUG 2
+
+                 if (!confirm('¿Estás seguro de que quieres eliminar esta sesión?')) {
+                      console.log("DEBUG: Eliminación cancelada por el usuario."); // <<< DEBUG 3
+                      return; 
+                 }
+                 
+                 try {
+                     console.log("DEBUG: Intentando eliminar sesión de Supabase..."); // <<< DEBUG 4
+                     const { error: deleteError } = await sb
+                         .from('actividades')
+                         .delete()
+                         .eq('sesion_id', sesionId);
+                     
+                     if (deleteError) throw deleteError;
+                     
+                     console.log("DEBUG: Eliminación exitosa. Recargando historial..."); // <<< DEBUG 5
+                     renderizarHistorialMVZ(); // Recarga la lista
+                 } catch (error) {
+                     console.error("DEBUG: Error al eliminar sesión:", error); // <<< DEBUG 6
+                     alert(error.message || 'Error al eliminar la sesión.');
+                 }
+             });
+        } else {
+             console.error("DEBUG: No se pudo volver a encontrar el botón clonado:", button.dataset.sesionId);
         }
     });
-});
+    // --- FIN BLOQUE DEBUG ---
 
   } catch (error) {
         console.error("Error al cargar historial MVZ:", error);
