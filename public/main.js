@@ -207,60 +207,109 @@ if (avatarEl && logoUrl) {
     console.log(`Cargando datos del dashboard para rancho ID: ${ranchoId}`);
 
 
-    // PARTE 2: Carga de Estadísticas y Lotes (¡AHORA USAREMOS SUPABASE DIRECTO!)
-    const lotesContainer = document.getElementById('lotes-container-scroll'); // ID correcto
-    const lotesPlaceholder = document.getElementById('lotes-placeholder');
-    if (lotesPlaceholder) lotesPlaceholder.textContent = 'Cargando lotes...';
+  // --- PARTE 2: Carga de Estadísticas y Lotes (MIGRADO A SUPABASE DIRECTO + PLAN B) ---
+        const lotesContainer = document.getElementById('lotes-container-scroll'); 
+        const lotesPlaceholder = document.getElementById('lotes-placeholder');
+        if (lotesPlaceholder) lotesPlaceholder.textContent = 'Cargando lotes...';
 
-    try {
-        // --- ¡NUEVA LLAMADA DIRECTA A SUPABASE! ---
-        // Asumiendo que tienes una función RPC 'get_rancho_stats' o similar.
-        // Si no la tienes, podemos adaptarlo para calcularlo aquí como antes.
-        // Por ahora, usaremos un placeholder fetch (CAMBIAR ESTO POR RPC)
-         console.log(`Intentando fetch a /api/rancho/${ranchoId}/estadisticas (ESTO DEBE CAMBIARSE A RPC)`);
-         // TEMPORALMENTE LLAMAREMOS AL VIEJO ENDPOINT HASTA QUE MIGREMOS A RPC
-         const resStats = await fetch(`/api/rancho/${ranchoId}/estadisticas`);
-         if (!resStats.ok) {
-             const errorData = await resStats.text(); // Leer el error como texto
-             console.error("Error en fetch stats:", errorData);
-             throw new Error('No se pudieron cargar las estadísticas.');
-         }
-         const stats = await resStats.json();
-         console.log("Estadísticas recibidas:", stats);
-        // --- FIN DE LA LLAMADA ---
+        try {
+            // 2a. Obtener todas las vacas del rancho
+            const { data: vacas, error: vacasError } = await sb
+                .from('vacas')
+                .select('id, lote, raza')
+                .eq('rancho_id', ranchoId); // RLS ya asegura que sean del propietario
+            if (vacasError) throw vacasError;
 
-        let totalVacas = 0, totalGestantes = 0;
-        Object.values(stats).forEach(lote => {
-            totalVacas += lote.totalVacas || 0;
-            totalGestantes += lote.estados?.Gestante || 0;
-        });
+            let stats = {}; // Objeto para guardar estadísticas
+            let totalVacas = 0;
+            let totalGestantes = 0;
 
-        document.getElementById('resumen-total-vacas').textContent = totalVacas;
-        document.getElementById('resumen-vacas-gestantes').textContent = totalGestantes;
-        document.getElementById('resumen-alertas').textContent = 0; // Placeholder
+            if (!vacas || vacas.length === 0) {
+                // Si no hay vacas, inicializamos stats vacío y contadores a 0
+                stats = {};
+                totalVacas = 0;
+                totalGestantes = 0;
+                if(lotesPlaceholder) lotesPlaceholder.textContent = 'No hay animales registrados en este rancho.';
 
-        if (lotesContainer) {
-             if (Object.keys(stats).length === 0) {
-                 if(lotesPlaceholder) lotesPlaceholder.textContent = 'No hay lotes con datos.';
-                 lotesContainer.innerHTML = ''; // Limpiar por si acaso
-             } else {
-                 if(lotesPlaceholder) lotesPlaceholder.style.display = 'none'; // Ocultar "Cargando..."
-                 lotesContainer.innerHTML = Object.entries(stats).map(([numeroLote, datosLote]) => {
-                     const vacasEnLote = datosLote.totalVacas || 0;
-                     const gestantesEnLote = datosLote.estados?.Gestante || 0;
-                     const porcentaje = vacasEnLote > 0 ? Math.round((gestantesEnLote / vacasEnLote) * 100) : 0;
-                     const nombreLote = numeroLote === 'Sin Lote' ? 'Animales sin Lote' : `Lote ${numeroLote}`;
-                     // Usamos el diseño con flex-shrink-0
-                     return `<div class="flex-shrink-0 w-72 bg-white p-4 rounded-xl shadow-md flex items-center justify-between"><div class="flex items-center"><div class="progress-ring mr-4" style="--value: ${porcentaje}; --color: #22c55e;"><span class="progress-ring-percent">${porcentaje}%</span></div><div><p class="font-semibold">${nombreLote}</p><p class="text-sm text-gray-500">Gestación</p></div></div><i class="fa-solid fa-chevron-right text-gray-400"></i></div>`;
-                 }).join('');
-             }
+            } else {
+                 totalVacas = vacas.length; // Contador total
+                 const cowIds = vacas.map(v => v.id);
+
+                 // 2b. Obtener la última palpación de esas vacas (Plan B manual)
+                 const { data: todasLasActividades, error: actError } = await sb
+                     .from('actividades')
+                     .select('id_vaca, descripcion, tipo_actividad')
+                     .in('id_vaca', cowIds)
+                     .eq('tipo_actividad', 'Palpación')
+                     .order('fecha_actividad', { ascending: false });
+                 if (actError) throw actError;
+
+                 // 2c. Procesamiento manual de estadísticas (lógica que ya teníamos)
+                 const estadoMap = new Map();
+                 (todasLasActividades || []).forEach(act => {
+                     if (!estadoMap.has(act.id_vaca)) {
+                         let desc = act.descripcion || {};
+                         // Aseguramos que desc sea un objeto
+                         if (typeof desc === 'string') { try { desc = JSON.parse(desc); } catch (e) { desc = {}; } }
+                         estadoMap.set(act.id_vaca, desc);
+                     }
+                 });
+
+                 stats = vacas.reduce((acc, vaca) => {
+                     const lote = vaca.lote || 'Sin Lote';
+                     acc[lote] = acc[lote] || { totalVacas: 0, estados: { Gestante: 0, Estatica: 0, Ciclando: 0 }, razas: {} };
+                     acc[lote].totalVacas++;
+
+                     const ultimoEstado = estadoMap.get(vaca.id);
+                     if (ultimoEstado && ultimoEstado.gestante === 'Sí') { // Verifica si es 'Sí'
+                         acc[lote].estados.Gestante++;
+                         totalGestantes++; // Incrementa el contador global
+                     }
+                     // Opcional: Contar otros estados si los necesitas en el resumen
+                     // if (ultimoEstado && ultimoEstado.estatica === 'Sí') acc[lote].estados.Estatica++;
+                     // if (ultimoEstado && ultimoEstado.ciclando === 'Sí') acc[lote].estados.Ciclando++;
+                     
+                     const raza = vaca.raza || 'Desconocida';
+                     acc[lote].razas[raza] = (acc[lote].razas[raza] || 0) + 1;
+                     return acc;
+                 }, {});
+            } // Fin del else (si hay vacas)
+
+            // 2d. Actualizar los resúmenes del dashboard
+            document.getElementById('resumen-total-vacas').textContent = totalVacas;
+            document.getElementById('resumen-vacas-gestantes').textContent = totalGestantes;
+            document.getElementById('resumen-alertas').textContent = 0; // Placeholder
+
+            // 2e. Renderizar las tarjetas de lotes
+            if (lotesContainer) {
+                 if (Object.keys(stats).length === 0 && totalVacas > 0) { // Si hay vacas pero no lotes/stats
+                     if(lotesPlaceholder) lotesPlaceholder.textContent = 'No hay lotes con datos o actividades recientes.';
+                     lotesContainer.innerHTML = ''; 
+                 } else if (Object.keys(stats).length === 0 && totalVacas === 0) { // Si no hay vacas
+                      if(lotesPlaceholder) lotesPlaceholder.textContent = 'No hay animales registrados.';
+                      lotesContainer.innerHTML = ''; 
+                 } else { // Si hay stats para mostrar
+                     if(lotesPlaceholder) lotesPlaceholder.style.display = 'none'; 
+                     lotesContainer.innerHTML = Object.entries(stats).map(([numeroLote, datosLote]) => {
+                         const vacasEnLote = datosLote.totalVacas || 0;
+                         const gestantesEnLote = datosLote.estados?.Gestante || 0;
+                         const porcentaje = vacasEnLote > 0 ? Math.round((gestantesEnLote / vacasEnLote) * 100) : 0;
+                         const nombreLote = numeroLote === 'Sin Lote' ? 'Animales sin Lote' : `Lote ${numeroLote}`;
+                         return `<div class="flex-shrink-0 w-72 bg-white p-4 rounded-xl shadow-md flex items-center justify-between"><div class="flex items-center"><div class="progress-ring mr-4" style="--value: ${porcentaje}; --color: #22c55e;"><span class="progress-ring-percent">${porcentaje}%</span></div><div><p class="font-semibold">${nombreLote}</p><p class="text-sm text-gray-500">Gestación</p></div></div><i class="fa-solid fa-chevron-right text-gray-400"></i></div>`;
+                     }).join('');
+                 }
+            }
+
+        } catch (error) {
+            console.error("Error procesando estadísticas/lotes del propietario:", error);
+            if (lotesPlaceholder) lotesPlaceholder.textContent = 'Error al cargar lotes.';
+            if (lotesContainer) lotesContainer.innerHTML = '';
+            // Limpiar resúmenes en caso de error
+            document.getElementById('resumen-total-vacas').textContent = '--';
+            document.getElementById('resumen-vacas-gestantes').textContent = '--';
+            document.getElementById('resumen-alertas').textContent = '--';
         }
-
-    } catch (error) {
-        console.error("Error procesando estadísticas del propietario:", error);
-        if (lotesPlaceholder) lotesPlaceholder.textContent = 'Error al cargar lotes.';
-        if (lotesContainer) lotesContainer.innerHTML = '';
-    }
+        // --- FIN PARTE 2 MIGRADA ---
 
     // --- PARTE 3 Y 4: Carga de Noticias y Eventos (¡TAMBIÉN CON SUPABASE DIRECTO!) ---
     const noticiasContainer = document.getElementById('ultimas-noticias');
@@ -1488,7 +1537,8 @@ async function renderizarHistorialMVZ() {
         }
         
         historialContainer.innerHTML = sesiones.map(sesion => {
-            const fecha = new Date(sesion.fecha_date).toLocaleDateString('es-MX', {day: 'numeric', month: 'long'});
+            const fechaObj = new Date(sesion.fecha_date + 'T00:00:00Z'); 
+const fecha = fechaObj.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', timeZone: 'UTC' });
             // La función de BD ya nos da rancho_nombre, tipo_actividad y conteo
             return `
             <div class="bg-white p-3 rounded-xl shadow-sm flex items-center justify-between">
