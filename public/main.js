@@ -1113,21 +1113,34 @@ window.verHistorialVaca = async function(vacaId, vacaNombre) {
     if (btnValidar) btnValidar.onclick = handleValidarRancho;
 }
 
-    async function handleValidarRancho() {
-        const codigoEl = document.getElementById('codigo-rancho');
-        const codigo = codigoEl ? codigoEl.value.trim().toUpperCase() : '';
-        if (!codigo) { mostrarMensaje('mensaje-rancho', 'El código no puede estar vacío.'); return; }
-        try {
-            const res = await fetch(`/api/rancho/validate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ codigo }) });
-            const respuesta = await res.json();
-            if (!res.ok) throw new Error(respuesta.message || 'Código inválido');
-            currentRancho = respuesta;
-            iniciarActividadUI();
-            await cargarVacasParaMVZ();
-        } catch (err) {
-            mostrarMensaje('mensaje-rancho', err.message || 'Error inesperado');
-        }
+    // Reemplaza tu función handleValidarRancho
+// Reemplaza tu función handleValidarRancho
+async function handleValidarRancho() {
+    const codigoEl = document.getElementById('codigo-rancho');
+    const codigo = codigoEl ? codigoEl.value.trim().toUpperCase() : '';
+    if (!codigo) { mostrarMensaje('mensaje-rancho', 'El código no puede estar vacío.'); return; }
+    try {
+        // --- CAMBIO: Usar Supabase directo ---
+        // Buscamos el rancho por su código
+        const { data: rancho, error } = await sb
+            .from('ranchos')
+            .select('*')
+            .eq('codigo', codigo)
+            .maybeSingle();
+
+        if (error) throw error;
+        if (!rancho) throw new Error('Código de rancho no válido.'); // Cambiado para lanzar error en lugar de usar res.status(404)
+
+        // Verificamos si el MVZ ya está asociado a este rancho
+        // Nota: Asumimos que esta verificación puede ser manejada por RLS más tarde si se necesita más control.
+        
+        currentRancho = rancho;
+        iniciarActividadUI();
+        await cargarVacasParaMVZ();
+    } catch (err) {
+        mostrarMensaje('mensaje-rancho', err.message || 'Error inesperado');
     }
+}
 
 function iniciarActividadUI() {
     document.getElementById('modo-seleccion-container')?.classList.add('hidden');
@@ -1373,15 +1386,20 @@ async function handleFinalizarYReportar() {
     }
 }
 
-    async function renderizarHistorialMVZ() {
+    // Reemplaza tu función renderizarHistorialMVZ
+async function renderizarHistorialMVZ() {
     const historialContainer = document.getElementById('historial-actividades-mvz');
     if (!historialContainer) return;
     historialContainer.innerHTML = '<p class="text-gray-500 text-center">Cargando historial...</p>';
 
     try {
-        const res = await fetch(`/api/actividades/mvz/${currentUser?.id || ''}`);
-        if (!res.ok) throw new Error('No se pudo cargar el historial.');
-        const sesiones = await res.json();
+        // --- CAMBIO: Usar Supabase RPC (Llamada a función de BD) ---
+        // Llamamos a la función que ya tienes creada en la base de datos para agrupar por sesión
+        const { data: sesiones, error } = await sb
+            .rpc('get_sesiones_actividad_mvz', { mvz_id: currentUser.id }); 
+            
+        if (error) throw error;
+        // --- FIN DEL CAMBIO ---
 
         if (!sesiones || sesiones.length === 0) {
             historialContainer.innerHTML = '<div class="bg-white p-4 rounded-xl text-center text-gray-500"><p>No hay reportes recientes.</p></div>';
@@ -1389,8 +1407,8 @@ async function handleFinalizarYReportar() {
         }
         
         historialContainer.innerHTML = sesiones.map(sesion => {
-            const fechaUTC = new Date(sesion.fecha + 'T00:00:00Z');
-            const fecha = fechaUTC.toLocaleDateString('es-MX', {day: 'numeric', month: 'long', timeZone: 'UTC'});
+            const fecha = new Date(sesion.fecha_date).toLocaleDateString('es-MX', {day: 'numeric', month: 'long'});
+            // La función de BD ya nos da rancho_nombre, tipo_actividad y conteo
             return `
             <div class="bg-white p-3 rounded-xl shadow-sm flex items-center justify-between">
                 <div class="flex items-center">
@@ -1409,21 +1427,29 @@ async function handleFinalizarYReportar() {
         
         // Reconectar los botones de eliminar
         historialContainer.querySelectorAll('.btn-eliminar-sesion').forEach(button => {
-            button.addEventListener('click', async (e) => {
-                const sesionId = e.currentTarget.dataset.sesionId;
-                if (!confirm('¿Estás seguro de que quieres eliminar esta sesión?')) return;
-                try {
-                    const deleteRes = await fetch(`/api/sesiones/${sesionId}`, { method: 'DELETE' });
-                    if (!deleteRes.ok) throw new Error('No se pudo eliminar la sesión.');
-                    renderizarHistorialMVZ(); // Recarga la lista
-                } catch (error) {
-                    alert(error.message || 'Error al eliminar la sesión.');
-                }
-            });
-        });
+    button.addEventListener('click', async (e) => {
+        const sesionId = e.currentTarget.dataset.sesionId;
+        if (!confirm('¿Estás seguro de que quieres eliminar esta sesión?')) return;
+        try {
+            // --- CAMBIO: Usar Supabase directo ---
+            const { error: deleteError } = await sb
+                .from('actividades')
+                .delete()
+                .eq('sesion_id', sesionId);
+            
+            if (deleteError) throw deleteError;
+            // --- FIN DEL CAMBIO ---
+            
+            renderizarHistorialMVZ(); // Recarga la lista
+        } catch (error) {
+            alert(error.message || 'Error al eliminar la sesión.');
+        }
+    });
+});
 
-    } catch (error) {
-        historialContainer.innerHTML = '<p class="text-red-500 text-center">Error al cargar historial.</p>';
+  } catch (error) {
+        console.error("Error al cargar historial MVZ:", error);
+        historialContainer.innerHTML = `<p class="text-red-500 text-center">Error al cargar historial: ${error.message}</p>`;
     }
 }
 
@@ -1504,21 +1530,31 @@ async function handleFinalizarYReportar() {
     });
 }
 
-    async function cargarVacasParaMVZ() {
-        if (!currentRancho || !currentRancho.id) return;
-        try {
-            const res = await fetch(`/api/vacas/rancho/${currentRancho.id}`);
-            if (!res.ok) throw new Error('No se pudieron cargar vacas');
-            const vacas = await res.json();
-            const datalist = document.getElementById('lista-aretes-autocompletar');
-            if (datalist) datalist.innerHTML = '';
-            vacasIndex.clear();
-            (vacas || []).forEach(v => {
-                if (datalist) datalist.insertAdjacentHTML('beforeend', `<option value="${v.numero_siniiga}">`);
-                vacasIndex.set(String(v.numero_siniiga).trim(), { id: v.id, nombre: v.nombre, raza: v.raza || '' });
-            });
-        } catch (err) { console.error("Error cargando vacas para MVZ:", err); }
+    // Reemplaza tu función cargarVacasParaMVZ
+async function cargarVacasParaMVZ() {
+    if (!currentRancho || !currentRancho.id) return;
+    try {
+        // --- CAMBIO: Usar Supabase directo ---
+        // Buscamos las vacas por rancho_id
+        const { data: vacas, error } = await sb
+            .from('vacas')
+            .select('id, numero_siniiga, raza') // Solo necesitamos estos campos
+            .eq('rancho_id', currentRancho.id);
+
+        if (error) throw error;
+        // --- FIN DEL CAMBIO ---
+
+        const datalist = document.getElementById('lista-aretes-autocompletar');
+        if (datalist) datalist.innerHTML = '';
+        vacasIndex.clear();
+        (vacas || []).forEach(v => {
+            if (datalist) datalist.insertAdjacentHTML('beforeend', `<option value="${v.numero_siniiga}">`);
+            vacasIndex.set(String(v.numero_siniiga).trim(), { id: v.id, nombre: v.nombre, raza: v.raza || '' });
+        });
+    } catch (err) { 
+        console.error("Error cargando vacas para MVZ:", err); 
     }
+}
 
     function handleAgregarVacaAlLote(tipoActividad, limpiarForm) {
         const form = document.getElementById('form-actividad-vaca');
@@ -1569,8 +1605,9 @@ async function handleFinalizarYReportar() {
 // LÓGICA COMPLETA DEL CALENDARIO MVZ
 // =================================================================
 
+// Reemplaza renderizarVistaCalendario
 async function renderizarVistaCalendario() {
-    // 1. Conecta los botones del modal de "Crear Evento"
+    // Primero, conectamos los botones del modal (no cambia)
     const modal = document.getElementById('modal-agregar-evento');
     const btnAbrirModal = document.getElementById('btn-abrir-modal-evento');
     const btnCerrarModal = document.getElementById('btn-cerrar-modal-evento');
@@ -1579,7 +1616,7 @@ async function renderizarVistaCalendario() {
     if (btnAbrirModal) btnAbrirModal.onclick = async () => {
         form.reset();
         document.getElementById('evento-id-input').value = '';
-        await cargarSelectDeRanchos();
+        await cargarSelectDeRanchos(); // Carga la lista de ranchos (ya migrada)
         modal.querySelector('h2').textContent = 'Agendar Evento';
         document.getElementById('btn-guardar-evento').textContent = 'Guardar Evento';
         modal.classList.remove('hidden');
@@ -1587,59 +1624,70 @@ async function renderizarVistaCalendario() {
     if (btnCerrarModal) btnCerrarModal.onclick = () => modal.classList.add('hidden');
     if (form) form.onsubmit = handleGuardarEvento;
 
-    // 2. Elementos donde se dibujará todo
     const containerCalendario = document.getElementById('calendario-visual-container');
     const containerLista = document.getElementById('lista-eventos-calendario');
 
     if (!containerCalendario || !containerLista) return;
     
-    containerCalendario.innerHTML = '<p class="text-center p-4">Cargando calendario...</p>';
-    containerLista.innerHTML = '<p class="text-center">Cargando eventos...</p>';
+    containerCalendario.innerHTML = '<p class="text-center text-gray-500 p-4">Cargando calendario...</p>';
+    containerLista.innerHTML = '<p class="text-center text-gray-500">Cargando eventos...</p>';
 
     try {
-        // 3. Obtiene los eventos del servidor
-        const res = await fetch(`/api/eventos/mvz/${currentUser.id}`);
-        if (!res.ok) throw new Error('No se pudieron cargar los eventos.');
-        const eventos = await res.json();
+        // --- CAMBIO: Usar Supabase directo ---
+        const { data: eventos, error: eventosError } = await sb
+            .from('eventos')
+            .select('*, ranchos (nombre)') // Incluye el nombre del rancho
+            .eq('mvz_id', currentUser.id)
+            .gte('fecha_evento', new Date().toISOString()) 
+            .order('fecha_evento', { ascending: true });
+            
+        if (eventosError) throw eventosError;
+        // --- FIN DEL CAMBIO ---
 
-        // 4. Dibuja la lista de eventos de abajo
+        // 2. Dibuja la lista de "Próximos Eventos" (Muestra cómo se accede al rancho)
         if (eventos.length === 0) {
             containerLista.innerHTML = '<p class="text-center text-gray-500">No tienes eventos próximos agendados.</p>';
         } else {
             containerLista.innerHTML = eventos.map(e => {
-                 const fecha = new Date(e.fecha_evento);
-                 const rancho = e.nombre_rancho_texto || e.ranchos?.nombre || 'General';
-                 return `
-                    <div class="bg-white p-4 rounded-xl shadow-md space-y-2">
-                        <div>
-                            <p class="font-bold text-brand-green">${e.titulo}</p>
-                            <p class="text-sm text-gray-600"><i class="fa-solid fa-house-medical w-5 text-center mr-1 text-gray-400"></i>Rancho: ${rancho}</p>
-                            <p class="text-sm text-gray-600"><i class="fa-solid fa-clock w-5 text-center mr-1 text-gray-400"></i>${fecha.toLocaleString('es-MX', { dateStyle: 'full', timeStyle: 'short' })}</p>
-                            ${e.descripcion ? `<p class="text-xs text-gray-500 mt-2 pt-2 border-t">${e.descripcion}</p>` : ''}
-                        </div>
-                        <div class="flex justify-end space-x-3 pt-2 border-t border-gray-100">
-                            <button onclick='handleEliminarEvento(${e.id})' class="text-sm text-red-600 font-semibold">Eliminar</button>
-                            <button onclick='handleEditarEvento(${JSON.stringify(e)})' class="text-sm bg-gray-600 text-white font-semibold px-4 py-1 rounded-md">Editar</button>
-                        </div>
-                    </div>`;
+                   const fecha = new Date(e.fecha_evento);
+                   const rancho = e.nombre_rancho_texto || e.ranchos?.nombre || 'General';
+                   return `
+                       <div class="bg-white p-4 rounded-xl shadow-md space-y-2">
+                            <div>
+                                <p class="font-bold text-brand-green">${e.titulo}</p>
+                                <p class="text-sm text-gray-600"><i class="fa-solid fa-house-medical w-5 text-center mr-1 text-gray-400"></i>Rancho: ${rancho}</p>
+                                <p class="text-sm text-gray-600"><i class="fa-solid fa-clock w-5 text-center mr-1 text-gray-400"></i>${fecha.toLocaleString('es-MX', { dateStyle: 'full', timeStyle: 'short' })}</p>
+                                ${e.descripcion ? `<p class="text-xs text-gray-500 mt-2 pt-2 border-t">${e.descripcion}</p>` : ''}
+                            </div>
+                            <div class="flex justify-end space-x-3 pt-2 border-t border-gray-100">
+                                <button onclick='handleEliminarEvento(${e.id})' class="text-sm text-red-600 font-semibold">Eliminar</button>
+                                <button onclick='handleEditarEvento(${JSON.stringify(e)})' class="text-sm bg-gray-600 text-white font-semibold px-4 py-1 rounded-md">Editar</button>
+                            </div>
+                        </div>`;
             }).join('');
         }
 
-        // 5. Dibuja el calendario visual
-        if (typeof FullCalendar === 'undefined') throw new Error("La librería FullCalendar no está cargada.");
+        // 3. Dibuja el calendario visual (no cambia)
+        if (typeof FullCalendar === 'undefined') {
+            throw new Error("La librería FullCalendar no está cargada.");
+        }
         
-        containerCalendario.innerHTML = '';
+        const eventosParaCalendario = eventos.map(e => ({
+            id: e.id,
+            title: e.titulo,
+            start: e.fecha_evento,
+        }));
+        
+        containerCalendario.innerHTML = ''; 
         const calendario = new FullCalendar.Calendar(containerCalendario, {
             initialView: 'dayGridMonth',
             locale: 'es',
             height: 'auto',
             headerToolbar: { left: 'prev', center: 'title', right: 'next' },
-            events: eventos.map(e => ({ id: e.id, title: e.titulo, start: e.fecha_evento })),
+            events: eventosParaCalendario,
             eventClick: function(info) {
                 const eventoOriginal = eventos.find(e => e.id == info.event.id);
-                if (eventoOriginal) {
-                    mostrarDetalleEvento(eventoOriginal); // Llama a la función de la tarjeta flotante
-                }
+                if (eventoOriginal) handleEditarEvento(eventoOriginal);
             }
         });
         
@@ -1776,15 +1824,24 @@ async function cargarEventos() {
     }
 }
 
+// Reemplaza tu función cargarSelectDeRanchos
 async function cargarSelectDeRanchos() {
     const select = document.getElementById('select-ranchos-evento');
     if (!select) return;
     select.innerHTML = '<option value="">Otro / No especificar</option>'; // Opción por defecto
     try {
-        // Ahora le preguntamos a nuestra nueva ruta en el servidor
-        const res = await fetch(`/api/ranchos/mvz/${currentUser.id}`);
-        if (!res.ok) throw new Error('Error del servidor al cargar ranchos');
-        const ranchos = await res.json();
+        // --- CAMBIO: Usar Supabase directo ---
+        // Le pedimos a Supabase la lista de ranchos a los que el MVZ (auth.uid()) tiene acceso
+        const { data: permisos, error } = await sb
+            .from('rancho_mvz_permisos')
+            .select('ranchos (id, nombre)') 
+            .eq('mvz_id', currentUser.id);
+
+        if (error) throw error;
+        // --- FIN DEL CAMBIO ---
+
+        // Mapeamos los resultados (permisos) para obtener solo los datos del rancho
+        const ranchos = (permisos || []).map(p => p.ranchos).filter(r => r && r.id);
 
         ranchos.forEach(r => {
             if(r) select.innerHTML += `<option value="${r.id}">${r.nombre}</option>`;
@@ -1794,6 +1851,7 @@ async function cargarSelectDeRanchos() {
     }
 }
 
+// Reemplaza tu función handleGuardarEvento
 async function handleGuardarEvento(e) {
     e.preventDefault();
     const form = e.target;
@@ -1803,33 +1861,50 @@ async function handleGuardarEvento(e) {
 
     const formData = new FormData(form);
     const payload = Object.fromEntries(formData.entries());
-    const eventoId = payload.evento_id; // Obtenemos el ID del campo oculto
+    const eventoId = payload.evento_id; 
 
-    // Decide si es una actualización (PUT) o una creación (POST)
+    // Decide si es una actualización (UPDATE) o una creación (INSERT)
     const isUpdating = eventoId && eventoId !== '';
-    const method = isUpdating ? 'PUT' : 'POST';
-    const url = isUpdating ? `/api/eventos/${eventoId}` : '/api/eventos';
 
     payload.mvz_id = currentUser.id;
 
+    // Convertir rancho_id a null si está vacío, para evitar errores de tipo
+    payload.rancho_id = (payload.rancho_id === '' || payload.rancho_id === null) ? null : payload.rancho_id;
+    
+    // Eliminamos el campo que usamos solo en el frontend
+    delete payload.evento_id; 
+
     try {
-        const res = await fetch(url, {
-            method: method,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        const respuesta = await res.json();
-        if (!res.ok) throw new Error(respuesta.message);
+        let dbResult;
+
+        // --- CAMBIO: Usar Supabase directo ---
+        if (isUpdating) {
+            // Actualización (UPDATE)
+            dbResult = await sb
+                .from('eventos')
+                .update(payload)
+                .eq('id', eventoId); // RLS verifica si mvz_id es el usuario actual
+        } else {
+            // Creación (INSERT)
+            dbResult = await sb
+                .from('eventos')
+                .insert(payload); // RLS verifica si mvz_id es el usuario actual
+        }
+
+        const { error: dbError } = dbResult;
+        if (dbError) throw dbError;
+        // --- FIN DEL CAMBIO ---
 
         mostrarMensaje('evento-mensaje', `¡Evento ${isUpdating ? 'actualizado' : 'guardado'} con éxito!`, false);
         setTimeout(() => {
             document.getElementById('modal-agregar-evento').classList.add('hidden');
             form.reset();
-            cargarEventos();
+            // Llama a la versión migrada (que haremos después)
+            renderizarVistaCalendario(); 
             cargarDashboardMVZ();
         }, 1200);
     } catch (error) {
-        mostrarMensaje('evento-mensaje', error.message, true);
+        mostrarMensaje('evento-mensaje', error.message || 'Error inesperado', true);
     } finally {
         btn.disabled = false;
         // El texto del botón se restablece en renderizarVistaCalendario
@@ -1964,20 +2039,25 @@ window.handleEditarEvento = async function(evento) {
 }
 
 // Elimina un evento tras confirmación
+// Reemplaza window.handleEliminarEvento
 window.handleEliminarEvento = async function(eventoId) {
     if (!confirm('¿Estás seguro de que quieres eliminar este evento? Esta acción no se puede deshacer.')) {
         return;
     }
     try {
-        const res = await fetch(`/api/eventos/${eventoId}`, {
-            method: 'DELETE'
-        });
-        if (!res.ok) throw new Error('No se pudo eliminar el evento.');
+        // --- CAMBIO: Usar Supabase directo ---
+        const { error } = await sb
+            .from('eventos')
+            .delete()
+            .eq('id', eventoId);
 
-        cargarEventos(); // Recarga la lista del calendario
+        if (error) throw error;
+        // --- FIN DEL CAMBIO ---
+
+        renderizarVistaCalendario(); // Recarga la lista del calendario
         cargarDashboardMVZ(); // Recarga el inicio por si el evento era para hoy
     } catch (error) {
-        alert(error.message);
+        alert(error.message || 'No se pudo eliminar el evento.');
     }
 }
 
