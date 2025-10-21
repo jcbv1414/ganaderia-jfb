@@ -1285,37 +1285,38 @@ function iniciarActividadUI() {
     renderizarHistorialMVZ();
 }
 
-   function abrirModalActividad(tipo) {
+   // REEMPLAZA tu función abrirModalActividad con este bloque completo
+function abrirModalActividad(tipo) {
     const modal = document.getElementById('modal-actividad');
     const form = document.getElementById('form-actividad-vaca');
     if (!modal || !form) return;
 
-    // Reemplaza esta parte en abrirModalActividad
-form.reset(); // Limpia textos y checkboxes
+    // 1. Limpieza inicial del formulario
+    form.reset(); 
+    form.querySelectorAll('select').forEach(select => { select.selectedIndex = -1; }); 
 
-// AÑADE ESTA LÍNEA para limpiar los menús desplegables
-form.querySelectorAll('select').forEach(select => { select.selectedIndex = -1; }); // Pone los selects en blanco
+    // 2. Generar los campos específicos del procedimiento (Palpación, etc.)
+    renderizarCamposProcedimiento(tipo);
 
-// Vuelve a generar los campos para asegurar que los condicionales se oculten
-renderizarCamposProcedimiento(tipo);
-
+    // 3. Mostrar el modal
     modal.classList.remove('hidden');
 
+    // 4. Poner el título correcto (Palpación, Inseminación, etc.)
     const tituloEl = document.getElementById('modal-actividad-titulo');
     if (tituloEl && PROCEDIMIENTOS[tipo]) {
         tituloEl.textContent = PROCEDIMIENTOS[tipo].titulo;
     }
-    // ----- PEGA ESTE BLOQUE -----
-const actividadLoteEl = document.getElementById('actividad-lote');
-if (actividadLoteEl) {
-    // Llenamos con opciones del 1 al 10
-    actividadLoteEl.innerHTML = ''; // Limpiamos primero
-    for (let i = 1; i <= 10; i++) {
-        actividadLoteEl.innerHTML += `<option value="${i}">Lote ${i}</option>`;
+    
+    // 5. Llenar el select de Lote (opciones 1-10)
+    const actividadLoteEl = document.getElementById('actividad-lote');
+    if (actividadLoteEl) {
+        actividadLoteEl.innerHTML = ''; 
+        for (let i = 1; i <= 10; i++) {
+            actividadLoteEl.innerHTML += `<option value="${i}">Lote ${i}</option>`;
+        }
     }
-}
 
-    // ... (el resto de la función sigue igual, conectando los botones) ...
+    // 6. Conectar los botones de acción del modal
     const btnCerrar = document.getElementById('btn-cerrar-modal-actividad');
     if (btnCerrar) btnCerrar.onclick = () => modal.classList.add('hidden');
 
@@ -1324,18 +1325,37 @@ if (actividadLoteEl) {
 
     const btnFinalizar = document.getElementById('btn-finalizar-actividad-modal');
     if (btnFinalizar) btnFinalizar.onclick = async () => {
+        // Asegurarse de agregar la última vaca si el campo Arete no está vacío
         if (document.getElementById('actividad-arete')?.value.trim()) {
-            handleAgregarVacaAlLote(tipo, false);
+            handleAgregarVacaAlLote(tipo, false); 
         }
         await handleFinalizarYReportar();
         modal.classList.add('hidden');
     };
      
-   // 🚨 Esta es la llamada que implementa la búsqueda parcial 🚨
+    // --- 7. LÓGICA DE AUTOCOMPLETADO (CORREGIDA) ---
+
+    // 7a. Conecta la búsqueda parcial para Arete (lista flotante)
+    // Usa la función que busca por los últimos 4 dígitos y rellena raza al seleccionar
     crearAutocompletadoParcial('actividad-arete', 'sugerencias-arete-container', vacasIndex);
     
-    // Se mantiene la lógica de autocompletado para Raza (normal)
+    // 7b. Conecta la búsqueda normal para Raza (lista flotante)
     crearAutocompletado('actividad-raza', 'sugerencias-raza-container', RAZAS_BOVINAS);
+    
+    // 7c. Re-añadimos el listener para autocompletar Raza si el MVZ escribe el arete COMPLETO manualmente
+    const areteInput = document.getElementById('actividad-arete');
+    const razaInput = document.getElementById('actividad-raza');
+    if (areteInput && razaInput) {
+        areteInput.addEventListener('input', () => {
+            const areteCompleto = areteInput.value.trim();
+            const vacaEncontrada = vacasIndex.get(areteCompleto);
+            // Si el texto coincide EXACTAMENTE con un arete del índice, rellenamos la raza
+            if (vacaEncontrada) { 
+                razaInput.value = vacaEncontrada.raza || '';
+            }
+        });
+    }
+    // --- FIN LÓGICA DE AUTOCOMPLETADO ---
 }
 
 // Reemplaza tu función handleFinalizarYReportar
@@ -1362,7 +1382,7 @@ async function handleFinalizarYReportar() {
             btn.textContent = 'Finalizar Actividad';
         }
         return;
-    }
+}
     
     // Asignamos una UUID de sesión única para todos los registros del lote
     const sesionId = crypto.randomUUID(); // Asumimos que la librería 'crypto' está disponible, si no, lo ajustaremos.
