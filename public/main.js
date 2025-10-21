@@ -2587,32 +2587,6 @@ function renderizarListaDeVacas(vacas) {
     `).join('');
 }
 
-// Reemplaza también renderizarVistaMisVacas para asegurarte de que todo está conectado
-async function renderizarVistaMisVacas() {
-    const ranchoId = currentUser.ranchos?.[0]?.id;
-    if (!ranchoId) return;
-
-    const container = document.getElementById('lista-vacas-container');
-    container.innerHTML = '<p class="text-center text-gray-500 mt-8">Ganaderia JFB</p>';
-    const fab = document.getElementById('btn-abrir-modal-vaca');
-    if (fab) fab.onclick = () => abrirModalVaca();
-
-    try {
-        const res = await fetch(`/api/vacas/rancho/${ranchoId}`);
-        if (!res.ok) throw new Error('Error al obtener vacas');
-        listaCompletaDeVacas = await res.json();
-
-        const totalVacasEl = document.getElementById('total-vacas-header');
-        if(totalVacasEl) totalVacasEl.textContent = (listaCompletaDeVacas && listaCompletaDeVacas.length) || 0;
-        
-        setupFiltrosDeGanado();
-        
-        aplicarFiltrosDeGanado();
-
-    } catch (error) {
-        container.innerHTML = '<p class="text-center text-red-500 mt-8">Error al cargar el ganado.</p>';
-    }
-}
 // =================================================================
 // FUNCIONES PARA EDITAR Y ELIMINAR VACAS
 // =================================================================
