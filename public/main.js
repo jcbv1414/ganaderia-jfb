@@ -1340,9 +1340,11 @@ if (actividadLoteEl) {
             }
         };
     }
+   // 🚨 Esta es la llamada que implementa la búsqueda parcial 🚨
+    crearAutocompletadoParcial('actividad-arete', 'sugerencias-arete-container', vacasIndex);
+    
+    // Se mantiene la lógica de autocompletado para Raza (normal)
     crearAutocompletado('actividad-raza', 'sugerencias-raza-container', RAZAS_BOVINAS);
-
-
 }
 
 // Reemplaza tu función handleFinalizarYReportar
@@ -1602,28 +1604,27 @@ async function handleGenerarPdfDeHistorial() {
 }
 
     // Reemplaza tu función cargarVacasParaMVZ
+// Reemplaza tu función cargarVacasParaMVZ
 async function cargarVacasParaMVZ() {
     if (!currentRancho || !currentRancho.id) return;
     try {
-        // --- CAMBIO: Usamos la LLAVE ANON para obtener la lista de vacas ---
-        // Esto se hace porque el MVZ aún no tiene permiso RLS explícito sobre esas vacas,
-        // pero el MVZ sí tiene un permiso en la tabla 'rancho_mvz_permisos'.
-        // Una forma simple es usar el permiso anónimo para lectura si el bucket es público,
-        // pero para evitar RLS complejos, mantendremos la consulta simple por rancho ID.
-        
+        // Consultamos la base de datos por el rancho ID del rancho activo.
         const { data: vacas, error } = await sb
             .from('vacas')
             .select('id, numero_siniiga, raza')
-            .eq('rancho_id', currentRancho.id); // Consultamos por el ID del rancho, y RLS debería dejar
+            .eq('rancho_id', currentRancho.id); 
 
         if (error) throw error;
 
+        // Limpiamos el datalist (aunque ya no lo usaremos, es buena práctica)
         const datalist = document.getElementById('lista-aretes-autocompletar');
         if (datalist) datalist.innerHTML = '';
+        
+        // 1. Limpiamos y creamos el índice de búsqueda
         vacasIndex.clear();
+        
         (vacas || []).forEach(v => {
-            if (datalist) datalist.insertAdjacentHTML('beforeend', `<option value="${v.numero_siniiga}">`);
-            // Nota: Aquí no usamos el nombre de la vaca porque no lo estamos seleccionando arriba, pero funciona.
+            // 2. Poblar el índice (clave para la búsqueda parcial posterior)
             vacasIndex.set(String(v.numero_siniiga).trim(), { id: v.id, raza: v.raza || '' });
         });
     } catch (err) { 
@@ -2077,6 +2078,63 @@ function crearAutocompletado(inputId, containerId, data) {
     });
 
     // Oculta la lista si se hace clic en cualquier otro lugar de la pantalla
+    document.addEventListener('click', (e) => {
+        if (e.target !== inputEl) {
+            containerEl.classList.add('hidden');
+        }
+    });
+}
+// main.js - Nueva función de autocompletado con búsqueda parcial para Aretes
+function crearAutocompletadoParcial(inputId, containerId, vacaIndexMap) {
+    const inputEl = document.getElementById(inputId);
+    const containerEl = document.getElementById(containerId);
+
+    if (!inputEl || !containerEl) return;
+
+    // Quitamos y volvemos a poner el listener para evitar duplicados
+    inputEl.removeEventListener('input', handleInput); 
+    inputEl.addEventListener('input', handleInput);
+
+    function handleInput() {
+        const query = inputEl.value.trim();
+        containerEl.innerHTML = '';
+
+        if (query.length < 3) { // Pedimos al menos 3 dígitos para empezar a sugerir
+            containerEl.classList.add('hidden');
+            return;
+        }
+
+        const queryLastFour = query.slice(-4); // Lógica clave: tomamos los últimos 4 dígitos
+        let sugerencias = [];
+
+        // Iteramos sobre todos los aretes indexados
+        for (const [arete, datos] of vacaIndexMap.entries()) {
+            // Condición: Si el arete termina con los últimos 4 dígitos escritos O incluye toda la consulta
+            if (arete.endsWith(queryLastFour) || arete.includes(query)) {
+                sugerencias.push({ arete: arete, raza: datos.raza });
+            }
+        }
+
+        if (sugerencias.length > 0) {
+            sugerencias.forEach(item => {
+                const divSugerencia = document.createElement('div');
+                divSugerencia.className = 'p-2 cursor-pointer hover:bg-gray-100 text-sm';
+                divSugerencia.textContent = `${item.arete} (${item.raza})`;
+                divSugerencia.onclick = () => {
+                    inputEl.value = item.arete; // Rellena con el arete COMPLETO
+                    // 🚨 Autocompleta la raza que estaba guardada en el índice
+                    document.getElementById('actividad-raza').value = item.raza; 
+                    containerEl.classList.add('hidden');
+                };
+                containerEl.appendChild(divSugerencia);
+            });
+            containerEl.classList.remove('hidden');
+        } else {
+            containerEl.classList.add('hidden');
+        }
+    }
+
+    // Cerrar la lista si se hace clic fuera
     document.addEventListener('click', (e) => {
         if (e.target !== inputEl) {
             containerEl.classList.add('hidden');
