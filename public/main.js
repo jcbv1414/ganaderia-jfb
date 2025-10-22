@@ -803,6 +803,36 @@ async function renderizarVistaMisVacas() {
         container.innerHTML = `<p class="text-center text-red-500 mt-8">Error al cargar el ganado: ${error.message}</p>`;
     }
 }   
+// =================================================================
+// FUNCIÓN DE AYUDA PARA HABILITAR/DESHABILITAR EL BOTÓN DE PDF
+// =================================================================
+function actualizarEstadoBotonPDF() {
+    // Usamos el ID de tu botón en el HTML
+    const botonPDF = document.getElementById('btn-generar-pdf-historial');
+    // Usamos 'appContent' porque el botón solo existe cuando la vista está activa
+    const appContent = document.getElementById('app-content'); 
+    
+    // Si el botón no está en la vista actual, no hagas nada
+    if (!botonPDF || !appContent) return; 
+
+    // Busca los checkboxes DENTRO del contenedor del historial
+    const historialContainer = appContent.querySelector('#historial-actividades-mvz');
+    if (!historialContainer) return;
+
+    const checkboxesMarcados = historialContainer.querySelectorAll('.sesion-checkbox:checked');
+
+    if (checkboxesMarcados.length > 0) {
+        // Habilitar botón
+        botonPDF.disabled = false;
+        botonPDF.textContent = `Descargar (${checkboxesMarcados.length})`;
+        botonPDF.classList.remove('opacity-50', 'cursor-not-allowed');
+    } else {
+        // Deshabilitar botón
+        botonPDF.disabled = true;
+        botonPDF.textContent = 'Descargar';
+        botonPDF.classList.add('opacity-50', 'cursor-not-allowed');
+    }
+}
 
 // REEMPLAZA tu función 'abrirModalVaca' (la que está por la línea 1530) con esta:
 function abrirModalVaca() {
@@ -1521,19 +1551,26 @@ async function renderizarHistorialMVZ() {
             return;
         }
 
-        // 5. Generar el HTML para cada sesión
+   // 5. Generar el HTML para cada sesión
         historialContainer.innerHTML = sesiones.map(sesion => {
             
             // --- INICIO DE LA CORRECCIÓN "Invalid Date" ---
-            // Asegura que la fecha se interprete como UTC y no local.
-            // Si tu fecha_date es "2025-10-21", esto previene que se muestre "20 de octubre"
-            // por problemas de zona horaria.
-            const fechaObj = new Date(sesion.fecha_date + 'T00:00:00Z');
-            const fechaFormateada = fechaObj.toLocaleDateString('es-MX', {
-                day: 'numeric',
-                month: 'long',
-                timeZone: 'UTC' // Importante para que coincida con la creación
-            });
+            let fechaFormateada = 'Sin fecha'; // Texto por defecto si la fecha falla
+
+            // 1. Comprobamos que sesion.fecha_date tenga un valor
+            if (sesion.fecha_date) {
+                const fechaObj = new Date(sesion.fecha_date + 'T00:00:00Z');
+                
+                // 2. Comprobamos que la fecha creada sea un objeto válido
+                //    (isNaN(fechaObj.getTime()) es la forma de saber si es "Invalid Date")
+                if (!isNaN(fechaObj.getTime())) { 
+                    fechaFormateada = fechaObj.toLocaleDateString('es-MX', {
+                        day: 'numeric',
+                        month: 'long',
+                        timeZone: 'UTC'
+                    });
+                }
+            }
             // --- FIN DE LA CORRECCIÓN ---
 
             // Plantilla HTML para cada tarjeta de historial
@@ -1600,6 +1637,12 @@ async function renderizarHistorialMVZ() {
             
             button.addEventListener('click', clickListener);
         });
+        // ===============================================
+        // AÑADE ESTA LÍNEA (PASO 3)
+        // ===============================================
+        // Actualiza el botón PDF para que aparezca deshabilitado
+        actualizarEstadoBotonPDF(); 
+        // ===============================================
 
     } catch (error) {
         // 7. Manejo de errores generales (falla de red, RPC, etc.)
@@ -2119,6 +2162,36 @@ async function handleGuardarEvento(e) {
     // INICIALIZACIÓN DE LA APLICACIÓN
     function initApp() {
         setupNavigation();
+        // =================================================================
+        // INICIO DE LA INTEGRACIÓN DE LISTENERS (PASO 4)
+        // =================================================================
+        // Usamos 'appContent' (la variable global de la línea 40)
+        // para la delegación de eventos.
+        if (appContent) {
+
+            // 1. Listener para el botón de PDF
+            appContent.addEventListener('click', (e) => {
+                // Si el clic ocurrió en TU botón
+                if (e.target.id === 'btn-generar-pdf-historial') {
+                    handleGenerarPdfDeHistorial(); // Llama a tu función existente
+                }
+            });
+    
+            // 2. Listener para los checkboxes
+            appContent.addEventListener('change', (e) => {
+                // Si el cambio ocurrió en un checkbox de sesión
+                if (e.target.classList.contains('sesion-checkbox')) {
+                    actualizarEstadoBotonPDF(); // Llama a la nueva función helper
+                }
+            });
+
+        } else {
+            console.error("Error crítico: #app-content no encontrado. Los listeners de PDF no funcionarán.");
+        }
+        // =================================================================
+        // FIN DE LA INTEGRACIÓN
+        // =================================================================
+        
         const savedUser = sessionStorage.getItem('currentUser');
         if (savedUser) {
             try { currentUser = JSON.parse(savedUser); } catch(e){}
