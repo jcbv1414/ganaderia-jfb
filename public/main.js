@@ -1540,6 +1540,11 @@ async function renderizarHistorialMVZ() {
 
         if (error) throw error;
 
+        // ============================================
+        // AÑADE ESTA LÍNEA PARA VER LOS DATOS CRUDOS
+        console.log("Datos crudos de sesiones:", sesiones); 
+        // ============================================
+
         // 4. Manejar el caso de que no haya reportes
         if (!sesiones || sesiones.length === 0) {
             historialContainer.innerHTML = `
@@ -1555,24 +1560,24 @@ async function renderizarHistorialMVZ() {
         // 5. Generar el HTML para cada sesión
         historialContainer.innerHTML = sesiones.map(sesion => {
             
-            // --- INICIO DE LA CORRECCIÓN "Fecha Real" ---
+// --- INICIO DE LA CORRECCIÓN "Fecha Real v2" ---
             let fechaFormateada = 'Sin fecha';
             
-            // Asumimos que 'sesion.fecha_date' es un TIMESTAMP completo
-            // (Ej: '2025-10-21T15:30:00Z')
+            // Intentamos asumir que 'sesion.fecha_date' es YYYY-MM-DD
             if (sesion.fecha_date) { 
-                const fechaObj = new Date(sesion.fecha_date); // Simplemente la leemos
+                // Forzamos la interpretación como UTC para evitar problemas de zona horaria
+                const fechaObj = new Date(sesion.fecha_date + 'T00:00:00Z'); 
                 
                 if (!isNaN(fechaObj.getTime())) { 
-                    // ¡La formateamos para mostrar fecha Y HORA!
+                    // Formateamos solo la FECHA (sin hora por ahora)
                     fechaFormateada = fechaObj.toLocaleDateString('es-MX', {
                         day: 'numeric',
                         month: 'long',
                         year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        timeZone: 'UTC' // Ajusta si es necesario
+                        timeZone: 'UTC' // Importante mantener UTC
                     });
+                } else {
+                     console.warn("Fecha inválida recibida:", sesion.fecha_date); // Ayuda a depurar
                 }
             }
             // --- FIN DE LA CORRECCIÓN ---
