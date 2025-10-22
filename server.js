@@ -378,34 +378,40 @@ app.post('/api/actividades', async (req, res) => {
     doc.fillColor('white').font('Helvetica-Bold').fontSize(12).text(`REPORTE DE ${tituloActividad}`, 40, yBarra + 4, { align: 'center' });
     doc.fillColor('black').moveDown(2);
 
-    const tableTop = doc.y;
+    // --- DIBUJAR ENCABEZADOS (CENTRADOS) ---
+    const headerY = doc.y;
     doc.font('Helvetica-Bold');
-    doc.text('Arete', 40, tableTop, { width: 70 });
-    doc.text('Raza', 110, tableTop, { width: 80 });
-    doc.text('Lote', 190, tableTop, { width: 40, align: 'center' });
-    doc.text('Fecha', 230, tableTop, { width: 80 });
-    doc.text('Detalles', 310, tableTop, { width: 260 });
-    doc.moveTo(40, doc.y).lineTo(doc.page.width - 40, doc.y).stroke();
+    doc.text('Arete', columnX.arete, headerY, { width: columnWidths.arete, align: 'center' }); // Centrado
+    doc.text('Raza', columnX.raza, headerY, { width: columnWidths.raza, align: 'center' }); // Centrado
+    doc.text('Lote', columnX.lote, headerY, { width: columnWidths.lote, align: 'center' }); // Centrado
+    doc.text('Fecha', columnX.fecha, headerY, { width: columnWidths.fecha, align: 'center' }); // Centrado
+    doc.text('Detalles', columnX.detalles, headerY, { width: columnWidths.detalles, align: 'center' }); // Centrado
+    doc.moveDown(0.5);
+    // ----------------------------------------
+
+    // Dibuja la línea DEBAJO de los encabezados (un poco más gruesa)
+    doc.moveTo(columnStartX, doc.y).lineTo(pageEndX, doc.y).strokeColor('black').lineWidth(1).stroke(); // Línea más gruesa
     doc.moveDown(0.5);
 
-    doc.font('Helvetica');
-    // --- DEFINIR POSICIONES Y ANCHOS DE COLUMNAS ---
+   // --- DEFINIR POSICIONES Y ANCHOS DE COLUMNAS (AJUSTADOS) ---
     const columnStartX = 40; // Margen izquierdo
+    const pageEndX = doc.page.width - 40; // Margen derecho
+
     const columnX = {
         arete: columnStartX,
-        raza: columnStartX + 75,  // Ancho Arete + pequeño espacio
-        lote: columnStartX + 75 + 85, // Ancho Raza + espacio
-        fecha: columnStartX + 75 + 85 + 45, // Ancho Lote + espacio
-        detalles: columnStartX + 75 + 85 + 45 + 85 // Ancho Fecha + espacio
+        raza: columnStartX + 95,      // Más espacio después de Arete
+        lote: columnStartX + 95 + 105, // Más espacio después de Raza
+        fecha: columnStartX + 95 + 105 + 65, // Más espacio después de Lote
+        detalles: columnStartX + 95 + 105 + 65 + 95 // Más espacio después de Fecha -> Empuja Detalles a la derecha
     };
     const columnWidths = {
-        arete: 70,
-        raza: 80,
-        lote: 40,
-        fecha: 80,
-        detalles: doc.page.width - columnX.detalles - columnStartX // Ancho restante hasta el margen derecho
+        arete: 90,                  // Arete un poco más ancho
+        raza: 100,                 // Raza más ancha
+        lote: 50,                   // Lote más ancho
+        fecha: 90,                  // Fecha más ancha
+        detalles: pageEndX - columnX.detalles // Ancho restante
     };
-    // ----------------------------------------------
+    // --------------------------------------------------------------------------------------------
 
     doc.font('Helvetica');
     let currentY = doc.y; // Posición Y inicial para la primera fila
@@ -422,9 +428,9 @@ app.post('/api/actividades', async (req, res) => {
         currentY = rowY + rowHeight + 10; // Añade un padding vertical (10 puntos)
 
         // Línea separadora al final de la fila
-        doc.strokeColor('#cccccc').lineWidth(0.5)
+        doc.strokeColor('#cccccc').lineWidth(1)
            .moveTo(columnStartX, currentY - 5) // Dibuja la línea un poco antes del inicio de la siguiente fila
-           .lineTo(doc.page.width - columnStartX, currentY - 5)
+           .lineTo(pageEndX, currentY - 5)
            .stroke();
         
         // Manejo de Salto de Página (si la siguiente fila no cabe)
@@ -586,17 +592,21 @@ app.post('/api/historial/pdf', async (req, res) => {
     doc.fillColor('white').font('Helvetica-Bold').fontSize(12).text(`REPORTE DE ${tituloActividad}`, 40, yBarra + 4, { align: 'center' });
     doc.fillColor('black').moveDown(2);
 
-    const tableTop = doc.y;
+   // --- DIBUJAR ENCABEZADOS (CENTRADOS) ---
+    const headerY = doc.y;
     doc.font('Helvetica-Bold');
-    doc.text('Arete', 40, tableTop, { width: 70 });
-    doc.text('Raza', 110, tableTop, { width: 80 });
-    doc.text('Lote', 190, tableTop, { width: 40, align: 'center' });
-    doc.text('Fecha', 230, tableTop, { width: 80 });
-    doc.text('Detalles', 310, tableTop, { width: 260 });
-    doc.moveTo(40, doc.y).lineTo(doc.page.width - 40, doc.y).stroke();
+    doc.text('Arete', columnX.arete, headerY, { width: columnWidths.arete, align: 'center' }); // Centrado
+    doc.text('Raza', columnX.raza, headerY, { width: columnWidths.raza, align: 'center' }); // Centrado
+    doc.text('Lote', columnX.lote, headerY, { width: columnWidths.lote, align: 'center' }); // Centrado
+    doc.text('Fecha', columnX.fecha, headerY, { width: columnWidths.fecha, align: 'center' }); // Centrado
+    doc.text('Detalles', columnX.detalles, headerY, { width: columnWidths.detalles, align: 'center' }); // Centrado
+    doc.moveDown(0.5);
+    // ----------------------------------------
+
+    // Dibuja la línea DEBAJO de los encabezados (un poco más gruesa)
+    doc.moveTo(columnStartX, doc.y).lineTo(pageEndX, doc.y).strokeColor('black').lineWidth(1).stroke(); // Línea más gruesa
     doc.moveDown(0.5);
 
-    doc.font('Helvetica');
 // --- DEFINIR POSICIONES Y ANCHOS DE COLUMNAS ---
     const columnStartX = 40; // Margen izquierdo
     const columnX = {
@@ -631,9 +641,9 @@ let currentY = doc.y; // Posición Y inicial para la primera fila
         currentY = rowY + rowHeight + 10; // Añade un padding vertical (10 puntos)
 
         // Línea separadora al final de la fila
-        doc.strokeColor('#cccccc').lineWidth(0.5)
+        doc.strokeColor('#cccccc').lineWidth(1)
            .moveTo(columnStartX, currentY - 5) 
-           .lineTo(doc.page.width - columnStartX, currentY - 5)
+           .lineTo(pageEndX, currentY - 5)
            .stroke();
         
         // Manejo de Salto de Página (Ahora usa 'index' y 'actividades.length')
