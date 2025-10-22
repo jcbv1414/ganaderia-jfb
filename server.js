@@ -8,6 +8,7 @@ const bcrypt = require('bcryptjs');
 const { createClient } = require('@supabase/supabase-js');
 const crypto = require('crypto');
 const fs = require('fs');
+const xlsx = require('xlsx');
 
 // ================== CONFIGURACIÓN Y ARRANQUE ==================
 const app = express();
@@ -219,6 +220,187 @@ app.post('/api/vacas', upload.single('fotoVaca'), async (req, res) => {
         handleServerError(res, err); 
     }
 });
+
+app.post('/api/vacas/importar/:ranchoId', upload.single('archivoGanado'), async (req, res) => {
+    console.log(`--- [IMPORTAR EXCEL] Solicitud recibida para rancho ID: ${req.params.ranchoId} ---`);
+    const { ranchoId } = req.params;
+    // Necesitamos el ID del usuario propietario para asociar las vacas
+    // Lo ideal sería obtenerlo de una sesión autenticada, pero por ahora asumimos que lo tenemos
+    // ¡¡¡ IMPORTANTE: Debes asegurarte de obtener el propietarioId correcto aquí !!!
+    // Podrías pasarlo en el body, o mejor aún, verificarlo en base al ranchoId.
+    // Por simplicidad, lo buscaremos basado en el ranchoId:
+    let propietarioId;
+    try {
+        const { data: ranchoData, error: ranchoError } = await supabase
+            .from('ranchos')
+            .select('propietario_id')
+            .eq('id', ranchoId)
+            .single();
+        if (ranchoError || !ranchoData) throw new Error('Rancho no encontrado o no autorizado.');
+        propietarioId = ranchoData.propietario_id;
+        console.log(`[IMPORTAR EXCEL] Propietario ID encontrado: ${propietarioId}`);
+    } catch(err) {
+        console.error("[IMPORTAR EXCEL] Error obteniendo propietario:", err);
+        return handleServerError(res, new Error('No se pudo verificar el propietario del rancho.'), 403);
+    }
+
+
+    if (!req.file || !req.file.buffer) {
+        console.error("[IMPORTAR EXCEL] Error: No se recibió archivo.");
+        return res.status(400).json({ message: 'No se recibió ningún archivo Excel.' });
+    }
+
+    let vacasImportadas = 0;
+    let erroresFilas = []; // Guarda [numero_fila, mensaje_error]
+    let vacasParaInsertar = []; // Array para inserción masiva
+
+    try {
+        console.log("[IMPORTAR EXCEL] Leyendo archivo Excel...");
+        const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
+        const sheetName = workbook.SheetNames[0]; // Asume datos en la primera hoja
+        const worksheet = workbook.Sheets[sheetName];
+        // Convierte la hoja a un array de objetos JSON (ignora encabezados con header: 1)
+        const data = xlsx.utils.sheet_to_json(worksheet, { header: 1, range: 1 }); // range: 1 salta la fila 0 (encabezados)
+
+        console.log(`[IMPORTAR EXCEL] Se encontraron ${data.length} filas de datos (sin encabezados).`);
+
+        if (data.length === 0) {
+            return res.json({ success: true, vacasImportadas: 0, errores: [], message: "El archivo Excel no contiene datos (después de los encabezados)." });
+        }
+
+        // Obtener SINIIGAs existentes en este rancho para chequeo de duplicados
+        console.log("[IMPORTAR EXCEL] Obteniendo SINIIGAs existentes...");
+        const { data: siniigasExistentesData, error: siniigaError } = await supabase
+            .from('vacas')
+            .select('numero_siniiga')
+            .eq('rancho_id', ranchoId);
+        if (siniigaError) throw siniigaError;
+        const siniigasExistentes = new Set((siniigasExistentesData || []).map(v => String(v.numero_siniiga).trim()));
+        console.log(`[IMPORTAR EXCEL] ${siniigasExistentes.size} SINIIGAs existentes cargados.`);
+
+        // --- Procesar cada fila del Excel ---
+        for (let i = 0; i < data.length; i++) {
+            const fila = data[i];
+            const numeroFilaExcel = i + 2; // +1 por índice base 0, +1 por saltar encabezados
+
+            // Extraer datos usando el orden de columnas de la plantilla
+            const siniigaRaw = fila[0]; // Col A: Arete SINIIGA (Requerido)
+            const nombreRaw = fila[1]; // Col B: Nombre Animal (Requerido)
+            const sexo = fila[2];    // Col C: Sexo
+            const raza = fila[3];    // Col D: Raza
+            const lote = fila[4];    // Col E: Lote
+            const nacimientoRaw = fila[5]; // Col F: Fecha Nacimiento (AAAA-MM-DD)
+            const pierna = fila[6];  // Col G: Numero Pierna
+            const padre = fila[7];   // Col H: Padre
+            const madre = fila[8];   // Col I: Madre
+            const origen = fila[9];  // Col J: Origen
+
+            // Limpiar y validar SINIIGA y Nombre
+            const siniiga = siniigaRaw ? String(siniigaRaw).trim() : null;
+            const nombre = nombreRaw ? String(nombreRaw).trim() : null;
+
+            if (!siniiga || !nombre) {
+                erroresFilas.push(`Fila ${numeroFilaExcel}: Faltan Arete SINIIGA o Nombre.`);
+                continue; // Saltar esta fila
+            }
+
+            // Validar/Formatear Fecha Nacimiento (AAAA-MM-DD)
+            let fechaNacimiento = null;
+            if (nacimientoRaw) {
+                // xlsx a veces lee fechas como números (días desde 1900), intentamos convertir
+                if (typeof nacimientoRaw === 'number') {
+                    try {
+                         // Corrección del origen de fecha de Excel (25569 días de diferencia con UNIX epoch)
+                        const fechaJS = new Date((nacimientoRaw - 25569) * 86400 * 1000);
+                        fechaNacimiento = fechaJS.toISOString().slice(0, 10);
+                    } catch (e) {
+                         console.warn(`[IMPORTAR EXCEL] Fila ${numeroFilaExcel}: No se pudo convertir número de fecha ${nacimientoRaw}`);
+                         fechaNacimiento = null; // Ignorar si falla la conversión
+                    }
+                }
+                // Si es string, valida el formato YYYY-MM-DD
+                else if (typeof nacimientoRaw === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(nacimientoRaw.trim())) {
+                    fechaNacimiento = nacimientoRaw.trim();
+                } else {
+                     console.warn(`[IMPORTAR EXCEL] Fila ${numeroFilaExcel}: Formato de fecha inválido '${nacimientoRaw}'. Se ignorará.`);
+                     // Opcional: añadir error en lugar de solo ignorar
+                     // erroresFilas.push(`Fila ${numeroFilaExcel}: Formato fecha incorrecto (AAAA-MM-DD).`);
+                     // continue;
+                }
+            }
+
+
+            // Chequear Duplicados por SINIIGA
+            if (siniigasExistentes.has(siniiga)) {
+                erroresFilas.push(`Fila ${numeroFilaExcel}: Arete SINIIGA '${siniiga}' ya existe.`);
+                continue; // Saltar duplicado
+            }
+
+            // Si pasa validaciones y no es duplicado, preparar para insertar
+            vacasParaInsertar.push({
+                numero_siniiga: siniiga,
+                nombre: nombre,
+                sexo: sexo || null,
+                raza: raza || null,
+                lote: lote || null,
+                fecha_nacimiento: fechaNacimiento, // Ya validado/formateado
+                numero_pierna: pierna || null,
+                padre: padre || null,
+                madre: madre || null,
+                origen: origen || null,
+                // --- IDs importantes ---
+                rancho_id: ranchoId,
+                id_usuario: propietarioId, // Asociado al propietario
+                // --- Valores por defecto ---
+                estado: 'Activa',
+                foto_url: null // La foto se añade después manualmente
+            });
+        } // Fin del bucle for
+
+        console.log(`[IMPORTAR EXCEL] Filas procesadas. ${vacasParaInsertar.length} vacas listas para insertar. ${erroresFilas.length} filas con errores.`);
+
+        // --- Inserción Masiva en Supabase ---
+        if (vacasParaInsertar.length > 0) {
+            console.log("[IMPORTAR EXCEL] Intentando inserción masiva en Supabase...");
+            const { error: insertError, count } = await supabase
+                .from('vacas')
+                .insert(vacasParaInsertar);
+
+            if (insertError) {
+                console.error("[IMPORTAR EXCEL] Error en inserción masiva:", insertError);
+                throw new Error(`Error al guardar en base de datos: ${insertError.message}`);
+            }
+            vacasImportadas = count || vacasParaInsertar.length; // Usa count si está disponible, sino la longitud del array
+            console.log(`[IMPORTAR EXCEL] Inserción masiva exitosa. ${vacasImportadas} vacas añadidas.`);
+        }
+
+        // --- Enviar Respuesta Exitosa ---
+        res.json({
+            success: true,
+            vacasImportadas: vacasImportadas,
+            errores: erroresFilas, // Envía la lista de errores (número de fila y mensaje)
+            message: `Importación finalizada. ${vacasImportadas} animales añadidos.`
+        });
+
+    } catch (err) {
+        console.error("--- [IMPORTAR EXCEL] ¡CRASH! Error durante el proceso: ---", err);
+        // Devuelve los errores encontrados hasta ahora, incluso si la inserción falló
+        handleServerError(res, err, 500, { errores: erroresFilas }); // Modificamos handleServerError para pasar errores
+    }
+});
+
+// Modifica LIGERAMENTE tu handleServerError para aceptar errores extra
+function handleServerError(res, err, code = 500, extraData = {}) { // <--- Añade extraData
+  console.error(err.message || err);
+  if (res.headersSent) return;
+  res.status(code).json({
+       success: false,
+       message: err.message || 'Error del servidor',
+       ...extraData // <--- Añade los datos extra (como la lista de errores)
+   });
+}
+// =================================================================
+
 // Ruta para ACTUALIZAR (Editar) una vaca existente
 app.put('/api/vacas/:vacaId', upload.single('fotoVaca'), async (req, res) => {
     try {
