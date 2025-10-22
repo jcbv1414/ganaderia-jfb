@@ -70,7 +70,57 @@ console.log('Cliente de Supabase inicializado');
     }
             
             }
-        }else if (viewId === 'inicio-propietario') {
+            
+        }// ... (otros else if para 'inicio-propietario', 'mis-vacas', 'mi-mvz', etc.) ...
+
+            // ==========================================================
+            // AÑADE ESTE BLOQUE para conectar la vista de importación
+            // ==========================================================
+            else if (viewId === 'importar-ganado') {
+                // Conectar botón "Seleccionar Archivo Excel"
+                const btnSeleccionar = document.getElementById('btn-seleccionar-excel');
+                const inputArchivo = document.getElementById('input-archivo-excel');
+                const nombreArchivoEl = document.getElementById('nombre-archivo-seleccionado');
+                const btnImportar = document.getElementById('btn-importar-ganado');
+
+                if (btnSeleccionar && inputArchivo && nombreArchivoEl && btnImportar) {
+                    // Al hacer clic en el botón visible, activa el input oculto
+                    btnSeleccionar.onclick = () => inputArchivo.click();
+
+                    // Cuando se selecciona un archivo en el input oculto...
+                    inputArchivo.onchange = () => {
+                        if (inputArchivo.files && inputArchivo.files.length > 0) {
+                            // Muestra el nombre del archivo
+                            nombreArchivoEl.textContent = inputArchivo.files[0].name;
+                            // Habilita el botón de importar
+                            btnImportar.disabled = false;
+                            btnImportar.classList.remove('opacity-50', 'cursor-not-allowed');
+                        } else {
+                            // Si cancela, limpia el nombre y deshabilita el botón
+                            nombreArchivoEl.textContent = '';
+                            btnImportar.disabled = true;
+                            btnImportar.classList.add('opacity-50', 'cursor-not-allowed');
+                        }
+                    };
+                }
+
+                // Conectar botón "Importar Ganado"
+                if (btnImportar) {
+                    btnImportar.onclick = handleUploadExcel; // Llama a la función que acabamos de crear
+                }
+
+                // Limpiar mensaje previo al cargar la vista
+                 const mensajeEl = document.getElementById('importar-mensaje');
+                 if(mensajeEl) mensajeEl.textContent = '';
+                 if(mensajeEl) mensajeEl.className = 'mt-4 text-sm text-center h-auto min-h-[1.25rem]'; // Resetear estilo
+            }
+            // ==========================================================
+
+            else if (viewId === 'estadisticas') {
+                 renderizarVistaEstadisticas();
+            }
+            // ... (resto de la función navigateTo) ...
+        else if (viewId === 'inicio-propietario') {
     document.getElementById('dash-nombre-propietario').textContent = currentUser?.nombre?.split(' ')[0] || '';
     document.getElementById('dash-fecha-actual').textContent = new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
     document.getElementById('btn-logout-propietario').onclick = logout;
@@ -3588,5 +3638,87 @@ function showToast(msg, ms = 1800) {
   clearTimeout(t._t);
   t._t = setTimeout(() => t.classList.add('hidden'), ms);
 }
+// =================================================================
+// AÑADE ESTA NUEVA FUNCIÓN A main.js (Manejar Subida de Excel)
+// =================================================================
+async function handleUploadExcel() {
+    const inputFile = document.getElementById('input-archivo-excel');
+    const btnImportar = document.getElementById('btn-importar-ganado');
+    const mensajeEl = document.getElementById('importar-mensaje');
+    const ranchoId = currentUser?.ranchos?.[0]?.id; // Obtiene el ID del rancho del propietario
+
+    if (!inputFile || !inputFile.files || inputFile.files.length === 0) {
+        if (mensajeEl) mostrarMensaje('importar-mensaje', 'Por favor, selecciona un archivo Excel primero.');
+        return;
+    }
+    if (!ranchoId) {
+        if (mensajeEl) mostrarMensaje('importar-mensaje', 'Error: No se pudo identificar tu rancho.');
+        return;
+    }
+
+    const file = inputFile.files[0];
+
+    // Validar tipo de archivo (opcional pero recomendado)
+    if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
+         if (mensajeEl) mostrarMensaje('importar-mensaje', 'Formato de archivo inválido. Solo se aceptan .xlsx o .xls');
+         return;
+    }
+
+    // Deshabilitar botón y mostrar mensaje de carga
+    if (btnImportar) {
+        btnImportar.disabled = true;
+        btnImportar.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Procesando...';
+    }
+    if (mensajeEl) mensajeEl.textContent = 'Subiendo y procesando archivo, por favor espera...';
+    if (mensajeEl) mensajeEl.className = 'mt-4 text-sm text-center h-auto min-h-[1.25rem] text-gray-600'; // Estilo normal
+
+    // Crear FormData para enviar el archivo
+    const formData = new FormData();
+    formData.append('archivoGanado', file); // 'archivoGanado' debe coincidir con el nombre esperado en Multer (backend)
+
+    try {
+        // Hacer la petición FETCH al nuevo endpoint del backend
+        // (Asegúrate de que ':ranchoId' se reemplace con el ID real)
+        const response = await fetch(`/api/vacas/importar/${ranchoId}`, {
+            method: 'POST',
+            body: formData // No necesitas 'Content-Type', FormData lo maneja
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            // Si el backend envió un error (ej. 400, 500)
+            throw new Error(result.message || `Error del servidor: ${response.status}`);
+        }
+
+        // Mostrar resultado exitoso del backend
+        if (mensajeEl) {
+             let feedbackMsg = `¡Importación completada! ${result.vacasImportadas || 0} animales añadidos.`;
+             if (result.errores && result.errores.length > 0) {
+                 feedbackMsg += ` Se encontraron errores en ${result.errores.length} fila(s): ${result.errores.join(', ')}.`;
+                 mensajeEl.className = 'mt-4 text-sm text-center h-auto min-h-[1.25rem] text-orange-700 bg-orange-50 p-2 rounded'; // Estilo advertencia
+             } else {
+                 mensajeEl.className = 'mt-4 text-sm text-center h-auto min-h-[1.25rem] text-green-700 bg-green-50 p-2 rounded'; // Estilo éxito
+             }
+             mensajeEl.textContent = feedbackMsg;
+             // Actualizar la vista de "Mi Ganado" en segundo plano
+             renderizarVistaMisVacas();
+        }
+
+    } catch (error) {
+        console.error("Error durante la importación:", error);
+        if (mensajeEl) mostrarMensaje('importar-mensaje', `Error: ${error.message}`, true); // Muestra error en rojo
+    } finally {
+        // Volver a habilitar el botón y restaurar texto
+        if (btnImportar) {
+            btnImportar.disabled = false;
+            btnImportar.innerHTML = 'Importar Ganado';
+        }
+        // Limpiar selección de archivo (opcional)
+        // inputFile.value = '';
+        // document.getElementById('nombre-archivo-seleccionado').textContent = '';
+    }
+}
+// =====================================================================
     initApp();
 });
