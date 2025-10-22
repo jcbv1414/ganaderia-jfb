@@ -1509,23 +1509,25 @@ async function handleFinalizarYReportar() {
 }
 
 /*
+ * =================================================================
+ * PASO 1: REEMPLAZA ESTA FUNCIÓN (Historial MVZ)
+ * =================================================================
  * Función para renderizar el historial de actividades del Veterinario (MVZ).
  * Obtiene las sesiones desde Supabase, las formatea y las muestra en el DOM.
- * También añade los event listeners para eliminar sesiones.
+ * CORREGIDO: Ahora maneja 'timestamp' (fecha y hora) en lugar de solo 'date'.
  */
 async function renderizarHistorialMVZ() {
     // 1. Obtener el contenedor del historial
     const historialContainer = document.getElementById('historial-actividades-mvz');
     if (!historialContainer) {
-        console.error("Error: Contenedor 'historial-actividades-mvz' no encontrado.");
-        return;
+        // Si no estamos en la vista 'actividades-mvz', simplemente salimos.
+        return; 
     }
 
-    // Muestra un estado de carga inicial
     historialContainer.innerHTML = '<p class="text-gray-500 text-center">Cargando historial...</p>';
 
     try {
-        // 2. Obtener los datos del usuario actual (asumiendo que 'currentUser' está disponible)
+        // 2. Obtener los datos del usuario actual
         if (!currentUser || !currentUser.id) {
             throw new Error("No se pudo identificar al usuario actual.");
         }
@@ -1536,10 +1538,7 @@ async function renderizarHistorialMVZ() {
                 mvz_id: currentUser.id 
             });
 
-        if (error) {
-            // Si hay un error en la consulta RPC, lo lanzamos
-            throw error;
-        }
+        if (error) throw error;
 
         // 4. Manejar el caso de que no haya reportes
         if (!sesiones || sesiones.length === 0) {
@@ -1548,26 +1547,31 @@ async function renderizarHistorialMVZ() {
                     <p>No hay reportes recientes.</p>
                 </div>
             `;
+            // Asegúrate de que el botón se actualice incluso si no hay reportes
+            actualizarEstadoBotonPDF(); 
             return;
         }
 
-   // 5. Generar el HTML para cada sesión
+        // 5. Generar el HTML para cada sesión
         historialContainer.innerHTML = sesiones.map(sesion => {
             
-            // --- INICIO DE LA CORRECCIÓN "Invalid Date" ---
-            let fechaFormateada = 'Sin fecha'; // Texto por defecto si la fecha falla
-
-            // 1. Comprobamos que sesion.fecha_date tenga un valor
-            if (sesion.fecha_date) {
-                const fechaObj = new Date(sesion.fecha_date + 'T00:00:00Z');
+            // --- INICIO DE LA CORRECCIÓN "Fecha Real" ---
+            let fechaFormateada = 'Sin fecha';
+            
+            // Asumimos que 'sesion.fecha_date' es un TIMESTAMP completo
+            // (Ej: '2025-10-21T15:30:00Z')
+            if (sesion.fecha_date) { 
+                const fechaObj = new Date(sesion.fecha_date); // Simplemente la leemos
                 
-                // 2. Comprobamos que la fecha creada sea un objeto válido
-                //    (isNaN(fechaObj.getTime()) es la forma de saber si es "Invalid Date")
                 if (!isNaN(fechaObj.getTime())) { 
+                    // ¡La formateamos para mostrar fecha Y HORA!
                     fechaFormateada = fechaObj.toLocaleDateString('es-MX', {
                         day: 'numeric',
                         month: 'long',
-                        timeZone: 'UTC'
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        timeZone: 'UTC' // Ajusta si es necesario
                     });
                 }
             }
@@ -1598,54 +1602,42 @@ async function renderizarHistorialMVZ() {
         }).join('');
 
         // 6. Añadir funcionalidad a los botones de eliminar
-        // (Esto se debe hacer DESPUÉS de modificar el .innerHTML)
         historialContainer.querySelectorAll('.btn-eliminar-sesion').forEach(button => {
             
             const clickListener = async (e) => {
-                // Desactiva el listener temporalmente para evitar doble-clicks
                 button.removeEventListener('click', clickListener); 
-                
                 const sesionId = e.currentTarget.dataset.sesionId;
 
-                // Confirmación
                 if (!confirm('¿Estás seguro de que quieres eliminar esta sesión?')) {
-                    button.addEventListener('click', clickListener); // Lo vuelve a añadir si cancela
+                    button.addEventListener('click', clickListener);
                     return; 
                 }
                 
-                // Inicio de la eliminación
                 try {
                     const { error: deleteError } = await sb
                         .from('actividades')
                         .delete()
                         .eq('sesion_id', sesionId);
 
-                    if (deleteError) {
-                        throw deleteError; // Lanza el error para que lo atrape el catch
-                    }
+                    if (deleteError) throw deleteError;
                     
-                    // Si todo salió bien, recarga la lista
-                    renderizarHistorialMVZ(); 
+                    renderizarHistorialMVZ(); // Recarga la lista
 
                 } catch (error) {
                     console.error("DEBUG: Error al eliminar sesión:", error);
                     alert(error.message || 'Error al eliminar la sesión.');
-                    // Si falla, vuelve a activar el botón
                     button.addEventListener('click', clickListener); 
                 }
             };
             
             button.addEventListener('click', clickListener);
         });
-        // ===============================================
-        // AÑADE ESTA LÍNEA (PASO 3)
-        // ===============================================
-        // Actualiza el botón PDF para que aparezca deshabilitado
-        actualizarEstadoBotonPDF(); 
-        // ===============================================
+
+        // 7. (LÍNEA IMPORTANTE)
+        // Actualiza el estado del botón PDF cada vez que la lista se renderiza
+        actualizarEstadoBotonPDF();
 
     } catch (error) {
-        // 7. Manejo de errores generales (falla de red, RPC, etc.)
         console.error("Error al cargar historial MVZ:", error);
         historialContainer.innerHTML = `
             <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl" role="alert">
@@ -1654,6 +1646,38 @@ async function renderizarHistorialMVZ() {
                 <p class="text-sm">${error.message}</p>
             </div>
         `;
+    }
+}
+/*
+ * =================================================================
+ * PASO 2: AÑADE ESTA NUEVA FUNCIÓN (Helper del PDF)
+ * =================================================================
+ * Revisa los checkboxes marcados y activa/desactiva el botón de descarga.
+ */
+function actualizarEstadoBotonPDF() {
+    // Usamos el ID de tu botón en el HTML
+    const botonPDF = document.getElementById('btn-generar-pdf-historial');
+    const appContent = document.getElementById('app-content'); 
+
+    // Si el botón no está en la vista actual, no hagas nada
+    if (!botonPDF || !appContent) return; 
+
+    // Busca los checkboxes DENTRO del contenedor del historial
+    const historialContainer = appContent.querySelector('#historial-actividades-mvz');
+    if (!historialContainer) return;
+
+    const checkboxesMarcados = historialContainer.querySelectorAll('.sesion-checkbox:checked');
+
+    if (checkboxesMarcados.length > 0) {
+        // Habilitar botón
+        botonPDF.disabled = false;
+        botonPDF.textContent = `Descargar (${checkboxesMarcados.length})`;
+        botonPDF.classList.remove('opacity-50', 'cursor-not-allowed');
+    } else {
+        // Deshabilitar botón
+        botonPDF.disabled = true;
+        botonPDF.textContent = 'Descargar';
+        botonPDF.classList.add('opacity-50', 'cursor-not-allowed');
     }
 }
 
@@ -2159,21 +2183,23 @@ async function handleGuardarEvento(e) {
     }
 }
 
-    // INICIALIZACIÓN DE LA APLICACIÓN
-    function initApp() {
-        setupNavigation();
+// INICIALIZACIÓN DE LA APLICACIÓN
+    function initApp() {
+        setupNavigation();
+
         // =================================================================
-        // INICIO DE LA INTEGRACIÓN DE LISTENERS (PASO 4)
+        // INICIO DE LA INTEGRACIÓN DE LISTENERS (PASO 3)
         // =================================================================
-        // Usamos 'appContent' (la variable global de la línea 40)
+        // Usamos la variable 'appContent' (definida en la línea 40)
         // para la delegación de eventos.
         if (appContent) {
 
             // 1. Listener para el botón de PDF
             appContent.addEventListener('click', (e) => {
-                // Si el clic ocurrió en TU botón
+                // Si el clic ocurrió en TU botón de historial
                 if (e.target.id === 'btn-generar-pdf-historial') {
-                    handleGenerarPdfDeHistorial(); // Llama a tu función existente
+                    // Llama a tu función existente (línea 1250)
+                    handleGenerarPdfDeHistorial(); 
                 }
             });
     
@@ -2181,7 +2207,8 @@ async function handleGuardarEvento(e) {
             appContent.addEventListener('change', (e) => {
                 // Si el cambio ocurrió en un checkbox de sesión
                 if (e.target.classList.contains('sesion-checkbox')) {
-                    actualizarEstadoBotonPDF(); // Llama a la nueva función helper
+                    // Llama a la nueva función helper
+                    actualizarEstadoBotonPDF(); 
                 }
             });
 
@@ -2191,17 +2218,16 @@ async function handleGuardarEvento(e) {
         // =================================================================
         // FIN DE LA INTEGRACIÓN
         // =================================================================
-        
-        const savedUser = sessionStorage.getItem('currentUser');
-        if (savedUser) {
-            try { currentUser = JSON.parse(savedUser); } catch(e){}
-            iniciarSesion();
-        } else {
-            if (navContainer) navContainer.classList.add('hidden');
-            navigateTo('login');
-        }
-        
-    }
+
+        const savedUser = sessionStorage.getItem('currentUser');
+        if (savedUser) {
+            try { currentUser = JSON.parse(savedUser); } catch(e){}
+            iniciarSesion();
+        } else {
+            if (navContainer) navContainer.classList.add('hidden');
+            navigateTo('login');
+        }
+    }
    // ----- REEMPLAZA LAS DOS ÚLTIMAS FUNCIONES CON ESTE BLOQUE -----
 
 // Hacemos la función global añadiendo "window." al principio
