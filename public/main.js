@@ -1478,196 +1478,117 @@ async function handleFinalizarYReportar() {
     }
 }
 
-// --------- RENDERIZAR HISTORIAL MVZ (corregido y mejorado) ----------
+// --- REEMPLAZA TU renderizarHistorialMVZ CON ESTA VERSIÓN ---
 async function renderizarHistorialMVZ() {
-  const historialContainer = document.getElementById('historial-actividades-mvz');
-  if (!historialContainer) return;
-  historialContainer.innerHTML = '<p class="text-gray-500 text-center">Cargando historial...</p>';
+  const historialContainer = document.getElementById('historial-actividades-mvz');
+  if (!historialContainer) return;
+  historialContainer.innerHTML = '<p class="text-gray-500 text-center">Cargando historial...</p>';
 
-  try {
-    // Trae todas las actividades finalizadas del MVZ (evita RPC que agrupa mal)
-    const { data: actividades, error: fetchError } = await sb
-      .from('actividades')
-      .select('*')
-      .eq('mvz_id', currentUser.id)
-      .eq('estado', 'finalizada') // asumo que usas un campo 'estado' o similar
-      .order('created_at', { ascending: false });
+  try {
+    // 1. Trae todas las actividades del MVZ (sin agrupar)
+    const { data: actividades, error: fetchError } = await sb
+      .from('actividades')
+      .select('*')
+      .eq('id_usuario', currentUser.id) // Cambiado de mvz_id a id_usuario
+      // .eq('estado', 'finalizada') // 🚨 ELIMINAMOS ESTA LÍNEA (no tienes columna estado)
+      .order('created_at', { ascending: false });
 
-    if (fetchError) throw fetchError;
+    if (fetchError) throw fetchError;
 
-    if (!actividades || actividades.length === 0) {
-      historialContainer.innerHTML = '<div class="bg-white p-4 rounded-xl text-center text-gray-500"><p>No hay reportes recientes.</p></div>';
-      return;
-    }
+    if (!actividades || actividades.length === 0) {
+      historialContainer.innerHTML = '<div class="bg-white p-4 rounded-xl text-center text-gray-500"><p>No hay reportes recientes.</p></div>';
+      return;
+    }
 
-    // Agrupa por sesion_id en el cliente para que cada finalización sea su propio bloque
-    const sesionesMap = new Map();
-    actividades.forEach(act => {
-      const sesionId = act.sesion_id || act.session_id || (`s_${act.id}`); // fallback si no hay sesion_id
-      if (!sesionesMap.has(sesionId)) {
-        sesionesMap.set(sesionId, {
-          sesion_id: sesionId,
-          tipo_actividad: act.tipo_actividad || 'Actividad',
-          rancho_nombre: act.rancho_nombre || act.rancho_texto || 'Rancho desconocido',
-          conteo: 0,
-          fecha: act.created_at || act.fecha_actividad || act.fecha || null,
-          // si guardas pdf_path en la actividad/sesión, toma el primero disponible
-          pdf_path: act.pdf_path || act.pdf_url || null
-        });
-      }
-      const s = sesionesMap.get(sesionId);
-      s.conteo = s.conteo + 1;
-      // actualizar fecha a la más reciente (suponiendo created_at)
-      if (act.created_at) {
-        const existing = new Date(s.fecha || 0);
-        const cand = new Date(act.created_at);
-        if (!s.fecha || cand > existing) s.fecha = act.created_at;
-      }
-      // si alguna actividad trae pdf_path, lo guardamos
-      if (!s.pdf_path && (act.pdf_path || act.pdf_url)) s.pdf_path = act.pdf_path || act.pdf_url;
-    });
+    // 2. Agrupa por sesion_id en el cliente (JavaScript)
+    const sesionesMap = new Map();
+    actividades.forEach(act => {
+      // Usamos sesion_id y extra_data de tu tabla
+      const sesionId = act.sesion_id; 
+      if (!sesionId) return; // Ignora actividades sin sesión (si las hubiera)
 
-    const sesiones = Array.from(sesionesMap.values());
+      if (!sesionesMap.has(sesionId)) {
+        sesionesMap.set(sesionId, {
+          sesion_id: sesionId,
+          tipo_actividad: act.tipo_actividad || 'Actividad',
+          rancho_nombre: act.extra_data?.rancho_nombre || 'Rancho desconocido',
+          conteo: 0,
+          fecha: act.fecha_actividad || act.created_at, // Usa fecha_actividad primero
+          pdf_path: act.extra_data?.pdf_path || null // Busca en extra_data si guardas la ruta del PDF
+        });
+      }
+      const s = sesionesMap.get(sesionId);
+      s.conteo = s.conteo + 1;
+    });
 
-    // Render
-    historialContainer.innerHTML = sesiones.map(sesion => {
-      // parseo de fecha robusto
-      let fechaText = '';
-      if (sesion.fecha) {
-        try {
-          const d = new Date(sesion.fecha);
-          fechaText = d.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' });
-        } catch (e) {
-          fechaText = String(sesion.fecha).slice(0, 10);
-        }
-      } else {
-        fechaText = 'Fecha desconocida';
-      }
+    const sesiones = Array.from(sesionesMap.values());
+    // Ordenamos las sesiones por fecha (la más nueva primero)
+    sesiones.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 
-      return `
-        <div class="bg-white p-3 rounded-xl shadow-sm flex items-center justify-between mb-3">
-          <div class="flex items-center">
-            <input type="checkbox" data-sesion-id="${sesion.sesion_id}" class="h-5 w-5 rounded border-gray-300 mr-4 sesion-checkbox">
-            <div>
-              <p class="font-bold text-gray-800">${escapeHtml(sesion.tipo_actividad)} en <em>${escapeHtml(sesion.rancho_nombre)}</em></p>
-              <p class="text-sm text-gray-500">${sesion.conteo} animales · ${fechaText}</p>
-            </div>
-          </div>
+    // 3. Renderizar el HTML
+    historialContainer.innerHTML = sesiones.map(sesion => {
+      let fechaText = 'Fecha desconocida';
+      if (sesion.fecha) {
+        // Usamos el parseo de fecha que ya teníamos (más robusto)
+        const fechaObj = new Date(sesion.fecha + 'T00:00:00Z'); 
+        fechaText = fechaObj.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', timeZone: 'UTC' });
+      }
 
-          <div class="flex items-center gap-2">
-            <button data-sesion-id="${sesion.sesion_id}" class="btn-descargar-sesion px-2 py-1 border rounded text-sm bg-white hover:bg-gray-50" title="Descargar PDF">
-              <i class="fa-solid fa-download"></i>
-            </button>
-            <button data-sesion-id="${sesion.sesion_id}" class="btn-eliminar-sesion px-2 py-1 border rounded text-sm text-red-500 hover:bg-red-50" title="Eliminar sesión">
-              <i class="fa-solid fa-trash-can"></i>
-            </button>
-          </div>
-        </div>
-      `;
-    }).join('');
+      return `
+        <div class="bg-white p-3 rounded-xl shadow-sm flex items-center justify-between mb-3">
+          <div class="flex items-center flex-1 min-w-0">
+            <input type="checkbox" data-sesion-id="${sesion.sesion_id}" class="h-5 w-5 rounded border-gray-300 mr-4 sesion-checkbox">
+            <div class="min-w-0">
+              <p class="font-bold text-gray-800 truncate">${escapeHtml(sesion.tipo_actividad)} en <em>${escapeHtml(sesion.rancho_nombre)}</em></p>
+              <p class="text-sm text-gray-500">${sesion.conteo} animales · ${fechaText}</p>
+            </div>
+          </div>
 
-    // Conectar listeners
-    // 1) Eliminar
-    const botonesEliminar = historialContainer.querySelectorAll('.btn-eliminar-sesion');
-    botonesEliminar.forEach(button => {
-      button.addEventListener('click', async (e) => {
-        const sesionId = e.currentTarget.dataset.sesionId;
-        if (!sesionId) return;
-        if (!confirm('¿Estás seguro de que quieres eliminar esta sesión y todas sus actividades?')) return;
-        try {
-          // Primero, si guardas pdfs en storage y tienes la ruta en la actividad/sesión, intenta borrarla
-          // Buscamos si existe pdf_path en alguna actividad de la sesión
-          const { data: actsWithPdf, error: pdfFetchErr } = await sb
-            .from('actividades')
-            .select('id,pdf_path')
-            .eq('sesion_id', sesionId)
-            .is('pdf_path', null, { foreignTableName: 'actividades' }); // no falla si null pero lo dejamos por claridad
+          <div class="flex items-center gap-2 ml-2">
+                        <button data-sesion-id="${sesion.sesion_id}" class="btn-descargar-sesion px-2 py-1 border rounded text-sm bg-white hover:bg-gray-50 hidden" title="Descargar PDF">
+              <i class="fa-solid fa-download"></i>
+            </button>
+            <button data-sesion-id="${sesion.sesion_id}" class="btn-eliminar-sesion px-2 py-1 border rounded text-sm text-red-500 hover:bg-red-50" title="Eliminar sesión">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
 
-          // Nota: la línea .is(...) es opcional; si te da problema, quítala y usa solo select('id,pdf_path')
-          if (pdfFetchErr) console.warn('No se pudieron consultar pdf_path:', pdfFetchErr);
+    // 4. Conectar listeners de Borrado
+    const botonesEliminar = historialContainer.querySelectorAll('.btn-eliminar-sesion');
+    botonesEliminar.forEach(button => {
+      button.addEventListener('click', async (e) => {
+        const sesionId = e.currentTarget.dataset.sesionId;
+        if (!sesionId) return;
+        if (!confirm('¿Estás seguro de que quieres eliminar esta sesión y todas sus actividades?')) return;
+        try {
+          // Borra las actividades con esa sesion_id (ya teníamos la política RLS DELETE)
+          const { error: deleteError } = await sb
+            .from('actividades')
+            .delete()
+            .eq('sesion_id', sesionId);
 
-          // Elimina archivos de storage si existen (ajusta BUCKET_PDFS a tu bucket)
-          const BUCKET_PDFS = 'pdfs';
-          if (Array.isArray(actsWithPdf)) {
-            for (const a of actsWithPdf) {
-              if (a.pdf_path) {
-                try {
-                  await sb.storage.from(BUCKET_PDFS).remove([a.pdf_path]);
-                } catch (err) {
-                  console.warn('No se pudo eliminar archivo en storage:', a.pdf_path, err);
-                }
-              }
-            }
-          }
+          if (deleteError) throw deleteError;
 
-          // Borra las actividades con esa sesion_id
-          const { error: deleteError } = await sb
-            .from('actividades')
-            .delete()
-            .eq('sesion_id', sesionId);
+          // Refrescar lista
+          await renderizarHistorialMVZ();
+          showToast('Sesión eliminada');
+        } catch (err) {
+          console.error('Error al eliminar sesión:', err);
+          alert(err.message || 'Error al eliminar la sesión.');
+        }
+      });
+    });
+    
+    // 5. Conectar listeners de Descarga (POR AHORA DESHABILITADO)
+   // (El botón "Generar PDF de Seleccionados" ya está migrado y debería funcionar)
 
-          if (deleteError) throw deleteError;
-
-          // Refrescar lista
-          await renderizarHistorialMVZ();
-          showToast('Sesión eliminada');
-        } catch (err) {
-          console.error('Error al eliminar sesión:', err);
-          alert(err.message || 'Error al eliminar la sesión.');
-        }
-      });
-    });
-
-    // 2) Descargar PDF
-    const botonesDescargar = historialContainer.querySelectorAll('.btn-descargar-sesion');
-    botonesDescargar.forEach(button => {
-      button.addEventListener('click', async (e) => {
-        const sesionId = e.currentTarget.dataset.sesionId;
-        if (!sesionId) return;
-
-        try {
-          // Intenta obtener la ruta del PDF buscando en actividades de la sesión
-          const { data: acts, error: qErr } = await sb
-            .from('actividades')
-            .select('pdf_path,pdf_url,id')
-            .eq('sesion_id', sesionId)
-            .limit(1);
-
-          if (qErr) throw qErr;
-          const act = (acts && acts[0]) ? acts[0] : null;
-
-          // Si tenemos pdf_url (pública) -> directo
-          if (act && act.pdf_url) {
-            window.open(act.pdf_url, '_blank');
-            return;
-          }
-
-          // Si tenemos pdf_path en storage, obtener URL pública
-          if (act && act.pdf_path) {
-            const BUCKET_PDFS = 'pdfs'; // AJUSTA si usas otro bucket
-            const { data: publicData, error: publicErr } = sb.storage.from(BUCKET_PDFS).getPublicUrl(act.pdf_path);
-            if (publicErr) throw publicErr;
-            if (publicData && publicData.publicUrl) {
-              window.open(publicData.publicUrl, '_blank');
-              return;
-            }
-          }
-
-          // Fallback: pedir al servidor que genere el PDF o mostrar mensaje
-          alert('No se encontró PDF pre-generado para esta sesión. Si esperabas un PDF, revisa que la actividad haya generado uno y que la ruta esté guardada en la columna pdf_path o pdf_url.');
-        } catch (err) {
-          console.error('Error al descargar PDF:', err);
-          alert(err.message || 'Error al descargar el PDF.');
-        }
-      });
-    });
-
-    // 3) (Opcional) Checkbox behavior - ejemplo: seleccionar todos o habilitar acciones masivas
-    // Puedes añadir botones fuera del contenedor para borrar seleccionadas o descargar en lote.
-  } catch (error) {
-    console.error("Error al cargar historial MVZ:", error);
-    historialContainer.innerHTML = `<p class="text-red-500 text-center">Error al cargar historial: ${escapeHtml(error.message || String(error))}</p>`;
-  }
+  } catch (error) {
+    console.error("Error al cargar historial MVZ:", error);
+    historialContainer.innerHTML = `<p class="text-red-500 text-center">Error al cargar historial: ${escapeHtml(error.message || String(error))}</p>`;
+Sintaxis   }
 }
 
 // pequeño helper para escapar HTML en textos dinámicos
@@ -3430,6 +3351,28 @@ window.handleGuardarVaca = async function(cerrarAlFinalizar) {
             if (btnFinalizar) btnFinalizar.disabled = false;
         }, 1200); // Dar tiempo a que se muestre el mensaje
     }
+}
+// --- PEGA ESTAS FUNCIONES DE AYUDA AL FINAL DE main.js ---
+
+// 1. Helper para escapar HTML (seguridad)
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+// 2. Helper para mostrar mensajes Toast (usa tu 'vaca-toast')
+function showToast(msg, ms = 1800) {
+  const t = document.getElementById('vaca-toast');
+  if (!t) return; // Si no existe el toast, no hace nada
+  t.textContent = msg;
+  t.classList.remove('hidden');
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.classList.add('hidden'), ms);
 }
     initApp();
 });
