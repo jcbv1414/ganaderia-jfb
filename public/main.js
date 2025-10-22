@@ -381,54 +381,64 @@ if (avatarEl && logoUrl) {
     // =================================================================
     // LÓGICA DEL MVZ
     // =================================================================
-// Reemplaza tu función cargarDashboardMVZ
+// =================================================================
+// REEMPLAZA ESTA FUNCIÓN COMPLETA (Cargar Dashboard MVZ con Estadísticas)
+// =================================================================
 async function cargarDashboardMVZ() {
     if (!currentUser || currentUser.rol !== 'mvz') return;
 
-    // Actualiza el saludo, la fecha y la foto de perfil del MVZ
+    // --- 1. Actualiza Cabecera (Esto no cambia) ---
     const nombreEl = document.getElementById('dash-nombre-mvz');
     if (nombreEl) nombreEl.textContent = currentUser.nombre.split(' ')[0];
-    
     const fechaEl = document.getElementById('dash-fecha-actual-mvz');
     if (fechaEl) fechaEl.textContent = new Date().toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
-
     const avatarEl = document.getElementById('dash-mvz-avatar');
     if (avatarEl) avatarEl.src = currentUser.avatar_url || 'assets/avatar_mvz_default.png';
 
-    // 1. Cargamos contadores de actividades usando RPC (Simulación de llamada a función DB)
-    const resumenVisitasEl = document.getElementById('resumen-visitas');
-const resumenAlertasEl = document.getElementById('resumen-alertas-mvz');
-const hoyString = new Date().toISOString().slice(0, 10); // Obtiene 'YYYY-MM-DD'
-
-try {
-    // a) Conteo de actividades HOY
-    const { count: actividadesHoy, error: actError } = await sb
-        .from('actividades')
-        .select('*', { count: 'exact', head: true })
-        .eq('id_usuario', currentUser.id)
-        .eq('fecha_actividad', hoyString);
-
-    if (actError) throw actError;
-
-    if (resumenVisitasEl) resumenVisitasEl.textContent = actividadesHoy || 0;
-    if (resumenAlertasEl) resumenAlertasEl.textContent = 0; // Alertas sigue como placeholder 0
-
-} catch(e) {
-    console.error("Error al cargar contadores MVZ:", e);
-    if (resumenVisitasEl) resumenVisitasEl.textContent = '--';
-    if (resumenAlertasEl) resumenAlertasEl.textContent = '--';
-}
-    
-    // 2. Cargamos eventos pendientes y próximos - Usando Supabase DIRECTO
-    const eventosContainer = document.getElementById('lista-eventos');
+    // --- 2. Referencias a los Elementos que Actualizaremos ---
+    const sesionesHoyEl = document.getElementById('stat-sesiones-hoy'); // <-- El nuevo ID
+    const animalesHoyEl = document.getElementById('stat-animales-hoy'); // <-- El nuevo ID
     const pendientesContainer = document.getElementById('lista-pendientes');
-    const hoy = new Date();
+    const eventosContainer = document.getElementById('lista-eventos');
 
+    // Poner placeholders de carga ("...")
+    if (sesionesHoyEl) sesionesHoyEl.textContent = '...';
+    if (animalesHoyEl) animalesHoyEl.textContent = '...';
     if (pendientesContainer) pendientesContainer.innerHTML = '<div class="bg-white p-4 rounded-xl shadow-md"><p class="text-sm text-gray-500">Cargando pendientes...</p></div>';
     if (eventosContainer) eventosContainer.innerHTML = '<div class="bg-white p-4 rounded-xl shadow-md"><p class="text-sm text-gray-500">Cargando eventos...</p></div>';
 
+    // --- 3. Calcular Fecha de Hoy (en formato YYYY-MM-DD UTC) ---
+    const hoy = new Date();
+    const hoyUTCString = hoy.toISOString().slice(0, 10);
+    console.log("Buscando estadísticas para fecha:", hoyUTCString);
 
     try {
+        // --- 4. CONSULTA A SUPABASE PARA ESTADÍSTICAS DEL DÍA ---
+        // (Busca todas las filas de 'actividades' de hoy para este MVZ)
+        const { data: actividadesHoy, error: actError } = await sb
+            .from('actividades')
+            .select('sesion_id, id') // Solo necesitamos estas columnas
+            .eq('id_usuario', currentUser.id) // Del usuario actual
+            .eq('fecha_actividad', hoyUTCString); // Donde la fecha sea hoy
+
+        if (actError) { // Si falla la consulta
+            console.error("Error al cargar estadísticas de hoy:", actError);
+            if (sesionesHoyEl) sesionesHoyEl.textContent = 'Err'; // Muestra 'Err'
+            if (animalesHoyEl) animalesHoyEl.textContent = 'Err';
+        } else { // Si la consulta funciona
+            // Calcula los números
+            const numeroAnimalesHoy = actividadesHoy ? actividadesHoy.length : 0; // Total de filas = Total animales
+            const sesionesUnicas = new Set((actividadesHoy || []).map(act => act.sesion_id)); // IDs de sesión únicos
+            const numeroSesionesHoy = sesionesUnicas.size; // Cuenta cuántos IDs únicos hay
+
+            // Muestra los números en las tarjetas
+            if (sesionesHoyEl) sesionesHoyEl.textContent = numeroSesionesHoy;
+            if (animalesHoyEl) animalesHoyEl.textContent = numeroAnimalesHoy;
+            console.log("Estadísticas hoy:", { sesiones: numeroSesionesHoy, animales: numeroAnimalesHoy });
+        }
+
+        // --- 5. CONSULTA A SUPABASE PARA EVENTOS (Pendientes y Próximos) ---
+        // (Esta parte es la misma lógica que ya tenías, solo integrada aquí)
         const { data: eventos, error: eventosError } = await sb
             .from('eventos')
             .select('*, ranchos (nombre)')
@@ -436,15 +446,18 @@ try {
             .eq('completado', false)
             .gte('fecha_evento', hoy.toISOString())
             .order('fecha_evento', { ascending: true });
-        
-        if (eventosError) throw eventosError;
 
-        // Lógica de filtrado de eventos (basada en tu código anterior)
+        if (eventosError) throw eventosError; // Lanza error si falla la consulta de eventos
+
+        // Filtrar eventos para hoy (Pendientes)
         const eventosHoy = eventos.filter(e => {
             const fechaEvento = new Date(e.fecha_evento);
-            return fechaEvento.toDateString() === hoy.toDateString();
+            return fechaEvento.getUTCFullYear() === hoy.getUTCFullYear() &&
+                   fechaEvento.getUTCMonth() === hoy.getUTCMonth() &&
+                   fechaEvento.getUTCDate() === hoy.getUTCDate();
         });
 
+        // Filtrar eventos Próximos (después de hoy)
         const eventosProximos = eventos.filter(e => !eventosHoy.includes(e));
 
         // Renderizar Pendientes HOY
@@ -452,31 +465,40 @@ try {
             if (eventosHoy.length > 0) {
                 pendientesContainer.innerHTML = eventosHoy.map((e, i) => {
                     const rancho = e.nombre_rancho_texto || e.ranchos?.nombre || 'General';
-                    return `<div class="bg-white p-3 rounded-lg shadow-sm mb-3"><p><strong>${i+1}.</strong> ${e.titulo} <em class="text-gray-500">(${rancho})</em></p><div class="flex justify-end space-x-2 mt-2"><button onclick="handleCancelarEvento(${e.id})" class="text-xs text-red-600 font-semibold px-2 py-1">Cancelar</button><button onclick="handleCompletarEvento(${e.id})" class="text-xs bg-green-600 text-white font-semibold px-3 py-1 rounded-full">Completar</button></div></div>`;
+                    // Añadimos window. para que los botones funcionen
+                    return `<div class="bg-white p-3 rounded-lg shadow-sm mb-3"><p><strong>${i+1}.</strong> ${escapeHtml(e.titulo)} <em class="text-gray-500">(${escapeHtml(rancho)})</em></p><div class="flex justify-end space-x-2 mt-2"><button onclick="window.handleCancelarEvento(${e.id})" class="text-xs text-red-600 font-semibold px-2 py-1">Cancelar</button><button onclick="window.handleCompletarEvento(${e.id})" class="text-xs bg-green-600 text-white font-semibold px-3 py-1 rounded-full">Completar</button></div></div>`;
                 }).join('');
             } else {
                 pendientesContainer.innerHTML = '<div class="bg-white p-4 rounded-xl shadow-md"><p class="text-sm text-gray-500">No hay pendientes para hoy.</p></div>';
             }
         }
 
-        // Renderizar Próximos Eventos
+        // Renderizar Próximos Eventos (máximo 3)
         if (eventosContainer) {
             if (eventosProximos.length > 0) {
                 eventosContainer.innerHTML = eventosProximos.slice(0, 3).map(e => {
                     const fecha = new Date(e.fecha_evento);
-                    const manana = new Date(); manana.setDate(new Date().getDate() + 1);
-                    let textoFecha = fecha.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' });
-                    if (fecha.toDateString() === manana.toDateString()) textoFecha = 'Mañana';
+                    const manana = new Date();
+                    manana.setUTCDate(hoy.getUTCDate() + 1);
+                    let textoFecha = fecha.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
+                    if (fecha.getUTCFullYear() === manana.getUTCFullYear() &&
+                        fecha.getUTCMonth() === manana.getUTCMonth() &&
+                        fecha.getUTCDate() === manana.getUTCDate()) {
+                           textoFecha = 'Mañana';
+                    }
                     const rancho = e.nombre_rancho_texto || e.ranchos?.nombre || 'General';
-                    return `<div class="bg-white p-4 rounded-xl shadow-md mb-3"><div class="flex justify-between items-center"><p><i class="fa-solid fa-calendar-alt text-brand-green mr-2"></i><strong>${textoFecha}:</strong> ${e.titulo} <em>(${rancho})</em></p><i class="fa-solid fa-chevron-right text-gray-400"></i></div></div>`;
+                    return `<div class="bg-white p-4 rounded-xl shadow-md mb-3"><div class="flex justify-between items-center"><p><i class="fa-solid fa-calendar-alt text-brand-green mr-2"></i><strong>${textoFecha}:</strong> ${escapeHtml(e.titulo)} <em>(${escapeHtml(rancho)})</em></p><i class="fa-solid fa-chevron-right text-gray-400"></i></div></div>`;
                 }).join('');
             } else {
                 eventosContainer.innerHTML = '<div class="bg-white p-4 rounded-xl shadow-md"><p class="text-sm text-gray-500">No hay más eventos programados.</p></div>';
             }
         }
 
-    } catch (error) {
-        console.error("Error al cargar eventos MVZ:", error);
+    } catch (error) { // Si falla CUALQUIERA de las consultas (estadísticas o eventos)
+        console.error("Error al cargar datos del dashboard MVZ:", error);
+        // Poner error en todas las secciones para que sea claro
+        if (sesionesHoyEl) sesionesHoyEl.textContent = 'Err';
+        if (animalesHoyEl) animalesHoyEl.textContent = 'Err';
         if (pendientesContainer) pendientesContainer.innerHTML = '<p class="text-red-500">Error al cargar datos.</p>';
         if (eventosContainer) eventosContainer.innerHTML = '<p class="text-red-500">Error al cargar datos.</p>';
     }
