@@ -318,14 +318,25 @@ app.post('/api/vacas/importar/:ranchoId', upload.single('archivoGanado'), async 
                          fechaNacimiento = null; // Ignorar si falla la conversión
                     }
                 }
-                // Si es string, valida el formato YYYY-MM-DD
-                else if (typeof nacimientoRaw === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(nacimientoRaw.trim())) {
-                    fechaNacimiento = nacimientoRaw.trim();
+                
+                // Si es string, valida el formato DD-MM-AAAA y lo convierte a AAAA-MM-DD
+            }else if (typeof nacimientoRaw === 'string') {
+                const fechaTrimmed = nacimientoRaw.trim();
+                const match = fechaTrimmed.match(/^(\d{2})-(\d{2})-(\d{4})$/); // Busca DD-MM-AAAA
+
+                if (match) {
+                    // Reordena los grupos capturados (día, mes, año) al formato AAAA-MM-DD
+                    const dia = match[1];
+                    const mes = match[2];
+                    const anio = match[3];
+                    fechaNacimiento = `${anio}-${mes}-${dia}`; // Convierte a AAAA-MM-DD para Supabase
+                    // Opcional: Validación extra (ej. que mes esté entre 01-12)
+                    // if (parseInt(mes, 10) < 1 || parseInt(mes, 10) > 12 || ...) { fechaNacimiento = null; /* error */ }
                 } else {
-                     console.warn(`[IMPORTAR EXCEL] Fila ${numeroFilaExcel}: Formato de fecha inválido '${nacimientoRaw}'. Se ignorará.`);
-                     // Opcional: añadir error en lugar de solo ignorar
-                     // erroresFilas.push(`Fila ${numeroFilaExcel}: Formato fecha incorrecto (AAAA-MM-DD).`);
-                     // continue;
+                    console.warn(`[IMPORTAR EXCEL] Fila ${numeroFilaExcel}: Formato de fecha inválido '${nacimientoRaw}'. Se esperaba DD-MM-AAAA. Se ignorará.`);
+                    // Opcional: añadir error en lugar de solo ignorar
+                    // erroresFilas.push(`Fila ${numeroFilaExcel}: Formato fecha incorrecto (DD-MM-AAAA).`);
+                    // continue;
                 }
             }
 
