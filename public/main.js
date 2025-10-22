@@ -884,7 +884,7 @@ async function renderizarVistaMisRanchosMVZ() {
                         </div>
                     <div class="min-w-0">
                         <p class="text-md font-semibold text-gray-800 truncate">${escapeHtml(rancho.nombre)}</p>
-                        <p class="text-xs text-gray-400">ID: ${rancho.id.substring(0, 8)}...</p> 
+                        <p class="text-xs text-gray-400">ID: ${(rancho.id && typeof rancho.id === 'string') ? rancho.id.substring(0, 8) + '...' : 'Inválido'}</p>
                         </div>
                 </div>
 
