@@ -42,47 +42,64 @@ function handleServerError(res, err, code = 500) {
   if (res.headersSent) return;
   res.status(code).json({ success: false, message: err.message || 'Error del servidor' });
 }
-// ================== HELPER PARA DIBUJAR FILA EN PDF ==================
+// ================== HELPER PARA DIBUJAR FILA EN PDF (VERSIÓN MEJORADA) ==================
 function drawTableRow(doc, y, item, columnX, columnWidths) {
-    // Extraer datos del item (ajusta según venga de /api/actividades o /api/historial/pdf)
+    // Extraer datos básicos (sin cambios)
     const arete = item.extra_data?.arete || item.areteVaca || '-';
     const raza = item.extra_data?.raza || item.raza || 'N/A';
     const lote = item.extra_data?.lote || item.loteNumero || 'N/A';
-    
-    // Formatear Fecha (asegurando que venga como YYYY-MM-DD)
     const rawDate = item.fecha_actividad || item.fecha; 
-    const fecha = formatDate(rawDate); // Usa tu helper formatDate
+    const fecha = formatDate(rawDate); 
 
-    // Formatear Detalles (asegurando que sea un objeto)
+    // --- INICIO: Formatear Detalles (Lógica Mejorada) ---
     let detallesObj = item.descripcion || {};
+    // Asegurarse de que sea un objeto
     if (typeof detallesObj === 'string') {
-        try { detallesObj = JSON.parse(detallesObj); } catch (e) { detallesObj = { 'Obs': detallesObj }; }
+        try { detallesObj = JSON.parse(detallesObj); } 
+        catch (e) { detallesObj = { 'Observaciones': detallesObj }; } // Si no es JSON, lo pone como Observaciones
     }
-    const detallesFiltrados = Object.entries(detallesObj)
-        .filter(([k, v]) => v && v !== 'No' && v !== '' && k !== 'raza') // Evita detalles vacíos o 'No' y la raza duplicada
-        .map(([k, v]) => `${prettyLabel(k)}: ${v}`)
-        .join('; ');
+
+    // Convertir el objeto de detalles en un string multi-línea
+    const detallesParaMostrar = Object.entries(detallesObj)
+        // 1. Filtrar: Elimina solo si la clave es 'raza' (ya la mostramos) o si el valor es realmente vacío/nulo.
+        .filter(([key, value]) => 
+            key !== 'raza' && 
+            value !== null && 
+            value !== undefined && 
+            String(value).trim() !== ''
+        )
+        // 2. Mapear: Convierte cada par [clave, valor] en "Etiqueta Bonita: Valor"
+        .map(([key, value]) => `${prettyLabel(key)}: ${value}`) 
+        // 3. Unir: Junta todas las líneas con un salto de línea (\n)
+        .join('\n'); 
+    // --- FIN: Formatear Detalles ---
 
     // --- DIBUJAR CADA CELDA EN SU POSICIÓN X ---
+    // (Dibujo de Arete, Raza, Lote, Fecha sin cambios)
     doc.text(arete, columnX.arete, y, { width: columnWidths.arete });
     doc.text(raza, columnX.raza, y, { width: columnWidths.raza });
-    doc.text(String(lote), columnX.lote, y, { width: columnWidths.lote, align: 'center' }); // Asegura que lote sea string
+    doc.text(String(lote), columnX.lote, y, { width: columnWidths.lote, align: 'center' }); 
     doc.text(fecha, columnX.fecha, y, { width: columnWidths.fecha });
-    doc.text(detallesFiltrados || '-', columnX.detalles, y, { width: columnWidths.detalles });
+    
+    // Dibujar Detalles (ahora con el string multi-línea)
+    doc.text(detallesParaMostrar || '-', columnX.detalles, y, { // Usa el string formateado
+        width: columnWidths.detalles,
+        align: 'left' // Alinea a la izquierda dentro de su columna
+    });
 
     // --- CALCULAR ALTURA MÁXIMA DE LA FILA ---
-    // Medimos la altura que ocupará cada texto en su respectiva celda
+    // (Cálculo sin cambios, heightOfString maneja los '\n')
     const areteHeight = doc.heightOfString(arete, { width: columnWidths.arete });
     const razaHeight = doc.heightOfString(raza, { width: columnWidths.raza });
     const loteHeight = doc.heightOfString(String(lote), { width: columnWidths.lote });
     const fechaHeight = doc.heightOfString(fecha, { width: columnWidths.fecha });
-    const detallesHeight = doc.heightOfString(detallesFiltrados || '-', { width: columnWidths.detalles });
+    // Calcula la altura REAL que ocuparán los detalles (pueden ser varias líneas)
+    const detallesHeight = doc.heightOfString(detallesParaMostrar || '-', { width: columnWidths.detalles }); 
 
-    // La altura de la fila es la mayor de todas las alturas calculadas
+    // Devuelve la altura máxima encontrada
     return Math.max(areteHeight, razaHeight, loteHeight, fechaHeight, detallesHeight);
 }
 // =====================================================================
-
 // ================== ENDPOINT: REGISTER ==================
 app.post('/api/register', async (req, res) => {
   try {
