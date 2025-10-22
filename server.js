@@ -336,19 +336,18 @@ app.delete('/api/rancho/mvz/:permisoId', async (req, res) => {
     } catch (err) { handleServerError(res, err); }
 });
 
-// ================== ACTIVIDADES, HISTORIAL Y REPORTES ==================
+// ==========================================================
+// REEMPLAZA ESTA RUTA COMPLETA (/api/actividades)
+// ==========================================================
 app.post('/api/actividades', async (req, res) => {
     console.log('---[INSPECTOR] Recibida nueva solicitud de actividad---');
     try {
         const { mvzId, ranchoId, loteActividad, mvzNombre, ranchoNombre } = req.body;
-        console.log('[INSPECTOR] Datos iniciales recibidos:', { mvzId, ranchoId, mvzNombre, ranchoNombre });
-
+        // ... (Validaciones iniciales sin cambios) ...
         if (!mvzId || !Array.isArray(loteActividad) || loteActividad.length === 0) {
-            console.error('[INSPECTOR] Faltan datos críticos. Abortando.');
-            return res.status(400).json({ message: 'Faltan datos para procesar la actividad.' });
+             return res.status(400).json({ message: 'Faltan datos para procesar la actividad.' });
         }
         console.log(`[INSPECTOR] Lote de actividad tiene ${loteActividad.length} registros.`);
-
         console.log('[INSPECTOR] Iniciando la creación del PDF...');
 
         res.setHeader('Content-Type', 'application/pdf');
@@ -356,103 +355,97 @@ app.post('/api/actividades', async (req, res) => {
         const doc = new PDFDocument({ size: 'LETTER', margin: 40 });
         doc.pipe(res);
 
-    // CORRECCIÓN: Añadir el logo al PDF
-    try {
-      const logoPath = path.join(__dirname, 'public', 'assets', 'logo.png');
-      if (fs.existsSync(logoPath)) {
-        doc.image(logoPath, 40, 25, { width: 90 });
-      }
-    } catch (logoErr) {
-      console.warn('Advertencia: No se pudo cargar el logo para el PDF.', logoErr.message);
-    }
-
-doc.fontSize(16).font('Helvetica-Bold').text('JFB Ganadería Inteligente', { align: 'right' });
-doc.fontSize(10).font('Helvetica')
-   .text(`Médico Veterinario: ${mvzNombre || '-'}`, { align: 'right' })
-   // --- LÍNEA AÑADIDA ---
-   .text(`Rancho: ${ranchoNombre || 'Independiente'}`, { align: 'right' })
-   // --- FIN LÍNEA AÑADIDA ---
-doc.moveDown(2); // Dejamos el moveDown después
-    
-    const yBarra = doc.y;
-    const tituloActividad = (loteActividad[0]?.tipoLabel || 'Actividades').toUpperCase();
-    doc.rect(40, yBarra, doc.page.width - 80, 20).fill('#001F3D');
-    doc.fillColor('white').font('Helvetica-Bold').fontSize(12).text(`REPORTE DE ${tituloActividad}`, 40, yBarra + 4, { align: 'center' });
-    doc.fillColor('black').moveDown(2);
-
-    // --- DIBUJAR ENCABEZADOS (CENTRADOS) ---
-    const headerY = doc.y;
-    doc.font('Helvetica-Bold');
-    doc.text('Arete', columnX.arete, headerY, { width: columnWidths.arete, align: 'center' }); // Centrado
-    doc.text('Raza', columnX.raza, headerY, { width: columnWidths.raza, align: 'center' }); // Centrado
-    doc.text('Lote', columnX.lote, headerY, { width: columnWidths.lote, align: 'center' }); // Centrado
-    doc.text('Fecha', columnX.fecha, headerY, { width: columnWidths.fecha, align: 'center' }); // Centrado
-    doc.text('Detalles', columnX.detalles, headerY, { width: columnWidths.detalles, align: 'center' }); // Centrado
-    doc.moveDown(0.5);
-    // ----------------------------------------
-
-    // Dibuja la línea DEBAJO de los encabezados (un poco más gruesa)
-    doc.moveTo(columnStartX, doc.y).lineTo(pageEndX, doc.y).strokeColor('black').lineWidth(1).stroke(); // Línea más gruesa
-    doc.moveDown(0.5);
-
-   // --- DEFINIR POSICIONES Y ANCHOS DE COLUMNAS (AJUSTADOS) ---
-    const columnStartX = 40; // Margen izquierdo
-    const pageEndX = doc.page.width - 40; // Margen derecho
-
-    const columnX = {
-        arete: columnStartX,
-        raza: columnStartX + 95,      // Más espacio después de Arete
-        lote: columnStartX + 95 + 105, // Más espacio después de Raza
-        fecha: columnStartX + 95 + 105 + 65, // Más espacio después de Lote
-        detalles: columnStartX + 95 + 105 + 65 + 95 // Más espacio después de Fecha -> Empuja Detalles a la derecha
-    };
-    const columnWidths = {
-        arete: 90,                  // Arete un poco más ancho
-        raza: 100,                 // Raza más ancha
-        lote: 50,                   // Lote más ancho
-        fecha: 90,                  // Fecha más ancha
-        detalles: pageEndX - columnX.detalles // Ancho restante
-    };
-    // --------------------------------------------------------------------------------------------
-
-    doc.font('Helvetica');
-    let currentY = doc.y; // Posición Y inicial para la primera fila
-
-    loteActividad.forEach(item => {
-        // Calcula dónde empezar a dibujar esta fila
-        const rowY = currentY; 
-        
-        // Dibuja la fila y obtén su altura calculada
-        // ¡Llama a la función auxiliar que definimos en Paso 1!
-        const rowHeight = drawTableRow(doc, rowY, item, columnX, columnWidths);
-
-        // Calcula la posición Y para la siguiente fila
-        currentY = rowY + rowHeight + 10; // Añade un padding vertical (10 puntos)
-
-        // Línea separadora al final de la fila
-        doc.strokeColor('#cccccc').lineWidth(1)
-           .moveTo(columnStartX, currentY - 5) // Dibuja la línea un poco antes del inicio de la siguiente fila
-           .lineTo(pageEndX, currentY - 5)
-           .stroke();
-        
-        // Manejo de Salto de Página (si la siguiente fila no cabe)
-        if (currentY + 30 > doc.page.height - doc.page.margins.bottom) { // Estimamos 30 puntos para una fila mínima
-             doc.addPage();
-             currentY = doc.page.margins.top; // Resetea Y al margen superior de la nueva página
-             // Opcional: Redibujar encabezados en la nueva página si lo deseas
-             // drawTableHeaders(doc, currentY, columnX, columnWidths);
-             // currentY = doc.y + 5; 
+        // --- Dibuja Logo y Encabezado General ---
+        try {
+            const logoPath = path.join(__dirname, 'public', 'assets', 'logo.png');
+            const logoBuffer = fs.readFileSync(logoPath);
+            doc.image(logoBuffer, 40, 20, { width: 90 }); // Logo arriba (Y=20)
+        } catch (logoErr) {
+            console.warn('Advertencia: No se pudo cargar el logo para el PDF.', logoErr.message);
         }
-    });
-     console.log('[INSPECTOR] PDF creado y enviado. ¡Proceso completado con éxito!');
-        doc.end();
+        doc.fontSize(16).font('Helvetica-Bold').text('JFB Ganadería Inteligente', { align: 'right' });
+        doc.fontSize(10).font('Helvetica')
+           .text(`Médico Veterinario: ${mvzNombre || '-'}`, { align: 'right' })
+           .text(`Rancho: ${ranchoNombre || 'Independiente'}`, { align: 'right' }); // Nombre del Rancho
+        doc.moveDown(2);
+
+        // --- Dibuja Título del Reporte ---
+        const yBarra = doc.y;
+        const tituloActividad = (loteActividad[0]?.tipoLabel || 'Actividades').toUpperCase();
+        doc.rect(40, yBarra, doc.page.width - 80, 20).fill('#001F3D');
+        doc.fillColor('white').font('Helvetica-Bold').fontSize(12).text(`REPORTE DE ${tituloActividad}`, 40, yBarra + 4, { align: 'center' });
+        doc.fillColor('black').moveDown(2);
+
+        // ==========================================================
+        // ¡ORDEN CORRECTO! Definir Columnas ANTES de usarlas
+        // ==========================================================
+        const columnStartX = 40;
+        const pageEndX = doc.page.width - 40;
+        const columnX = {
+            arete: columnStartX,
+            raza: columnStartX + 95,
+            lote: columnStartX + 95 + 105,
+            fecha: columnStartX + 95 + 105 + 65,
+            detalles: columnStartX + 95 + 105 + 65 + 95
+        };
+        const columnWidths = {
+            arete: 90,
+            raza: 100,
+            lote: 50,
+            fecha: 90,
+            detalles: pageEndX - columnX.detalles
+        };
+        // ==========================================================
+
+        // --- Dibuja Encabezados de la Tabla (Centrados) ---
+        const headerY = doc.y;
+        doc.font('Helvetica-Bold');
+        doc.text('Arete', columnX.arete, headerY, { width: columnWidths.arete, align: 'center' });
+        doc.text('Raza', columnX.raza, headerY, { width: columnWidths.raza, align: 'center' });
+        doc.text('Lote', columnX.lote, headerY, { width: columnWidths.lote, align: 'center' });
+        doc.text('Fecha', columnX.fecha, headerY, { width: columnWidths.fecha, align: 'center' });
+        doc.text('Detalles', columnX.detalles, headerY, { width: columnWidths.detalles, align: 'center' });
+        doc.moveDown(0.5);
+        // Línea debajo de encabezados
+        doc.moveTo(columnStartX, doc.y).lineTo(pageEndX, doc.y).strokeColor('black').lineWidth(1).stroke();
+        doc.moveDown(0.5);
+        // ---------------------------------------------------
+
+        // --- Dibuja Filas de Datos ---
+        doc.font('Helvetica'); // Fuente normal para datos
+        let currentY = doc.y;
+
+        loteActividad.forEach((item, index) => { // Asegúrate que usa 'index' si no lo tenía
+            const rowY = currentY;
+            const rowHeight = drawTableRow(doc, rowY, item, columnX, columnWidths); // Llama al helper
+            currentY = rowY + rowHeight + 10;
+
+            // Línea separadora (gruesa)
+            doc.strokeColor('#cccccc').lineWidth(1)
+               .moveTo(columnStartX, currentY - 5)
+               .lineTo(pageEndX, currentY - 5)
+               .stroke();
+
+            // Salto de página
+            if (currentY + 30 > doc.page.height - doc.page.margins.bottom && index < loteActividad.length - 1) { // Usa index y loteActividad.length
+                 doc.addPage();
+                 currentY = doc.page.margins.top;
+                 // Opcional: Redibujar encabezados
+            }
+        });
+        // -----------------------------
+
+        console.log('[INSPECTOR] PDF creado y enviado. ¡Proceso completado!');
+        doc.end(); // Finaliza y envía el PDF
 
     } catch (err) {
-        console.error('---[INSPECTOR] ¡CRASH! El proceso falló. Causa del error: ---');
-        console.error(err); // Imprime el error completo en los logs del servidor
-        handleServerError(res, err);
+        console.error('---[INSPECTOR] ¡CRASH! Error en /api/actividades:', err);
+        if (!res.headersSent) { // Solo envía si no ha empezado a enviar PDF
+             res.status(500).json({ message: 'Error inesperado al generar reporte.' });
+        }
     }
 });
+// ==========================================================
 // En server.js, agrega este nuevo endpoint
 app.delete('/api/sesiones/:sesionId', async (req, res) => {
   try {
