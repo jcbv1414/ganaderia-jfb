@@ -239,9 +239,13 @@
             <div class="flex items-center space-x-3"> 
                 <span id="total-vacas-header" class="bg-brand-green text-white text-base px-3 py-1 rounded-lg font-bold shadow-md">0</span>
                 
-                <button onclick="navigateTo('importar-ganado')" title="Importar desde Excel" class="text-white bg-white/10 hover:bg-white/20 p-2 rounded-lg">
-                    <i class="fa-solid fa-file-import text-lg"></i> 
-                </button>
+              <button 
+    onclick="navigateTo('importar-ganado')" 
+    title="Importar desde Excel" 
+    class="text-white bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg flex items-center space-x-2 text-sm"> {/* Clases ajustadas */}
+    <i class="fa-solid fa-file-import text-lg"></i> 
+    <span>Importar</span> {/* Texto añadido */}
+</button>
                 </div>
 
         </header>
