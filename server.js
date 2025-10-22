@@ -538,133 +538,125 @@ app.get('/api/actividades/mvz/:mvzId', async (req, res) => {
   } catch (err) { handleServerError(res, err); }
 });
 
-// Generar PDF desde sesiones/actividades (recibe array de sesion_ids o array de actividades)
-// En server.js, reemplaza el endpoint de PDF con este:
-
+// Reemplaza ESTA RUTA COMPLETA en server.js
 app.post('/api/historial/pdf', async (req, res) => {
-    console.log('---[HISTORIAL-INSPECTOR] Solicitud para generar PDF de historial recibida ---');
-    try {
-        const { sesion_ids, mvzNombre } = req.body || {};
-        if (!Array.isArray(sesion_ids) || sesion_ids.length === 0) {
-            console.error('[HISTORIAL-INSPECTOR] Error: No se recibieron IDs de sesión.');
-            return res.status(400).json({ message: 'Parámetros inválidos.' });
-        }
-        console.log('[HISTORIAL-INSPECTOR] Buscando actividades para las sesiones:', sesion_ids);
-
-        const { data: actividades, error } = await supabase
-            .from('actividades')
-            .select('*')
-            .in('sesion_id', sesion_ids)
-            .order('fecha_actividad', { ascending: false });
-
-        if (error) {
-            console.error('[HISTORIAL-INSPECTOR] ¡Error de Supabase al buscar actividades!', error);
-            throw error;
-        }
-        if (!actividades || !actividades.length) {
-            console.warn('[HISTORIAL-INSPECTOR] No se encontraron actividades para estas sesiones.');
-            return res.status(404).json({ message: 'No se encontraron actividades.' });
-        }
-        console.log(`[HISTORIAL-INSPECTOR] Se encontraron ${actividades.length} actividades. Iniciando creación de PDF.`);
-
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename="reporte_historial_${Date.now()}.pdf"`);
-        
-        const doc = new PDFDocument({ size: 'LETTER', margin: 40 });
-        doc.pipe(res);
-    // --- CORRECCIÓN DEL LOGO ---
-    try {
-    const logoPath = path.join(__dirname, 'public', 'assets', 'logo.png');
-    const logoBuffer = fs.readFileSync(logoPath);
-    doc.image(logoBuffer, 40, 25, { width: 90 });
-} catch (logoErr) {
-    console.warn('ADVERTENCIA: No se pudo cargar el logo para el PDF.', logoErr.message);
-}
-    
-    doc.fontSize(16).font('Helvetica-Bold').text('JFB Ganadería Inteligente', { align: 'right' });
-    doc.fontSize(10).font('Helvetica')
-      .text(`Médico Veterinario: ${mvzNombre || '-'}`, { align: 'right' });
-    doc.moveDown(2);
-    
-    const yBarra = doc.y;
-    const tituloActividad = (actividades[0]?.tipo_actividad || 'Actividades').toUpperCase();
-    doc.rect(40, yBarra, doc.page.width - 80, 20).fill('#001F3D');
-    doc.fillColor('white').font('Helvetica-Bold').fontSize(12).text(`REPORTE DE ${tituloActividad}`, 40, yBarra + 4, { align: 'center' });
-    doc.fillColor('black').moveDown(2);
-
-   // --- DIBUJAR ENCABEZADOS (CENTRADOS) ---
-    const headerY = doc.y;
-    doc.font('Helvetica-Bold');
-    doc.text('Arete', columnX.arete, headerY, { width: columnWidths.arete, align: 'center' }); // Centrado
-    doc.text('Raza', columnX.raza, headerY, { width: columnWidths.raza, align: 'center' }); // Centrado
-    doc.text('Lote', columnX.lote, headerY, { width: columnWidths.lote, align: 'center' }); // Centrado
-    doc.text('Fecha', columnX.fecha, headerY, { width: columnWidths.fecha, align: 'center' }); // Centrado
-    doc.text('Detalles', columnX.detalles, headerY, { width: columnWidths.detalles, align: 'center' }); // Centrado
-    doc.moveDown(0.5);
-    // ----------------------------------------
-
-    // Dibuja la línea DEBAJO de los encabezados (un poco más gruesa)
-    doc.moveTo(columnStartX, doc.y).lineTo(pageEndX, doc.y).strokeColor('black').lineWidth(1).stroke(); // Línea más gruesa
-    doc.moveDown(0.5);
-
-// --- DEFINIR POSICIONES Y ANCHOS DE COLUMNAS ---
-    const columnStartX = 40; // Margen izquierdo
-    const columnX = {
-        arete: columnStartX,
-        raza: columnStartX + 75,  // Ancho Arete + pequeño espacio
-        lote: columnStartX + 75 + 85, // Ancho Raza + espacio
-        fecha: columnStartX + 75 + 85 + 45, // Ancho Lote + espacio
-        detalles: columnStartX + 75 + 85 + 45 + 85 // Ancho Fecha + espacio
-    };
-    const columnWidths = {
-        arete: 70,
-        raza: 80,
-        lote: 40,
-        fecha: 80,
-        detalles: doc.page.width - columnX.detalles - columnStartX // Ancho restante hasta el margen derecho
-    };
-    // ----------------------------------------------
-
-    doc.font('Helvetica');
-let currentY = doc.y; // Posición Y inicial para la primera fila
-
-    // --- CORRECCIÓN --- 
-    // Itera sobre la variable 'actividades' que contiene los datos del historial
-    actividades.forEach((item, index) => { // <-- CAMBIADO a 'actividades' y añadido 'index'
-        // Calcula dónde empezar a dibujar esta fila
-        const rowY = currentY; 
-        
-        // Dibuja la fila y obtén su altura calculada
-        const rowHeight = drawTableRow(doc, rowY, item, columnX, columnWidths);
-
-        // Calcula la posición Y para la siguiente fila
-        currentY = rowY + rowHeight + 10; // Añade un padding vertical (10 puntos)
-
-        // Línea separadora al final de la fila
-        doc.strokeColor('#cccccc').lineWidth(1)
-           .moveTo(columnStartX, currentY - 5) 
-           .lineTo(pageEndX, currentY - 5)
-           .stroke();
-        
-        // Manejo de Salto de Página (Ahora usa 'index' y 'actividades.length')
-        if (currentY + 30 > doc.page.height - doc.page.margins.bottom && index < actividades.length - 1) { // <-- CAMBIADO
-             doc.addPage();
-             currentY = doc.page.margins.top; 
-             // Opcional: Redibujar encabezados
+    console.log('---[HISTORIAL-INSPECTOR] Solicitud PDF historial recibida ---');
+    try {
+        const { sesion_ids, mvzNombre } = req.body || {};
+        if (!Array.isArray(sesion_ids) || sesion_ids.length === 0) {
+            return res.status(400).json({ message: 'Parámetros inválidos.' });
         }
-    }); // Fin del forEach corregido
+        console.log('[HISTORIAL-INSPECTOR] Buscando acts para sesiones:', sesion_ids);
 
-     console.log('[HISTORIAL-INSPECTOR] PDF de historial creado y enviado correctamente.');
-        doc.end();
+        const { data: actividades, error } = await supabase
+            .from('actividades')
+            .select('*') // Selecciona todo para tener 'descripcion', 'extra_data', 'fecha_actividad', etc.
+            .in('sesion_id', sesion_ids)
+            .order('fecha_actividad', { ascending: false }); // Ordena por fecha
 
-    } catch (err) {
-        console.error('---[HISTORIAL-INSPECTOR] ¡CRASH! El proceso falló. Causa del error: ---');
-        console.error(err);
-        // Evitamos enviar una respuesta de error si el PDF ya empezó a enviarse
-        if (!res.headersSent) {
-            res.status(500).json({ message: 'Hubo un error inesperado al generar el reporte.' });
+        if (error) throw error;
+        if (!actividades || !actividades.length) {
+            return res.status(404).json({ message: 'No se encontraron actividades.' });
+        }
+        console.log(`[HISTORIAL-INSPECTOR] ${actividades.length} acts encontradas. Creando PDF.`);
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="reporte_historial_${Date.now()}.pdf"`);
+        
+        const doc = new PDFDocument({ size: 'LETTER', margin: 40 });
+        doc.pipe(res);
+        
+        // --- Dibuja Logo y Encabezado General ---
+        try {
+            const logoPath = path.join(__dirname, 'public', 'assets', 'logo.png');
+            // Usamos readFileSync para asegurar que esté listo antes de continuar
+            const logoBuffer = fs.readFileSync(logoPath); 
+            doc.image(logoBuffer, 40, 25, { width: 90 });
+        } catch (logoErr) {
+            console.warn('ADVERTENCIA: No se pudo cargar el logo para el PDF.', logoErr.message);
         }
-    }
+    
+        doc.fontSize(16).font('Helvetica-Bold').text('JFB Ganadería Inteligente', { align: 'right' });
+        doc.fontSize(10).font('Helvetica')
+           .text(`Médico Veterinario: ${mvzNombre || '-'}`, { align: 'right' });
+        doc.moveDown(2);
+    
+        // --- Dibuja Título del Reporte (ej. REPORTE DE PALPACIÓN) ---
+        // (Usa el tipo de la primera actividad como título general)
+        const yBarra = doc.y;
+        const tituloActividad = (actividades[0]?.tipo_actividad || 'Actividades').toUpperCase();
+        doc.rect(40, yBarra, doc.page.width - 80, 20).fill('#001F3D');
+        doc.fillColor('white').font('Helvetica-Bold').fontSize(12).text(`REPORTE DE ${tituloActividad}`, 40, yBarra + 4, { align: 'center' });
+        doc.fillColor('black').moveDown(2);
+
+        // ==========================================================
+        // ¡ORDEN CORRECTO! Definir Columnas ANTES de usarlas
+        // ==========================================================
+        const columnStartX = 40; 
+        const pageEndX = doc.page.width - 40; 
+        const columnX = {
+            arete: columnStartX,
+            raza: columnStartX + 95,      
+            lote: columnStartX + 95 + 105, 
+            fecha: columnStartX + 95 + 105 + 65, 
+            detalles: columnStartX + 95 + 105 + 65 + 95 
+        };
+        const columnWidths = {
+            arete: 90,                  
+            raza: 100,                 
+            lote: 50,                   
+            fecha: 90,                  
+            detalles: pageEndX - columnX.detalles 
+        };
+        // ==========================================================
+
+        // --- Dibuja Encabezados de la Tabla (Centrados) ---
+        const headerY = doc.y;
+        doc.font('Helvetica-Bold');
+        doc.text('Arete', columnX.arete, headerY, { width: columnWidths.arete, align: 'center' });
+        doc.text('Raza', columnX.raza, headerY, { width: columnWidths.raza, align: 'center' });
+        doc.text('Lote', columnX.lote, headerY, { width: columnWidths.lote, align: 'center' });
+        doc.text('Fecha', columnX.fecha, headerY, { width: columnWidths.fecha, align: 'center' });
+        doc.text('Detalles', columnX.detalles, headerY, { width: columnWidths.detalles, align: 'center' });
+        doc.moveDown(0.5); 
+        // Línea debajo de encabezados
+        doc.moveTo(columnStartX, doc.y).lineTo(pageEndX, doc.y).strokeColor('black').lineWidth(1).stroke(); 
+        doc.moveDown(0.5); 
+        // ---------------------------------------------------
+
+        // --- Dibuja Filas de Datos ---
+        doc.font('Helvetica'); // Cambia a fuente normal para los datos
+        let currentY = doc.y; // Posición Y inicial para la primera fila
+
+        actividades.forEach((item, index) => { // Itera sobre 'actividades'
+            const rowY = currentY; 
+            const rowHeight = drawTableRow(doc, rowY, item, columnX, columnWidths); // Llama al helper
+            currentY = rowY + rowHeight + 10; // Calcula Y para la siguiente
+
+            // Línea separadora (más gruesa)
+            doc.strokeColor('#cccccc').lineWidth(1) 
+               .moveTo(columnStartX, currentY - 5)
+               .lineTo(pageEndX, currentY - 5) 
+               .stroke();
+            
+            // Salto de página
+            if (currentY + 30 > doc.page.height - doc.page.margins.bottom && index < actividades.length - 1) { 
+                 doc.addPage();
+                 currentY = doc.page.margins.top;
+                 // Opcional: Redibujar encabezados aquí si quieres que aparezcan en cada página nueva
+            }
+        }); // Fin del forEach
+        // -----------------------------
+
+        console.log('[HISTORIAL-INSPECTOR] PDF historial creado y enviado.');
+        doc.end(); // Finaliza el documento PDF y lo envía
+
+    } catch (err) {
+        console.error('---[HISTORIAL-INSPECTOR] ¡CRASH! Error:', err);
+        if (!res.headersSent) { // Solo envía error si no se ha empezado a enviar el PDF
+            res.status(500).json({ message: 'Error inesperado al generar reporte.' });
+        }
+    }
 });
 
 app.get('/api/eventos/mvz/:mvzId', async (req, res) => {
