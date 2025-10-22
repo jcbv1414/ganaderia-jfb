@@ -93,6 +93,28 @@
         color: white;
     }
 
+/* --- Estilizar Scrollbar Horizontal para Estado de Lotes --- */
+#lotes-container-scroll::-webkit-scrollbar {
+  height: 6px; /* Altura de la barra (hazla más delgada) */
+}
+
+#lotes-container-scroll::-webkit-scrollbar-track {
+  background: #e0e0e0; /* Color del 'riel' (fondo de la barra) */
+  border-radius: 3px; /* Bordes redondeados para el riel */
+}
+
+#lotes-container-scroll::-webkit-scrollbar-thumb {
+  background-color: #cccccc; /* Color del 'pulgar' (la parte que se mueve) */
+  border-radius: 3px; /* Bordes redondeados para el pulgar */
+  border: 1px solid #e0e0e0; /* Opcional: Borde del mismo color que el riel */
+}
+
+/* Para Firefox (estilo más simple) */
+#lotes-container-scroll {
+  scrollbar-width: thin; /* Hace la barra más delgada */
+  scrollbar-color: #cccccc #e0e0e0; /* Color del pulgar y del riel */
+}
+/* --- Fin Estilizar Scrollbar --- */
 </style>
 </head>
           <head>
