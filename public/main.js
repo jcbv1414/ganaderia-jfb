@@ -1478,117 +1478,85 @@ async function handleFinalizarYReportar() {
     }
 }
 
-// --- REEMPLAZA TU renderizarHistorialMVZ CON ESTA VERSIÓN ---
+// ✅ REEMPLAZA TU renderizarHistorialMVZ CON ESTE BLOQUE (VERSIÓN RPC LIMPIA) ✅
 async function renderizarHistorialMVZ() {
-  const historialContainer = document.getElementById('historial-actividades-mvz');
-  if (!historialContainer) return;
-  historialContainer.innerHTML = '<p class="text-gray-500 text-center">Cargando historial...</p>';
+    const historialContainer = document.getElementById('historial-actividades-mvz');
+    if (!historialContainer) return;
+    historialContainer.innerHTML = '<p class="text-gray-500 text-center">Cargando historial...</p>';
 
-  try {
-    // 1. Trae todas las actividades del MVZ (sin agrupar)
-    const { data: actividades, error: fetchError } = await sb
-      .from('actividades')
-      .select('*')
-      .eq('id_usuario', currentUser.id) // Cambiado de mvz_id a id_usuario
-      // .eq('estado', 'finalizada') // 🚨 ELIMINAMOS ESTA LÍNEA (no tienes columna estado)
-      .order('created_at', { ascending: false });
+    try {
+        // 1. USA LA FUNCIÓN DE TU BASE DE DATOS (RPC)
+        const { data: sesiones, error } = await sb
+            .rpc('get_sesiones_actividad_mvz', { mvz_id: currentUser.id }); 
+            
+        if (error) throw error;
 
-    if (fetchError) throw fetchError;
-
-    if (!actividades || actividades.length === 0) {
-      historialContainer.innerHTML = '<div class="bg-white p-4 rounded-xl text-center text-gray-500"><p>No hay reportes recientes.</p></div>';
-      return;
-    }
-
-    // 2. Agrupa por sesion_id en el cliente (JavaScript)
-    const sesionesMap = new Map();
-    actividades.forEach(act => {
-      // Usamos sesion_id y extra_data de tu tabla
-      const sesionId = act.sesion_id; 
-      if (!sesionId) return; // Ignora actividades sin sesión (si las hubiera)
-
-      if (!sesionesMap.has(sesionId)) {
-        sesionesMap.set(sesionId, {
-          sesion_id: sesionId,
-          tipo_actividad: act.tipo_actividad || 'Actividad',
-          rancho_nombre: act.extra_data?.rancho_nombre || 'Rancho desconocido',
-          conteo: 0,
-          fecha: act.fecha_actividad || act.created_at, // Usa fecha_actividad primero
-          pdf_path: act.extra_data?.pdf_path || null // Busca en extra_data si guardas la ruta del PDF
-        });
-      }
-      const s = sesionesMap.get(sesionId);
-      s.conteo = s.conteo + 1;
-    });
-
-    const sesiones = Array.from(sesionesMap.values());
-    // Ordenamos las sesiones por fecha (la más nueva primero)
-    sesiones.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
-
-    // 3. Renderizar el HTML
-    historialContainer.innerHTML = sesiones.map(sesion => {
-      let fechaText = 'Fecha desconocida';
-      if (sesion.fecha) {
-        // Usamos el parseo de fecha que ya teníamos (más robusto)
-        const fechaObj = new Date(sesion.fecha + 'T00:00:00Z'); 
-        fechaText = fechaObj.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', timeZone: 'UTC' });
-      }
-
-      return `
-        <div class="bg-white p-3 rounded-xl shadow-sm flex items-center justify-between mb-3">
-          <div class="flex items-center flex-1 min-w-0">
-            <input type="checkbox" data-sesion-id="${sesion.sesion_id}" class="h-5 w-5 rounded border-gray-300 mr-4 sesion-checkbox">
-            <div class="min-w-0">
-              <p class="font-bold text-gray-800 truncate">${escapeHtml(sesion.tipo_actividad)} en <em>${escapeHtml(sesion.rancho_nombre)}</em></p>
-              <p class="text-sm text-gray-500">${sesion.conteo} animales · ${fechaText}</p>
-            </div>
-          </div>
-
-          <div class="flex items-center gap-2 ml-2">
-                        <button data-sesion-id="${sesion.sesion_id}" class="btn-descargar-sesion px-2 py-1 border rounded text-sm bg-white hover:bg-gray-50 hidden" title="Descargar PDF">
-              <i class="fa-solid fa-download"></i>
-            </button>
-            <button data-sesion-id="${sesion.sesion_id}" class="btn-eliminar-sesion px-2 py-1 border rounded text-sm text-red-500 hover:bg-red-50" title="Eliminar sesión">
-              <i class="fa-solid fa-trash-can"></i>
-            </button>
-          </div>
-        </div>
-      `;
-    }).join('');
-
-    // 4. Conectar listeners de Borrado
-    const botonesEliminar = historialContainer.querySelectorAll('.btn-eliminar-sesion');
-    botonesEliminar.forEach(button => {
-      button.addEventListener('click', async (e) => {
-        const sesionId = e.currentTarget.dataset.sesionId;
-        if (!sesionId) return;
-        if (!confirm('¿Estás seguro de que quieres eliminar esta sesión y todas sus actividades?')) return;
-        try {
-          // Borra las actividades con esa sesion_id (ya teníamos la política RLS DELETE)
-          const { error: deleteError } = await sb
-            .from('actividades')
-            .delete()
-            .eq('sesion_id', sesionId);
-
-          if (deleteError) throw deleteError;
-
-          // Refrescar lista
-          await renderizarHistorialMVZ();
-          showToast('Sesión eliminada');
-        } catch (err) {
-          console.error('Error al eliminar sesión:', err);
-          alert(err.message || 'Error al eliminar la sesión.');
+        // 2. MANEJA SI NO HAY REPORTES
+        if (!sesiones || sesiones.length === 0) {
+            historialContainer.innerHTML = '<div class="bg-white p-4 rounded-xl text-center text-gray-500"><p>No hay reportes recientes.</p></div>';
+            return;
         }
-      });
-    });
-    
-    // 5. Conectar listeners de Descarga (POR AHORA DESHABILITADO)
-   // (El botón "Generar PDF de Seleccionados" ya está migrado y debería funcionar)
+        
+        // 3. DIBUJA LA LISTA (AGRUPADA)
+        // (Usamos las clases de Tailwind que SÍ están en tu HTML estático y en tu <style>)
+        historialContainer.innerHTML = sesiones.map(sesion => {
+            // Arregla el "Invalid Date"
+            const fechaObj = new Date(sesion.fecha_date + 'T00:00:00Z'); 
+            const fecha = fechaObj.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', timeZone: 'UTC' });
+            
+            return `
+            <div class="bg-white p-3 rounded-xl shadow-sm flex items-center justify-between mb-3">
+                <div class="flex items-center flex-1 min-w-0">
+                    <input type="checkbox" data-sesion-id="${sesion.sesion_id}" class="h-5 w-5 rounded border-gray-300 mr-4 sesion-checkbox">
+                    <div class="min-w-0">
+                        <p class="font-bold text-gray-800 truncate">${sesion.tipo_actividad} en <em>${sesion.rancho_nombre}</em></p>
+                        <p class="text-sm text-gray-500">${sesion.conteo} animales - ${fecha}</p>
+                    </div>
+                </div>
+                <button data-sesion-id="${sesion.sesion_id}" class="btn-eliminar-sesion text-red-400 hover:text-red-600 px-2">
+                    <i class="fa-solid fa-trash-can text-xl"></i>
+                </button>
+            </div>
+            `;
+        }).join('');
+        
+        // 4. CONECTAR BOTONES DE ELIMINAR (MIGRADO A SUPABASE)
+        const botonesEliminar = historialContainer.querySelectorAll('.btn-eliminar-sesion');
 
-  } catch (error) {
-    console.error("Error al cargar historial MVZ:", error);
-    historialContainer.innerHTML = `<p class="text-red-500 text-center">Error al cargar historial: ${escapeHtml(error.message || String(error))}</p>`;
-Sintaxis   }
+        botonesEliminar.forEach(button => {
+            const clickListener = async (e) => {
+                button.removeEventListener('click', clickListener); 
+                
+                const sesionId = e.currentTarget.dataset.sesionId;
+
+               if (!confirm('¿Estás seguro de que quieres eliminar esta sesión?')) {
+                     button.addEventListener('click', clickListener); 
+                     return; 
+                }
+                
+                try {
+                    const { error: deleteError } = await sb
+                        .from('actividades')
+                        .delete()
+                        .eq('sesion_id', sesionId);
+                    
+                    if (deleteError) throw deleteError;
+sintaxis.                     
+                    renderizarHistorialMVZ(); // Recarga la lista
+             } catch (error) {
+                 console.error("DEBUG: Error al eliminar sesión:", error); 
+                   alert(error.message || 'Error al eliminar la sesión.');
+                    button.addEventListener('click', clickListener); 
+                }
+            };
+            
+            button.addEventListener('click', clickListener);
+        });
+
+    } catch (error) {
+        console.error("Error al cargar historial MVZ:", error);
+        historialContainer.innerHTML = `<p class="text-red-500 text-center">Error al cargar historial: ${error.message}</p>`;
+    }
 }
 
 // pequeño helper para escapar HTML en textos dinámicos
