@@ -366,11 +366,13 @@ app.post('/api/actividades', async (req, res) => {
       console.warn('Advertencia: No se pudo cargar el logo para el PDF.', logoErr.message);
     }
 
-    doc.fontSize(16).font('Helvetica-Bold').text('JFB Ganadería Inteligente', { align: 'right' });
-    doc.fontSize(10).font('Helvetica')
-      .text(`Rancho: ${ranchoNombre || 'Independiente'}`, { align: 'right' })
-      .text(`Médico Veterinario: ${mvzNombre || '-'}`, { align: 'right' });
-    doc.moveDown(1.5);
+doc.fontSize(16).font('Helvetica-Bold').text('JFB Ganadería Inteligente', { align: 'right' });
+doc.fontSize(10).font('Helvetica')
+   .text(`Médico Veterinario: ${mvzNombre || '-'}`, { align: 'right' })
+   // --- LÍNEA AÑADIDA ---
+   .text(`Rancho: ${ranchoNombre || 'Independiente'}`, { align: 'right' })
+   // --- FIN LÍNEA AÑADIDA ---
+doc.moveDown(2); // Dejamos el moveDown después
     
     const yBarra = doc.y;
     const tituloActividad = (loteActividad[0]?.tipoLabel || 'Actividades').toUpperCase();
@@ -571,15 +573,18 @@ app.post('/api/historial/pdf', async (req, res) => {
             const logoPath = path.join(__dirname, 'public', 'assets', 'logo.png');
             // Usamos readFileSync para asegurar que esté listo antes de continuar
             const logoBuffer = fs.readFileSync(logoPath); 
-            doc.image(logoBuffer, 40, 25, { width: 90 });
+            doc.image(logoBuffer, 40, 20, { width: 90 });
         } catch (logoErr) {
             console.warn('ADVERTENCIA: No se pudo cargar el logo para el PDF.', logoErr.message);
         }
     
         doc.fontSize(16).font('Helvetica-Bold').text('JFB Ganadería Inteligente', { align: 'right' });
-        doc.fontSize(10).font('Helvetica')
-           .text(`Médico Veterinario: ${mvzNombre || '-'}`, { align: 'right' });
-        doc.moveDown(2);
+doc.fontSize(10).font('Helvetica')
+   .text(`Médico Veterinario: ${mvzNombre || '-'}`, { align: 'right' })
+   // --- LÍNEA AÑADIDA ---
+   .text(`Rancho: ${ranchoNombre || 'Independiente'}`, { align: 'right' })
+   // --- FIN LÍNEA AÑADIDA ---
+doc.moveDown(2); // Dejamos el moveDown después
     
         // --- Dibuja Título del Reporte (ej. REPORTE DE PALPACIÓN) ---
         // (Usa el tipo de la primera actividad como título general)
