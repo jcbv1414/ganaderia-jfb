@@ -42,6 +42,46 @@ function handleServerError(res, err, code = 500) {
   if (res.headersSent) return;
   res.status(code).json({ success: false, message: err.message || 'Error del servidor' });
 }
+// ================== HELPER PARA DIBUJAR FILA EN PDF ==================
+function drawTableRow(doc, y, item, columnX, columnWidths) {
+    // Extraer datos del item (ajusta según venga de /api/actividades o /api/historial/pdf)
+    const arete = item.extra_data?.arete || item.areteVaca || '-';
+    const raza = item.extra_data?.raza || item.raza || 'N/A';
+    const lote = item.extra_data?.lote || item.loteNumero || 'N/A';
+    
+    // Formatear Fecha (asegurando que venga como YYYY-MM-DD)
+    const rawDate = item.fecha_actividad || item.fecha; 
+    const fecha = formatDate(rawDate); // Usa tu helper formatDate
+
+    // Formatear Detalles (asegurando que sea un objeto)
+    let detallesObj = item.descripcion || {};
+    if (typeof detallesObj === 'string') {
+        try { detallesObj = JSON.parse(detallesObj); } catch (e) { detallesObj = { 'Obs': detallesObj }; }
+    }
+    const detallesFiltrados = Object.entries(detallesObj)
+        .filter(([k, v]) => v && v !== 'No' && v !== '' && k !== 'raza') // Evita detalles vacíos o 'No' y la raza duplicada
+        .map(([k, v]) => `${prettyLabel(k)}: ${v}`)
+        .join('; ');
+
+    // --- DIBUJAR CADA CELDA EN SU POSICIÓN X ---
+    doc.text(arete, columnX.arete, y, { width: columnWidths.arete });
+    doc.text(raza, columnX.raza, y, { width: columnWidths.raza });
+    doc.text(String(lote), columnX.lote, y, { width: columnWidths.lote, align: 'center' }); // Asegura que lote sea string
+    doc.text(fecha, columnX.fecha, y, { width: columnWidths.fecha });
+    doc.text(detallesFiltrados || '-', columnX.detalles, y, { width: columnWidths.detalles });
+
+    // --- CALCULAR ALTURA MÁXIMA DE LA FILA ---
+    // Medimos la altura que ocupará cada texto en su respectiva celda
+    const areteHeight = doc.heightOfString(arete, { width: columnWidths.arete });
+    const razaHeight = doc.heightOfString(raza, { width: columnWidths.raza });
+    const loteHeight = doc.heightOfString(String(lote), { width: columnWidths.lote });
+    const fechaHeight = doc.heightOfString(fecha, { width: columnWidths.fecha });
+    const detallesHeight = doc.heightOfString(detallesFiltrados || '-', { width: columnWidths.detalles });
+
+    // La altura de la fila es la mayor de todas las alturas calculadas
+    return Math.max(areteHeight, razaHeight, loteHeight, fechaHeight, detallesHeight);
+}
+// =====================================================================
 
 // ================== ENDPOINT: REGISTER ==================
 app.post('/api/register', async (req, res) => {
@@ -332,20 +372,53 @@ app.post('/api/actividades', async (req, res) => {
     doc.moveDown(0.5);
 
     doc.font('Helvetica');
-    loteActividad.forEach(item => {
-        const detallesFiltrados = Object.entries(item.detalles || {}).filter(([k,v])=>v&&v!=='No'&&v!=='').map(([k,v])=>`${prettyLabel(k)}: ${v}`).join('; ');
-        const y = doc.y;
-        // ... (resto de la lógica para dibujar la tabla, que es igual a la que ya te había dado)
-        doc.text(item.areteVaca, 40, y, { width: 70 });
-        doc.text(item.raza || '-', 110, y, { width: 80 });
-        doc.text(item.loteNumero, 190, y, { width: 40, align: 'center' });
-        doc.text(formatDate(item.fecha), 230, y, { width: 80 });
-        doc.text(detallesFiltrados || 'Sin detalles', 310, y, { width: 260 });
-        doc.y += Math.max(doc.heightOfString(item.raza || '-', {width:80}), doc.heightOfString(detallesFiltrados || '-', {width:260})) + 5;
-        doc.moveTo(40, doc.y).lineTo(doc.page.width - 40, doc.y).strokeColor('#cccccc').stroke();
-        doc.moveDown(0.5);
-    });
+    // --- DEFINIR POSICIONES Y ANCHOS DE COLUMNAS ---
+    const columnStartX = 40; // Margen izquierdo
+    const columnX = {
+        arete: columnStartX,
+        raza: columnStartX + 75,  // Ancho Arete + pequeño espacio
+        lote: columnStartX + 75 + 85, // Ancho Raza + espacio
+        fecha: columnStartX + 75 + 85 + 45, // Ancho Lote + espacio
+        detalles: columnStartX + 75 + 85 + 45 + 85 // Ancho Fecha + espacio
+    };
+    const columnWidths = {
+        arete: 70,
+        raza: 80,
+        lote: 40,
+        fecha: 80,
+        detalles: doc.page.width - columnX.detalles - columnStartX // Ancho restante hasta el margen derecho
+    };
+    // ----------------------------------------------
 
+    doc.font('Helvetica');
+    let currentY = doc.y; // Posición Y inicial para la primera fila
+
+    loteActividad.forEach(item => {
+        // Calcula dónde empezar a dibujar esta fila
+        const rowY = currentY; 
+        
+        // Dibuja la fila y obtén su altura calculada
+        // ¡Llama a la función auxiliar que definimos en Paso 1!
+        const rowHeight = drawTableRow(doc, rowY, item, columnX, columnWidths);
+
+        // Calcula la posición Y para la siguiente fila
+        currentY = rowY + rowHeight + 10; // Añade un padding vertical (10 puntos)
+
+        // Línea separadora al final de la fila
+        doc.strokeColor('#cccccc').lineWidth(0.5)
+           .moveTo(columnStartX, currentY - 5) // Dibuja la línea un poco antes del inicio de la siguiente fila
+           .lineTo(doc.page.width - columnStartX, currentY - 5)
+           .stroke();
+        
+        // Manejo de Salto de Página (si la siguiente fila no cabe)
+        if (currentY + 30 > doc.page.height - doc.page.margins.bottom) { // Estimamos 30 puntos para una fila mínima
+             doc.addPage();
+             currentY = doc.page.margins.top; // Resetea Y al margen superior de la nueva página
+             // Opcional: Redibujar encabezados en la nueva página si lo deseas
+             // drawTableHeaders(doc, currentY, columnX, columnWidths);
+             // currentY = doc.y + 5; 
+        }
+    });
      console.log('[INSPECTOR] PDF creado y enviado. ¡Proceso completado con éxito!');
         doc.end();
 
@@ -507,62 +580,52 @@ app.post('/api/historial/pdf', async (req, res) => {
     doc.moveDown(0.5);
 
     doc.font('Helvetica');
- actividades.forEach((item, index) => {
-    const arete = item.extra_data?.arete || item.areteVaca || '-';
-    const raza = item.extra_data?.raza || 'N/A';
-    const lote = item.extra_data?.lote || 'N/A';
-    const tipoLabel = item.tipoLabel || item.tipo || 'Actividad';
+// --- DEFINIR POSICIONES Y ANCHOS DE COLUMNAS ---
+    const columnStartX = 40; // Margen izquierdo
+    const columnX = {
+        arete: columnStartX,
+        raza: columnStartX + 75,  // Ancho Arete + pequeño espacio
+        lote: columnStartX + 75 + 85, // Ancho Raza + espacio
+        fecha: columnStartX + 75 + 85 + 45, // Ancho Lote + espacio
+        detalles: columnStartX + 75 + 85 + 45 + 85 // Ancho Fecha + espacio
+    };
+    const columnWidths = {
+        arete: 70,
+        raza: 80,
+        lote: 40,
+        fecha: 80,
+        detalles: doc.page.width - columnX.detalles - columnStartX // Ancho restante hasta el margen derecho
+    };
+    // ----------------------------------------------
 
-    // Asegurarse de que fecha_actividad tenga un valor antes de intentar formatearlo
-    const rawDate = item.fecha_actividad || item.fecha; // Usar fecha o fecha_actividad
-    const dateObj = rawDate ? new Date(rawDate + 'T00:00:00Z') : null; // Asumir UTC para evitar desfases
-    const fecha = dateObj ? dateObj.toLocaleDateString('es-MX', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'UTC' }) : 'Fecha desconocida';
+    doc.font('Helvetica');
+let currentY = doc.y; // Posición Y inicial para la primera fila
 
-    let detalles = item.descripcion || {};
-    if (typeof detalles === 'string') {
-        try {
-            detalles = JSON.parse(detalles);
-        } catch (e) {
-            detalles = { 'Observaciones': detalles };
-        }
-    }
-    // Filtramos "raza" nuevamente para asegurar que no aparezca en los detalles
-    const detallesFiltrados = Object.entries(detalles)
-        .filter(([key, value]) => value && value !== 'No' && value !== '' && key !== 'raza')
-        .map(([key, value]) => `${prettyLabel(key)}: ${value}`)
-        .join('; ');
+    // --- CORRECCIÓN --- 
+    // Itera sobre la variable 'actividades' que contiene los datos del historial
+    actividades.forEach((item, index) => { // <-- CAMBIADO a 'actividades' y añadido 'index'
+        // Calcula dónde empezar a dibujar esta fila
+        const rowY = currentY; 
+        
+        // Dibuja la fila y obtén su altura calculada
+        const rowHeight = drawTableRow(doc, rowY, item, columnX, columnWidths);
 
-    // Altura inicial para la fila
-    let currentY = doc.y;
+        // Calcula la posición Y para la siguiente fila
+        currentY = rowY + rowHeight + 10; // Añade un padding vertical (10 puntos)
 
-    // Tipo de Actividad como título de sección
-    doc.font('Helvetica-Bold').fontSize(12).text(`${tipoLabel} (Lote: ${lote})`, 50, currentY);
-    currentY = doc.y + 5; // Espacio después del título
-
-    // Detalles principales en dos columnas
-    doc.font('Helvetica').fontSize(10);
-    doc.text(`Arete: ${arete}`, 60, currentY, { width: 200 });
-    doc.text(`Raza: ${raza}`, 260, currentY, { width: 100 });
-    doc.text(`Fecha: ${fecha}`, 360, currentY, { width: 150 });
-    currentY = doc.y + 15; // Espacio después de la primera línea de detalles
-
-    // Detalles adicionales (la cadena "Estática: Sí; Ciclando: No;")
-    if (detallesFiltrados) {
-        doc.font('Helvetica-Oblique').fontSize(9).text(`Detalles: ${detallesFiltrados}`, 60, currentY, { width: 450 });
-        currentY = doc.y + 15;
-    }
-
-    // Línea separadora para la siguiente actividad
-    doc.strokeColor('#cccccc').lineWidth(0.5).moveTo(50, currentY).lineTo(550, currentY).stroke();
-    doc.moveDown(0.5); // Pequeño espacio después del separador
-
-    // Añadir una nueva página si no hay suficiente espacio para la siguiente actividad
-    if (doc.y + 60 > doc.page.height - doc.page.margins.bottom && index < actividades.length - 1) {
-        doc.addPage();
-        doc.text('Historial de Actividades (continuación)', 50, 50); // Título de continuación
-        doc.moveDown(0.5);
-    }
-});
+        // Línea separadora al final de la fila
+        doc.strokeColor('#cccccc').lineWidth(0.5)
+           .moveTo(columnStartX, currentY - 5) 
+           .lineTo(doc.page.width - columnStartX, currentY - 5)
+           .stroke();
+        
+        // Manejo de Salto de Página (Ahora usa 'index' y 'actividades.length')
+        if (currentY + 30 > doc.page.height - doc.page.margins.bottom && index < actividades.length - 1) { // <-- CAMBIADO
+             doc.addPage();
+             currentY = doc.page.margins.top; 
+             // Opcional: Redibujar encabezados
+        }
+    }); // Fin del forEach corregido
 
      console.log('[HISTORIAL-INSPECTOR] PDF de historial creado y enviado correctamente.');
         doc.end();
