@@ -98,7 +98,9 @@ console.log('Cliente de Supabase inicializado');
             renderizarVistaCalendario();
             } else if (viewId === 'ajustes-mvz') { // <-- ¡ESTA ES LA "PUERTA" QUE FALTABA!
     renderizarVistaAjustesMvz();
-        }
+        }else if (viewId === 'mis-ranchos-mvz') { 
+                renderizarVistaMisRanchosMVZ(); // Llama a la nueva función
+            }
     }
 
     function setupNavigation() {
@@ -824,7 +826,85 @@ async function renderizarVistaMisVacas() {
         console.error("Error completo en renderizarVistaMisVacas:", error);
         container.innerHTML = `<p class="text-center text-red-500 mt-8">Error al cargar el ganado: ${error.message}</p>`;
     }
-}   
+}  
+ // =================================================================
+// AÑADE ESTA NUEVA FUNCIÓN A main.js (Renderizar Vista Mis Ranchos MVZ)
+// =================================================================
+async function renderizarVistaMisRanchosMVZ() {
+    const container = document.getElementById('lista-ranchos-mvz-container');
+    if (!container) return;
+
+    container.innerHTML = '<p class="text-center text-gray-500 mt-8">Cargando ranchos...</p>';
+
+    // Obtener el ID del rancho fijado (si existe) desde localStorage
+    let pinnedRanchoId = null;
+    try {
+        const pinnedData = localStorage.getItem('pinnedRancho');
+        if (pinnedData) {
+            const pinnedRancho = JSON.parse(pinnedData);
+            pinnedRanchoId = pinnedRancho?.id; // Guardamos solo el ID
+        }
+    } catch (e) {
+        console.error("Error al leer rancho fijado:", e);
+        localStorage.removeItem('pinnedRancho'); // Limpia si está corrupto
+    }
+
+    try {
+        // 1. Consulta a Supabase para obtener los ranchos asociados al MVZ
+        const { data: permisos, error } = await sb
+            .from('rancho_mvz_permisos') // Desde la tabla de permisos
+            .select('ranchos (*)')      // Selecciona TODOS los datos del rancho relacionado (*)
+            .eq('mvz_id', currentUser.id); // Donde el mvz_id sea el del usuario actual
+
+        if (error) throw error; // Lanza error si la consulta falla
+
+        // 2. Extraer solo la lista de objetos 'ranchos'
+        //    (Filtra por si algún permiso no tiene rancho asociado)
+        const ranchos = (permisos || []).map(p => p.ranchos).filter(Boolean);
+
+        // 3. Renderizar la lista
+        if (ranchos.length === 0) {
+            container.innerHTML = `
+                <div class="bg-white p-6 rounded-xl text-center text-gray-500 shadow-sm">
+                    <p>Aún no tienes acceso a ningún rancho.</p>
+                    <p class="text-sm mt-2">Pídele al propietario el código de acceso de su rancho y valídalo en la pestaña 'Actividades'.</p>
+                </div>`;
+            return;
+        }
+
+        container.innerHTML = ranchos.map(rancho => {
+            const isPinned = rancho.id === pinnedRanchoId; // Comprueba si este rancho es el fijado
+
+            // Generar el HTML para cada tarjeta de rancho
+            return `
+            <div class="bg-white p-4 rounded-xl shadow-md flex items-center justify-between space-x-3">
+                <div class="flex items-center space-x-3 min-w-0">
+                    <div class="flex-shrink-0 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                        <i class="fa-solid fa-house-medical text-xl text-gray-500"></i> 
+                        </div>
+                    <div class="min-w-0">
+                        <p class="text-md font-semibold text-gray-800 truncate">${escapeHtml(rancho.nombre)}</p>
+                        <p class="text-xs text-gray-400">ID: ${rancho.id.substring(0, 8)}...</p> 
+                        </div>
+                </div>
+
+                <div class="flex-shrink-0">
+                    ${isPinned 
+                        ? '<i class="fa-solid fa-thumbtack text-xl text-blue-600" title="Rancho Fijado"></i>' 
+                        : '<i class="fa-solid fa-thumbtack text-xl text-gray-300" title="No fijado"></i>'
+                    }
+                </div>
+                
+                </div>
+            `;
+        }).join('');
+
+    } catch (error) {
+        console.error("Error al cargar la lista de ranchos MVZ:", error);
+        container.innerHTML = `<p class="text-center text-red-500 mt-8">Error al cargar los ranchos: ${error.message}</p>`;
+    }
+}
+// =====================================================================
 // =================================================================
 // FUNCIÓN DE AYUDA PARA HABILITAR/DESHABILITAR EL BOTÓN DE PDF
 // =================================================================
