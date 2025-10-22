@@ -232,10 +232,18 @@
 </template>
     
 <template id="template-mis-vacas">
-    <div class="p-5" style="background-color: #203a43;">
+   <div class="p-5" style="background-color: #203a43;">
         <header class="flex justify-between items-center">
             <h1 class="text-2xl font-bold text-white">Mi Ganado</h1>
-            <span id="total-vacas-header" class="bg-brand-green text-white text-base px-3 py-1 rounded-lg font-bold shadow-md">0</span>
+            
+            <div class="flex items-center space-x-3"> 
+                <span id="total-vacas-header" class="bg-brand-green text-white text-base px-3 py-1 rounded-lg font-bold shadow-md">0</span>
+                
+                <button onclick="navigateTo('importar-ganado')" title="Importar desde Excel" class="text-white bg-white/10 hover:bg-white/20 p-2 rounded-lg">
+                    <i class="fa-solid fa-file-import text-lg"></i> 
+                </button>
+                </div>
+
         </header>
     </div>
 
@@ -261,6 +269,56 @@
         <i class="fa-solid fa-plus"></i>
     </button>
 </template>  
+
+<template id="template-importar-ganado">
+    <div class="p-5">
+        <header class="flex items-center mb-6">
+            <button onclick="navigateTo('mis-vacas')" class="text-2xl mr-4 text-gray-600 hover:text-gray-800">
+                <i class="fa-solid fa-arrow-left"></i>
+            </button>
+            <h1 class="text-2xl font-bold text-gray-800">Importar Ganado desde Excel</h1>
+        </header>
+
+        <section class="bg-white p-4 rounded-xl shadow-md mb-6 space-y-3">
+            <h2 class="text-lg font-semibold text-gray-700">Pasos para importar:</h2>
+            <ol class="list-decimal list-inside text-sm text-gray-600 space-y-1">
+                <li>
+                    Descarga nuestra plantilla Excel.
+                    <a href="assets/plantilla_ganado.xlsx" download="plantilla_ganado.xlsx" class="text-blue-600 hover:underline font-medium ml-2">
+                        <i class="fa-solid fa-download mr-1"></i>Descargar Plantilla
+                    </a>
+                </li>
+                <li>Abre el archivo y copia/pega los datos de tu ganado en las columnas correspondientes. Asegúrate de seguir el formato indicado (especialmente para fechas).</li>
+                <li>Guarda tu archivo Excel ya llenado.</li>
+                <li>Selecciona tu archivo guardado usando el botón de abajo.</li>
+                <li>Haz clic en "Importar Ganado".</li>
+            </ol>
+            <p class="text-xs text-orange-600 bg-orange-50 p-2 rounded-md border border-orange-200">
+                <i class="fa-solid fa-triangle-exclamation mr-1"></i>
+                **Importante:** Solo se importarán animales nuevos. Si un Arete SINIIGA ya existe en tu rancho, esa fila será ignorada.
+            </p>
+        </section>
+
+        <section class="bg-white p-4 rounded-xl shadow-md">
+            <h2 class="text-lg font-semibold text-gray-700 mb-3">Subir Archivo</h2>
+            <div class="flex flex-col items-center space-y-4">
+                 <input type="file" id="input-archivo-excel" accept=".xlsx, .xls" class="hidden">
+                 
+                 <button id="btn-seleccionar-excel" class="w-full sm:w-auto bg-gray-100 text-gray-700 font-semibold py-3 px-6 rounded-lg border border-gray-300 hover:bg-gray-200 flex items-center justify-center space-x-2">
+                     <i class="fa-solid fa-file-excel text-xl text-green-700"></i>
+                     <span>Seleccionar Archivo Excel</span>
+                 </button>
+
+                 <p id="nombre-archivo-seleccionado" class="text-sm text-gray-500 h-5 text-center"></p> 
+
+                 <button id="btn-importar-ganado" disabled class="w-full sm:w-1/2 bg-brand-green text-white font-bold py-3 px-6 rounded-lg opacity-50 cursor-not-allowed">
+                     Importar Ganado
+                 </button>
+            </div>
+             <div id="importar-mensaje" class="mt-4 text-sm text-center h-auto min-h-[1.25rem]"></div> 
+        </section>
+    </div>
+</template>
 
     
     <!-- Mi MVZ -->
