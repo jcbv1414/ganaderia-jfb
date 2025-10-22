@@ -581,10 +581,7 @@ app.post('/api/historial/pdf', async (req, res) => {
         doc.fontSize(16).font('Helvetica-Bold').text('JFB Ganadería Inteligente', { align: 'right' });
 doc.fontSize(10).font('Helvetica')
    .text(`Médico Veterinario: ${mvzNombre || '-'}`, { align: 'right' })
-   // --- LÍNEA AÑADIDA ---
-   .text(`Rancho: ${ranchoNombre || 'Independiente'}`, { align: 'right' })
-   // --- FIN LÍNEA AÑADIDA ---
-doc.moveDown(2); // Dejamos el moveDown después
+  doc.moveDown(2); // Dejamos el moveDown después
     
         // --- Dibuja Título del Reporte (ej. REPORTE DE PALPACIÓN) ---
         // (Usa el tipo de la primera actividad como título general)
