@@ -1510,85 +1510,70 @@ async function handleFinalizarYReportar() {
 
 /*
  * =================================================================
- * PASO 1: REEMPLAZA ESTA FUNCIÓN (Historial MVZ)
+ * REEMPLAZA OTRA VEZ ESTA FUNCIÓN (Historial MVZ - Fecha Fix v3 FINAL)
  * =================================================================
- * Función para renderizar el historial de actividades del Veterinario (MVZ).
- * Obtiene las sesiones desde Supabase, las formatea y las muestra en el DOM.
- * CORREGIDO: Ahora maneja 'timestamp' (fecha y hora) en lugar de solo 'date'.
+ * Usa 'sesion.fecha' y la formatea correctamente.
  */
 async function renderizarHistorialMVZ() {
-    // 1. Obtener el contenedor del historial
     const historialContainer = document.getElementById('historial-actividades-mvz');
-    if (!historialContainer) {
-        // Si no estamos en la vista 'actividades-mvz', simplemente salimos.
-        return; 
-    }
+    if (!historialContainer) return; 
 
     historialContainer.innerHTML = '<p class="text-gray-500 text-center">Cargando historial...</p>';
 
     try {
-        // 2. Obtener los datos del usuario actual
         if (!currentUser || !currentUser.id) {
-            throw new Error("No se pudo identificar al usuario actual.");
+            throw new Error("No se pudo identificado al usuario actual.");
         }
 
-        // 3. Llamar a la función RPC de Supabase
         const { data: sesiones, error } = await sb
             .rpc('get_sesiones_actividad_mvz', { 
                 mvz_id: currentUser.id 
             });
 
         if (error) throw error;
-
-        // ============================================
-        // AÑADE ESTA LÍNEA PARA VER LOS DATOS CRUDOS
+        
+        // --- LÍNEA DE DEBUG AÑADIDA ---
         console.log("Datos crudos de sesiones:", sesiones); 
-        // ============================================
+        // --- FIN DE LÍNEA DE DEBUG ---
 
-        // 4. Manejar el caso de que no haya reportes
         if (!sesiones || sesiones.length === 0) {
             historialContainer.innerHTML = `
                 <div class="bg-white p-4 rounded-xl text-center text-gray-500">
                     <p>No hay reportes recientes.</p>
                 </div>
             `;
-            // Asegúrate de que el botón se actualice incluso si no hay reportes
             actualizarEstadoBotonPDF(); 
             return;
         }
 
-        // 5. Generar el HTML para cada sesión
         historialContainer.innerHTML = sesiones.map(sesion => {
             
-// --- INICIO DE LA CORRECCIÓN "Fecha Real v2" ---
+            // --- INICIO DE LA CORRECCIÓN "Fecha Real v3" ---
             let fechaFormateada = 'Sin fecha';
             
-            // Intentamos asumir que 'sesion.fecha_date' es YYYY-MM-DD
-            if (sesion.fecha_date) { 
-                // Forzamos la interpretación como UTC para evitar problemas de zona horaria
-                const fechaObj = new Date(sesion.fecha_date + 'T00:00:00Z'); 
+            // Usamos 'sesion.fecha' que viene como 'YYYY-MM-DD'
+            if (sesion.fecha) { 
+                // Forzamos la interpretación como UTC
+                const fechaObj = new Date(sesion.fecha + 'T00:00:00Z'); 
                 
                 if (!isNaN(fechaObj.getTime())) { 
-                    // Formateamos solo la FECHA (sin hora por ahora)
                     fechaFormateada = fechaObj.toLocaleDateString('es-MX', {
                         day: 'numeric',
                         month: 'long',
                         year: 'numeric',
-                        timeZone: 'UTC' // Importante mantener UTC
+                        timeZone: 'UTC' 
                     });
                 } else {
-                     console.warn("Fecha inválida recibida:", sesion.fecha_date); // Ayuda a depurar
+                     console.warn("Fecha inválida recibida:", sesion.fecha); 
                 }
             }
             // --- FIN DE LA CORRECCIÓN ---
 
-            // Plantilla HTML para cada tarjeta de historial
+            // Usamos sesion.conteo y sesion.rancho_nombre que sí vienen bien
             return `
             <div class="bg-white p-3 rounded-xl shadow-sm flex items-center justify-between mb-3 w-full">
-                
                 <div class="flex items-center flex-1 min-w-0">
                     <input type="checkbox" data-sesion-id="${sesion.sesion_id}" class="h-5 w-5 rounded border-gray-300 mr-4 sesion-checkbox">
-                    
                     <div class="min-w-0">
                         <p class="font-bold text-gray-800 truncate">
                             ${sesion.tipo_actividad} en <em>${sesion.rancho_nombre}</em>
@@ -1598,7 +1583,6 @@ async function renderizarHistorialMVZ() {
                         </p>
                     </div>
                 </div>
-
                 <button data-sesion-id="${sesion.sesion_id}" class="btn-eliminar-sesion text-red-400 hover:text-red-600 px-2 ml-2 flex-shrink-0">
                     <i class="fa-solid fa-trash-can text-xl"></i>
                 </button>
@@ -1606,10 +1590,9 @@ async function renderizarHistorialMVZ() {
             `;
         }).join('');
 
-        // 6. Añadir funcionalidad a los botones de eliminar
+        // Conectar botones de eliminar (sin cambios)
         historialContainer.querySelectorAll('.btn-eliminar-sesion').forEach(button => {
-            
-            const clickListener = async (e) => {
+            const clickListener = async (e) => { 
                 button.removeEventListener('click', clickListener); 
                 const sesionId = e.currentTarget.dataset.sesionId;
 
@@ -1620,9 +1603,9 @@ async function renderizarHistorialMVZ() {
                 
                 try {
                     const { error: deleteError } = await sb
-                        .from('actividades')
+                        .from('actividades') // Tabla donde están los registros
                         .delete()
-                        .eq('sesion_id', sesionId);
+                        .eq('sesion_id', sesionId); // Filtra por el ID de la sesión a borrar
 
                     if (deleteError) throw deleteError;
                     
@@ -1633,13 +1616,11 @@ async function renderizarHistorialMVZ() {
                     alert(error.message || 'Error al eliminar la sesión.');
                     button.addEventListener('click', clickListener); 
                 }
-            };
-            
+             };
             button.addEventListener('click', clickListener);
         });
 
-        // 7. (LÍNEA IMPORTANTE)
-        // Actualiza el estado del botón PDF cada vez que la lista se renderiza
+        // Actualizar botón PDF (sin cambios)
         actualizarEstadoBotonPDF();
 
     } catch (error) {
