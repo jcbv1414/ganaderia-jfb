@@ -304,41 +304,38 @@ app.post('/api/vacas/importar/:ranchoId', upload.single('archivoGanado'), async 
                 continue; // Saltar esta fila
             }
 
-            // Validar/Formatear Fecha Nacimiento (AAAA-MM-DD)
+// --- INICIO REEMPLAZO BLOQUE DE FECHA ---
+            // Validar/Formatear Fecha Nacimiento (DD-MM-AAAA)
             let fechaNacimiento = null;
             if (nacimientoRaw) {
-                // xlsx a veces lee fechas como números (días desde 1900), intentamos convertir
+                // xlsx a veces lee fechas como números, intentamos convertir
                 if (typeof nacimientoRaw === 'number') {
                     try {
-                         // Corrección del origen de fecha de Excel (25569 días de diferencia con UNIX epoch)
                         const fechaJS = new Date((nacimientoRaw - 25569) * 86400 * 1000);
-                        fechaNacimiento = fechaJS.toISOString().slice(0, 10);
+                        fechaNacimiento = fechaJS.toISOString().slice(0, 10); // Guarda como AAAA-MM-DD
                     } catch (e) {
                          console.warn(`[IMPORTAR EXCEL] Fila ${numeroFilaExcel}: No se pudo convertir número de fecha ${nacimientoRaw}`);
-                         fechaNacimiento = null; // Ignorar si falla la conversión
+                         fechaNacimiento = null;
                     }
                 }
-                
                 // Si es string, valida el formato DD-MM-AAAA y lo convierte a AAAA-MM-DD
-            }else if (typeof nacimientoRaw === 'string') {
-                const fechaTrimmed = nacimientoRaw.trim();
-                const match = fechaTrimmed.match(/^(\d{2})-(\d{2})-(\d{4})$/); // Busca DD-MM-AAAA
+                else if (typeof nacimientoRaw === 'string') {
+                    const fechaTrimmed = nacimientoRaw.trim();
+                    const match = fechaTrimmed.match(/^(\d{2})-(\d{2})-(\d{4})$/); // Busca DD-MM-AAAA
 
-                if (match) {
-                    // Reordena los grupos capturados (día, mes, año) al formato AAAA-MM-DD
-                    const dia = match[1];
-                    const mes = match[2];
-                    const anio = match[3];
-                    fechaNacimiento = `${anio}-${mes}-${dia}`; // Convierte a AAAA-MM-DD para Supabase
-                    // Opcional: Validación extra (ej. que mes esté entre 01-12)
-                    // if (parseInt(mes, 10) < 1 || parseInt(mes, 10) > 12 || ...) { fechaNacimiento = null; /* error */ }
-                } else {
-                    console.warn(`[IMPORTAR EXCEL] Fila ${numeroFilaExcel}: Formato de fecha inválido '${nacimientoRaw}'. Se esperaba DD-MM-AAAA. Se ignorará.`);
-                    // Opcional: añadir error en lugar de solo ignorar
-                    // erroresFilas.push(`Fila ${numeroFilaExcel}: Formato fecha incorrecto (DD-MM-AAAA).`);
-                    // continue;
+                    if (match) {
+                        // Reordena los grupos capturados (día, mes, año) al formato AAAA-MM-DD
+                        const dia = match[1];
+                        const mes = match[2];
+                        const anio = match[3];
+                        fechaNacimiento = `${anio}-${mes}-${dia}`; // Convierte a AAAA-MM-DD para Supabase
+                    } else {
+                        console.warn(`[IMPORTAR EXCEL] Fila ${numeroFilaExcel}: Formato de fecha inválido '${nacimientoRaw}'. Se esperaba DD-MM-AAAA. Se ignorará.`);
+                        // Opcional: añadir error
+                    }
                 }
             }
+            // --- FIN REEMPLAZO BLOQUE DE FECHA ---
 
 
             // Chequear Duplicados por SINIIGA

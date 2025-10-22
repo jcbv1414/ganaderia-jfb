@@ -1101,12 +1101,14 @@ window.handleEditarVaca = function(vaca) {
     btnFinalizar.innerHTML = '<i class="fa-solid fa-save mr-2"></i>Actualizar Cambios';
     btnFinalizar.onclick = () => handleGuardarVaca(true); // Siempre cierra al editar
 
-    // ¡Conecta las funciones auxiliares!
-    conectarAyudantesFormVaca();
-    // Dispara el 'change' para que calcule la edad al abrir
-    const nacimientoInput = document.getElementById('vaca-nacimiento');
-    if(nacimientoInput) nacimientoInput.dispatchEvent(new Event('change')); 
-
+    // 3. Conectar cálculo de EDAD (Ahora usa la función helper)
+    const nacimientoInput = document.getElementById('vaca-nacimiento');
+    if (nacimientoInput) {
+        // Llama a la función helper cada vez que la fecha cambie
+        nacimientoInput.onchange = () => {
+            calcularYMostrarEdad(nacimientoInput.value); 
+        };
+    }
     modal.classList.remove('hidden');
 }
     async function handleEliminarVaca(vacaId) {
@@ -2896,6 +2898,7 @@ window.handleEditarVaca = function(vaca) {
     form.querySelector('#vaca-lote').value = vaca.lote || '';
     form.querySelector('#vaca-raza').value = vaca.raza || '';
     form.querySelector('#vaca-nacimiento').value = vaca.fecha_nacimiento || '';
+    calcularYMostrarEdad(vaca.fecha_nacimiento || '');
     form.querySelector('#vaca-padre').value = vaca.padre || '';
     form.querySelector('#vaca-madre').value = vaca.madre || '';
     form.querySelector('#vaca-origen').value = vaca.origen || 'Natural';
@@ -3432,6 +3435,68 @@ function conectarAyudantesFormVaca() {
         };
     }
 }
+
+// =================================================================
+// NUEVA FUNCIÓN HELPER para Calcular y Mostrar Edad
+// =================================================================
+function calcularYMostrarEdad(fechaNacimientoStr) {
+    const edadInput = document.getElementById('vaca-edad');
+    if (!edadInput) return; // Salir si el campo Edad no existe
+
+    if (!fechaNacimientoStr) {
+        edadInput.value = ''; // Limpiar si no hay fecha
+        return;
+    }
+
+    try {
+        // Asegura que la fecha se interprete correctamente (YYYY-MM-DD)
+        const nacimiento = new Date(fechaNacimientoStr + 'T00:00:00Z'); // Interpreta como UTC
+        const hoy = new Date();
+
+        // Validaciones básicas
+        if (isNaN(nacimiento.getTime())) {
+             edadInput.value = 'Fecha inválida';
+             return;
+        }
+         if (nacimiento > hoy) {
+            edadInput.value = 'Fecha futura';
+            return;
+        }
+
+        // Cálculo de edad (igual que antes)
+        let edadMeses = (hoy.getFullYear() - nacimiento.getFullYear()) * 12;
+        edadMeses -= nacimiento.getMonth();
+        edadMeses += hoy.getMonth();
+         // Ajuste si aún no cumple el día del mes
+         if (hoy.getDate() < nacimiento.getDate()) {
+             // Si estamos en el mismo mes y año, pero el día es anterior, son 0 meses
+             if (edadMeses === 0 && hoy.getFullYear() === nacimiento.getFullYear() && hoy.getMonth() === nacimiento.getMonth()) {
+                 // Caso especial: menos de un mes de edad
+             } else {
+                 edadMeses--; // Si no, simplemente resta un mes
+             }
+         }
+         // Asegurarse de que edadMeses no sea negativo si es muy joven
+         if (edadMeses < 0) edadMeses = 0;
+
+
+        const anios = Math.floor(edadMeses / 12);
+        const meses = edadMeses % 12;
+
+        if (anios > 0) {
+             edadInput.value = `${anios} año${anios > 1 ? 's' : ''}${meses > 0 ? ` y ${meses} mes${meses > 1 ? 'es' : ''}` : ''}`;
+        } else {
+             edadInput.value = `${meses} mes${meses > 1 ? 'es' : ''}`;
+        }
+
+
+    } catch(e) {
+        console.error("Error calculando edad:", e);
+        edadInput.value = 'Error cálculo';
+    }
+}
+// =====================================================================
+
 // =================================================================
 // FUNCIÓN PARA GUARDAR O ACTUALIZAR VACA (¡LA QUE FALTABA!)
 // =================================================================
