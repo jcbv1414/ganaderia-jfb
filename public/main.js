@@ -1737,9 +1737,13 @@ async function renderizarHistorialMVZ() {
                         </p>
                     </div>
                 </div>
+                {/* --- INICIO DEL CÓDIGO NUEVO (CONDICIONAL) --- */}
+            ${currentUser.rol === 'propietario' ? ` 
                 <button data-sesion-id="${sesion.sesion_id}" class="btn-eliminar-sesion text-red-400 hover:text-red-600 px-2 ml-2 flex-shrink-0">
                     <i class="fa-solid fa-trash-can text-xl"></i>
                 </button>
+            ` : ''} 
+            {/* --- FIN DEL CÓDIGO NUEVO --- */}
             </div>
             `;
         }).join('');
