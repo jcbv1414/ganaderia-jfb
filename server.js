@@ -611,6 +611,7 @@ app.post('/api/actividades', async (req, res) => {
             const rowHeight = drawTableRow(doc, rowY, item, columnX, columnWidths); // Llama al helper
             currentY = rowY + rowHeight + 10;
 
+            console.log(`[INSPECTOR PDF /api/actividades] Item ${index} a dibujar:`, JSON.stringify(item, null, 2));
             // Línea separadora (gruesa)
             doc.strokeColor('#cccccc').lineWidth(1)
                .moveTo(columnStartX, currentY - 5)
