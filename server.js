@@ -539,6 +539,7 @@ app.post('/api/actividades', async (req, res) => {
         }
         console.log(`[INSPECTOR] Lote de actividad tiene ${loteActividad.length} registros.`);
         console.log('[INSPECTOR] Iniciando la creación del PDF...');
+        console.log("[INSPECTOR] loteActividad RECIBIDO:", JSON.stringify(loteActividad, null, 2));
 
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename="reporte_${Date.now()}.pdf"`);

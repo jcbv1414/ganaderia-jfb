@@ -1629,6 +1629,8 @@ async function handleFinalizarYReportar() {
             mvzNombre: currentUser.nombre || '', ranchoNombre: nombreDelRancho
         };
 
+        console.log("Datos enviados a /api/actividades:", JSON.stringify(payloadPDF, null, 2));
+
         const res = await fetch('/api/actividades', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
