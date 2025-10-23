@@ -1723,8 +1723,7 @@ async function renderizarHistorialMVZ() {
             }
             // --- FIN DE LA CORRECCIÓN ---
 
-            // Usamos sesion.conteo y sesion.rancho_nombre que sí vienen bien
-            return `
+            return ` 
             <div class="bg-white p-3 rounded-xl shadow-sm flex items-center justify-between mb-3 w-full">
                 <div class="flex items-center flex-1 min-w-0">
                     <input type="checkbox" data-sesion-id="${sesion.sesion_id}" class="h-5 w-5 rounded border-gray-300 mr-4 sesion-checkbox">
@@ -1737,13 +1736,16 @@ async function renderizarHistorialMVZ() {
                         </p>
                     </div>
                 </div>
-                {/* --- INICIO DEL CÓDIGO NUEVO (CONDICIONAL) --- */}
-            ${currentUser.rol === 'propietario' ? ` 
-                <button data-sesion-id="${sesion.sesion_id}" class="btn-eliminar-sesion text-red-400 hover:text-red-600 px-2 ml-2 flex-shrink-0">
-                    <i class="fa-solid fa-trash-can text-xl"></i>
-                </button>
-            ` : ''} 
-            {/* --- FIN DEL CÓDIGO NUEVO --- */}
+
+                ${ // Condición para mostrar el botón de borrar
+                    currentUser.rol === 'propietario' 
+                    ? // Si es propietario, dibuja el botón:
+                      `<button data-sesion-id="${sesion.sesion_id}" class="btn-eliminar-sesion text-red-400 hover:text-red-600 px-2 ml-2 flex-shrink-0">
+                           <i class="fa-solid fa-trash-can text-xl"></i>
+                       </button>`
+                    : // Si NO es propietario, no dibujes nada:
+                      '' 
+                }
             </div>
             `;
         }).join('');
