@@ -1205,10 +1205,11 @@ async function renderizarVistaEstadisticas() {
         const cowIds = vacas.map(v => v.id);
         const { data: todasLasActividades, error: actError } = await sb
             .from('actividades')
-            .select('id_vaca, descripcion, tipo_actividad')
+            .select('id_vaca, descripcion, tipo_actividad, created_at')
             .in('id_vaca', cowIds)
             .eq('tipo_actividad', 'Palpación')
-            .order('fecha_actividad', { ascending: false });
+            .order('fecha_actividad', { ascending: false }) // 1. Ordena por fecha (más nueva primero)
+            .order('created_at', { ascending: false });    // 2. Si fechas iguales, ordena por hora de creación (más nueva primero)
 
         if (actError) throw actError;
 
