@@ -348,7 +348,7 @@ if (avatarEl && logoUrl) {
                          const gestantesEnLote = datosLote.estados?.Gestante || 0;
                          const porcentaje = vacasEnLote > 0 ? Math.round((gestantesEnLote / vacasEnLote) * 100) : 0;
                          const nombreLote = numeroLote === 'Sin Lote' ? 'Animales sin Lote' : `Lote ${numeroLote}`;
-                         return `<div class="flex-shrink-0 w-72 bg-white p-4 rounded-xl shadow-md flex items-center justify-between"><div class="flex items-center"><div class="progress-ring mr-4" style="--value: ${porcentaje}; --color: #22c55e;"><span class="progress-ring-percent">${porcentaje}%</span></div><div><p class="font-semibold">${nombreLote}</p><p class="text-sm text-gray-500">Gestación</p></div></div><i class="fa-solid fa-chevron-right text-gray-400"></i></div>`;
+                         return `<div class="flex-shrink-0 w-72 bg-white p-4 rounded-xl shadow-md flex items-center justify-between"><div class="flex items-center"><div class="progress-ring mr-4" style="--value: ${porcentaje}; --color: #22c55e;"><span class="progress-ring-percent">${porcentaje}%</span></div><div><p class="font-semibold">${nombreLote}</p><p class="text-sm text-gray-500">Estado Reprod.</p></div></div><i class="fa-solid fa-chevron-right text-gray-400"></i></div>`;
                      }).join('');
                  }
             }
