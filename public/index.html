@@ -100,6 +100,17 @@
   scrollbar-color: #cccccc #e0e0e0; /* Color del pulgar y del riel */
 }
 /* --- Fin Estilizar Scrollbar --- */
+/* --- AÑADE ESTO DENTRO DE TU <style> --- */
+
+/* Oculta la barra de scroll horizontal */
+.horizontal-scrollbar-hidden {
+    scrollbar-width: none; /* Para Firefox */
+    -ms-overflow-style: none;  /* Para IE/Edge */
+}
+.horizontal-scrollbar-hidden::-webkit-scrollbar {
+    display: none; /* Para Chrome/Safari */
+}
+/* ------------------------------------- */
 </style>
 </head>
           <head>
