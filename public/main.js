@@ -1853,7 +1853,7 @@ async function handleValidarRancho() {
 }
 
 // =================================================================
-// REEMPLAZA ESTA FUNCIÓN COMPLETA (iniciarActividadUI - Diseño Scroll)
+// REEMPLAZA ESTA FUNCIÓN COMPLETA (iniciarActividadUI - Corrección de Diseño)
 // =================================================================
 function iniciarActividadUI() {
     document.getElementById('modo-seleccion-container')?.classList.add('hidden');
@@ -1870,32 +1870,26 @@ function iniciarActividadUI() {
     if (loteInfoEl) loteInfoEl.textContent = `${loteActividadActual.length} vacas`;
     
     // --- Lógica de Fijado (sin cambios) ---
-    // (Todo el bloque if (esIndependiente) { ... } else { ... } que maneja los botones de fijar)
     const btnFijarPrincipal = document.getElementById('btn-fijar-rancho');
-    const btnFijarIndependienteInput = document.getElementById('rancho-independiente-nombre'); // Asumo que el botón de pinchar está en el input
-    const ranchoIndependienteContainer = document.getElementById('rancho-independiente-input-container');
-
+    const ranchoIndependienteContainer = document.getElementById('rancho-independiente-input-container');
     if (esIndependiente) {
         if (ranchoIndependienteContainer) ranchoIndependienteContainer.classList.remove('hidden');
         if (btnFijarPrincipal) btnFijarPrincipal.classList.add('hidden');
-        // (Aquí va tu lógica de 'btnFijarIndependiente.onclick' si la tienes)
     } else { 
         if (ranchoIndependienteContainer) ranchoIndependienteContainer.classList.add('hidden');
         if (btnFijarPrincipal) btnFijarPrincipal.classList.remove('hidden');
-        // (Aquí va tu lógica de 'btnFijarPrincipal.onclick' que maneja el pincho)
         if (btnFijarPrincipal) {
             const pinnedRancho = JSON.parse(localStorage.getItem('pinnedRancho') || 'null');
             const isPinned = pinnedRancho && pinnedRancho.id === currentRancho?.id;
             btnFijarPrincipal.querySelector('i').classList.toggle('text-white', isPinned);
             btnFijarPrincipal.querySelector('i').classList.toggle('text-white/50', !isPinned);
             btnFijarPrincipal.onclick = () => {
-                // (Toda la lógica de 'onclick' para fijar/desfijar)
                 const currentlyPinned = JSON.parse(localStorage.getItem('pinnedRancho') || 'null');
                 if (currentlyPinned && currentlyPinned.id === currentRancho?.id) {
                     localStorage.removeItem('pinnedRancho');
                     btnFijarPrincipal.querySelector('i').classList.replace('text-white', 'text-white/50');
                     alert('Rancho desfijado.');
-                } else {
+              S   } else {
                     localStorage.setItem('pinnedRancho', JSON.stringify(currentRancho));
                     btnFijarPrincipal.querySelector('i').classList.replace('text-white/50', 'text-white');
                     alert(`Rancho '${currentRancho.nombre}' fijado.`);
@@ -1903,19 +1897,21 @@ function iniciarActividadUI() {
             };
         }
     }
-    
+   end;
     // ==============================================
-    // --- INICIO: NUEVA LÓGICA DE DIBUJO DE ACCIONES ---
+    // --- INICIO: LÓGICA DE DIBUJO DE ACCIONES (CORREGIDA) ---
     // ==============================================
     const accionesContainer = document.getElementById('acciones-rapidas-container');
     if (accionesContainer) {
         accionesContainer.innerHTML = ''; // Limpiamos
 
+        // --- CORRECCIÓN 1: Quitar las clases grid para que los elementos se apilen verticalmente ---
+        accionesContainer.className = 'space-y-4'; // Añade espacio vertical entre elementos
+
         // --- 1. Dibuja el botón "Administrar Ganado" (solo si es admin) ---
-        // (Gracias al Bug Fix, 'Trabajo Independiente' ya no es admin)
         if (currentRancho && currentRancho.permission_level === 'admin') {
             const adminBtn = document.createElement('button');
-            adminBtn.className = 'w-full p-4 rounded-2xl shadow-sm flex items-center justify-center space-x-3 mb-4 bg-gray-800 text-white';
+            adminBtn.className = 'w-full p-4 rounded-2xl shadow-sm flex items-center justify-center space-x-3 bg-gray-800 text-white';
             adminBtn.innerHTML = `
                 <i class="fa-solid fa-cow text-2xl"></i>
                 <span class="font-bold text-md">Administrar Ganado</span>
@@ -1926,13 +1922,12 @@ function iniciarActividadUI() {
 
         // --- 2. Añade el título "Actividades de Registro" ---
         const tituloActividades = document.createElement('h3');
-        tituloActividades.className = 'text-lg font-bold text-gray-800 mb-3';
+        tituloActividades.className = 'text-lg font-bold text-gray-800'; // Quitamos mb-3
         tituloActividades.textContent = 'Actividades de Registro';
         accionesContainer.appendChild(tituloActividades);
 
         // --- 3. Crea el contenedor de scroll horizontal ---
         const scrollerDiv = document.createElement('div');
-        // Usamos la clase CSS que añadimos al index.html
         scrollerDiv.className = 'flex overflow-x-auto py-2 horizontal-scrollbar-hidden';
         accionesContainer.appendChild(scrollerDiv);
 
@@ -1948,19 +1943,18 @@ function iniciarActividadUI() {
 
         acciones.forEach(accion => {
             const card = document.createElement('button');
-            // Clases para las tarjetas pequeñas del carrusel
-            card.className = `flex-shrink-0 w-36 h-28 p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center mr-3 ${accion.color}`;
+            // --- CORRECCIÓN 2: Reducir el ancho de la tarjeta ---
+            card.className = `flex-shrink-0 w-32 h-28 p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center mr-3 ${accion.color}`; // Cambiado w-36 a w-32
             card.onclick = () => abrirModalActividad(accion.id);
             card.innerHTML = `
                 <i class="fa-solid ${accion.icono} text-3xl ${accion.textColor}"></i>
                 <span class="font-bold text-md text-center mt-3 ${accion.textColor}">${accion.titulo}</span>
             `;
-            // Añade la tarjeta al carrusel (scrollerDiv)
             scrollerDiv.appendChild(card); 
         });
     }
     // ==============================================
-    // --- FIN: NUEVA LÓGICA DE DIBUJO DE ACCIONES ---
+    // --- FIN: LÓGICA DE DIBUJO DE ACCIONES (CORREGIDA) ---
     // ==============================================
     
     renderizarHistorialMVZ(); // Esto se queda igual
