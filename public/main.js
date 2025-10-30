@@ -1866,8 +1866,7 @@ function iniciarActividadUI() {
     if (nombreActivoEl) nombreActivoEl.textContent = esIndependiente ? 'Trabajo Independiente' : (currentRancho?.nombre || '');
     const logoEl = document.getElementById('rancho-logo');
     if (logoEl) logoEl.src = currentRancho?.logo_url || 'assets/logo.png';
-    const loteInfoEl = document.getElementById('lote-info');
-    if (loteInfoEl) loteInfoEl.textContent = `${loteActividadActual.length} vacas`;
+    const loteInfoEl = document.getElementById('lote-info');   if (loteInfoEl) loteInfoEl.textContent = `${loteActividadActual.length} vacas`;
     
     // --- Lógica de Fijado (sin cambios) ---
     const btnFijarPrincipal = document.getElementById('btn-fijar-rancho');
@@ -1889,7 +1888,7 @@ function iniciarActividadUI() {
                     localStorage.removeItem('pinnedRancho');
                     btnFijarPrincipal.querySelector('i').classList.replace('text-white', 'text-white/50');
                     alert('Rancho desfijado.');
-              S   } else {
+                } else {
                     localStorage.setItem('pinnedRancho', JSON.stringify(currentRancho));
                     btnFijarPrincipal.querySelector('i').classList.replace('text-white/50', 'text-white');
                     alert(`Rancho '${currentRancho.nombre}' fijado.`);
@@ -1897,7 +1896,7 @@ function iniciarActividadUI() {
             };
         }
     }
-   end;
+   
     // ==============================================
     // --- INICIO: LÓGICA DE DIBUJO DE ACCIONES (CORREGIDA) ---
     // ==============================================
