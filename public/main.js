@@ -809,7 +809,7 @@ async function renderizarVistaMiMvz() {
                 </div>
                 <div class="mt-3 pt-3 border-t border-gray-100">
                     <label class="block text-sm font-medium text-gray-700">Permisos:</label>
-                    <select onchange="handleCambiarPermisoMvz(${item.id}, this.value)" class="mt-1 w-full p-2 border border-gray-300 rounded-lg bg-white">
+                    <select onchange="handleConfirmarPermisoChange(${item.id}, this, '${escapeHtml(item.usuarios.nombre)}')" data-permiso-actual="${permisoActual}" class="mt-1 w-full p-2 border border-gray-300 rounded-lg bg-white">
                         <option value="basico" ${permisoActual === 'basico' ? 'selected' : ''}>Solo registrar actividades</option>
                         <option value="admin" ${permisoActual === 'admin' ? 'selected' : ''}>Registrar actividades y agregar ganado</option>
                     </select>
@@ -2378,9 +2378,49 @@ async function handleGuardarEvento(e) {
             navigateTo('login');
         }
     }
-   // ----- REEMPLAZA LAS DOS ÚLTIMAS FUNCIONES CON ESTE BLOQUE -----
+   
+// =================================================================
+// AÑADE ESTA NUEVA FUNCIÓN (con confirmación de permisos)
+// =================================================================
+window.handleConfirmarPermisoChange = async function(permisoId, selectElement, mvzNombre) {
+    const nuevoPermiso = selectElement.value; // El permiso que el usuario acaba de seleccionar
+    const permisoActual = selectElement.dataset.permisoActual; // El permiso que tenía ANTES del clic
 
-// Hacemos la función global añadiendo "window." al principio
+    // 1. Si el usuario está intentando CAMBIAR A ADMIN
+    if (nuevoPermiso === 'admin' && permisoActual !== 'admin') {
+        const mensajeConfirmacion = `¿Estás seguro de que quieres dar permisos de Administrador a ${mvzNombre}?\n\nAl confirmar, este veterinario podrá:\n\n- Añadir nuevos animales.\n- Editar la información de tu ganado.\n- Eliminar animales de tu rancho.\n\nTendrá control casi total sobre los datos de tu ganado.`;
+        
+        if (!window.confirm(mensajeConfirmacion)) {
+            // Si el usuario presiona "Cancelar", revierte el dropdown
+            selectElement.value = permisoActual;
+            return; // No hagas nada más
+        }
+        // Si presiona "Aceptar", continúa...
+    }
+
+    // 2. Si el usuario confirmó (o si está cambiando a 'basico'), guarda el cambio en Supabase
+    try {
+        const { error } = await sb
+            .from('rancho_mvz_permisos')
+            .update({ permisos: nuevoPermiso })
+            .eq('id', permisoId);
+            
+        if (error) throw error;
+
+        // 3. Actualiza el estado 'data-permiso-actual' en el dropdown
+        selectElement.dataset.permisoActual = nuevoPermiso;
+        
+        // Muestra un toast/alerta de éxito (usando tu función 'showToast')
+        showToast(`Permisos actualizados para ${mvzNombre}.`);
+
+    } catch (error) { 
+        alert(error.message || 'Error al actualizar el permiso.'); 
+        // Si falla, revierte el dropdown al valor original
+        selectElement.value = permisoActual;
+    }
+}
+// =================================================================
+
 // Reemplaza window.handleCompletarEvento
 window.handleCompletarEvento = async function(eventoId) {
     try {
@@ -2730,23 +2770,6 @@ window.handleRevocarAccesoMvz = async function(permisoId) {
     }
 }
 
-// Reemplaza window.handleCambiarPermisoMvz
-window.handleCambiarPermisoMvz = async function(permisoId, nuevoPermiso) {
-    try {
-        // --- CAMBIO: Usar Supabase directo ---
-        const { error } = await sb
-            .from('rancho_mvz_permisos')
-            .update({ permisos: nuevoPermiso })
-            .eq('id', permisoId);
-            
-        if (error) throw error;
-        // --- FIN DEL CAMBIO ---
-        
-        // Opcional: mostrar un mensaje de éxito
-    } catch (error) { 
-        alert(error.message || 'Error al actualizar el permiso.'); 
-    }
-}
 // =================================================================
 // FUNCIONES PARA FILTRAR LA LISTA DE GANADO (VERSIÓN CORREGIDA)
 // =================================================================
