@@ -1953,23 +1953,31 @@ function iniciarActividadUI() {
         }
         // --- FIN DE LA MAGIA ---
 
-// Dibuja todas las tarjetas (incluyendo la nueva si se añadió)
+// Dibuja todas las tarjetas (CON LÓGICA DE DISEÑO HÍBRIDO)
         acciones.forEach(accion => {
             const card = document.createElement('button');
             
-            // --- CLASES MODIFICADAS ---
-            // Quitamos text-left, flex-col y añadimos centrado y altura fija
-            card.className = `p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center h-28 ${accion.color}`;
+            // --- INICIO DE LÓGICA HÍBRIDA ---
+            // Clases base (iguales para todas)
+            let cardClasses = `p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center h-28 ${accion.color}`;
 
-            // Maneja el clic de forma diferente
+            // Condición para el ancho
+            if (accion.id === 'administrar-ganado' || accion.id === 'palpacion') {
+                cardClasses += " col-span-2"; // Ocupa 2 columnas
+            } else {
+                cardClasses += " col-span-1"; // Ocupa 1 columna
+            }
+            card.className = cardClasses;
+            // --- FIN DE LÓGICA HÍBRIDA ---
+
+            // Maneja el clic (sin cambios)
             if (accion.type === 'navegacion') {
-                card.onclick = () => navigateTo(accion.id); // Navega a la nueva vista
+                card.onclick = () => navigateTo(accion.id); 
             } else {
-                card.onclick = () => abrirModalActividad(accion.id); // Abre el modal de actividad
+                card.onclick = () => abrirModalActividad(accion.id);
             }
 
-            // --- HTML MODIFICADO ---
-            // Hacemos el icono un poco más grande y centramos el texto
+            // HTML interno (sin cambios, usa el centrado que hicimos)
             card.innerHTML = `
                 <i class="fa-solid ${accion.icono} text-3xl ${accion.textColor}"></i>
                 <span class="font-bold text-md text-center mt-3 ${accion.textColor}">${accion.titulo}</span>
