@@ -146,6 +146,8 @@ console.log('Cliente de Supabase inicializado');
             initActividadesMvzListeners();
         } else if (viewId === 'calendario-mvz') { // <-- Aquí se añade la nueva vista
             renderizarVistaCalendario();
+            } else if (viewId === 'mvz-ganado') {
+            renderizarVistaMvzGanado();
             } else if (viewId === 'ajustes-mvz') { // <-- ¡ESTA ES LA "PUERTA" QUE FALTABA!
     renderizarVistaAjustesMvz();
         }else if (viewId === 'mis-ranchos-mvz') { 
@@ -556,6 +558,386 @@ async function cargarDashboardMVZ() {
         if (eventosContainer) eventosContainer.innerHTML = '<p class="text-red-500">Error al cargar datos.</p>';
     }
 }
+// =================================================================
+// INICIO: BLOQUE DE FUNCIONES PARA "MVZ - ADMINISTRAR GANADO"
+// (Copiar y pegar todo este bloque en main.js)
+// =================================================================
+
+// Variables globales para la lista y filtros del MVZ
+let listaMvzGanadoCompleta = [];
+let filtrosActivosMvz = { sexo: '', lote: '', raza: '' };
+
+/**
+ * (NUEVA) Función principal para renderizar la vista de ganado del MVZ
+ */
+async function renderizarVistaMvzGanado() {
+    // 1. Obtener el ranchoId y propietarioId desde el estado global 'currentRancho'
+    if (!currentRancho || !currentRancho.id) {
+        console.error("MVZ: No hay rancho activo para administrar.");
+        alert("Error: No se ha seleccionado un rancho. Vuelve a la pestaña 'Actividades'.");
+        navigateTo('actividades-mvz');
+        return;
+    }
+    const ranchoId = currentRancho.id;
+    // Necesitaremos el propietarioId para guardar vacas (asumiendo que lo obtuvimos antes)
+    // Buscamos al propietario en la tabla 'ranchos'
+    const { data: ranchoData, error: ranchoError } = await sb
+        .from('ranchos')
+        .select('propietario_id, nombre')
+        .eq('id', ranchoId)
+        .single();
+
+    if (ranchoError || !ranchoData) {
+         console.error("MVZ: Error cargando datos del rancho:", ranchoError);
+         alert("Error al cargar datos del rancho.");
+         return;
+    }
+    // Guardamos el ID del propietario en el estado global del rancho para usarlo al guardar
+    currentRancho.propietario_id = ranchoData.propietario_id;
+
+    // Actualiza el título de la cabecera
+    const tituloEl = document.getElementById('mvz-ganado-rancho-nombre');
+    if(tituloEl) tituloEl.textContent = `Ganado de ${ranchoData.nombre}`;
+
+    const container = document.getElementById('lista-vacas-container-mvz');
+    container.innerHTML = '<p class="text-center text-gray-500 mt-8">Cargando ganado...</p>';
+    
+    // Conectar el FAB (+)
+    const fab = document.getElementById('btn-abrir-modal-vaca-mvz');
+    if (fab) {
+        // Llama a la función de abrir modal específica del MVZ
+        fab.onclick = () => abrirModalVacaMvz(); 
+    }
+
+    try {
+        // 2. Cargar las vacas (usando la RLS del MVZ que le da acceso)
+        const { data: vacasData, error } = await sb
+            .from('vacas')
+            .select('*') 
+            .eq('rancho_id', ranchoId); // Solo vacas de este rancho
+
+        if (error) throw error;
+        
+        listaMvzGanadoCompleta = vacasData || []; 
+
+        const totalVacasEl = document.getElementById('total-vacas-header-mvz');
+        if(totalVacasEl) totalVacasEl.textContent = listaMvzGanadoCompleta.length;
+
+        // 3. Configurar filtros y renderizar lista
+        setupFiltrosDeGanadoMvz();
+        aplicarFiltrosDeGanadoMvz(); // Muestra la lista inicial
+
+    } catch (error) {
+        console.error("Error en renderizarVistaMvzGanado:", error);
+        container.innerHTML = `<p class="text-center text-red-500 mt-8">Error al cargar el ganado: ${error.message}</p>`;
+    }
+}
+
+/**
+ * (NUEVA) Configura los listeners para los botones de filtro del MVZ
+ */
+function setupFiltrosDeGanadoMvz() {
+    const btnSexo = document.getElementById('filtro-btn-sexo-mvz');
+    const btnLote = document.getElementById('filtro-btn-lote-mvz');
+    const btnRaza = document.getElementById('filtro-btn-raza-mvz');
+
+    if (btnSexo) btnSexo.onclick = () => {
+        const opciones = ['Hembra', 'Macho'];
+        abrirModalDeFiltroMvz('sexo', opciones, 'Selecciona un Sexo');
+    };
+    if (btnLote) btnLote.onclick = () => {
+        const lotesUnicos = [...new Set(listaMvzGanadoCompleta.map(v => v.lote).filter(Boolean))].sort((a,b) => a - b);
+        abrirModalDeFiltroMvz('lote', lotesUnicos.map(l => `Lote ${l}`), 'Selecciona un Lote');
+    };
+    if (btnRaza) btnRaza.onclick = () => {
+        const razasUnicas = [...new Set(listaMvzGanadoCompleta.map(v => v.raza).filter(Boolean))].sort();
+        abrirModalDeFiltroMvz('raza', razasUnicas, 'Selecciona una Raza');
+    };
+
+    const busquedaInput = document.getElementById('filtro-busqueda-ganado-mvz');
+    if (busquedaInput) busquedaInput.addEventListener('input', aplicarFiltrosDeGanadoMvz);
+}
+
+/**
+ * (NUEVA) Abre el modal de filtro (específico MVZ)
+ */
+function abrirModalDeFiltroMvz(tipoFiltro, opciones, titulo) {
+    // Esta función crea un modal temporal, es segura reutilizarla
+    // ... (copia la lógica exacta de 'abrirModalDeFiltro' pero cambia la llamada al final)
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[1002]';
+    modal.onclick = (e) => {
+        if (e.target === modal) modal.remove();
+    };
+
+    const contenido = document.createElement('div');
+    contenido.className = 'bg-white rounded-xl shadow-lg p-4 w-11/12 max-w-xs';
+    contenido.innerHTML = `<h3 class="font-bold text-lg mb-4">${titulo}</h3>`;
+
+    const btnQuitar = document.createElement('div');
+    btnQuitar.className = 'p-2 text-center text-red-600 font-semibold cursor-pointer border rounded-lg mb-2';
+    btnQuitar.textContent = 'Quitar Filtro';
+    btnQuitar.onclick = () => {
+        filtrosActivosMvz[tipoFiltro] = '';
+        aplicarFiltrosDeGanadoMvz(); // Llama a la versión MVZ
+        modal.remove();
+    };
+    contenido.appendChild(btnQuitar);
+
+    opciones.forEach(opcion => {
+        const btnOpcion = document.createElement('div');
+        btnOpcion.className = 'p-3 cursor-pointer hover:bg-gray-100 border-b';
+        btnOpcion.textContent = opcion;
+        btnOpcion.onclick = (e) => {
+            e.stopPropagation();
+            filtrosActivosMvz[tipoFiltro] = tipoFiltro === 'lote' ? opcion.replace('Lote ', '') : opcion;
+            aplicarFiltrosDeGanadoMvz(); // Llama a la versión MVZ
+            modal.remove();
+        };
+        contenido.appendChild(btnOpcion);
+    });
+
+    modal.appendChild(contenido);
+    document.body.appendChild(modal);
+}
+
+/**
+ * (NUEVA) Aplica los filtros y llama a renderizar la lista del MVZ
+ */
+function aplicarFiltrosDeGanadoMvz() {
+    const busqueda = document.getElementById('filtro-busqueda-ganado-mvz').value.toLowerCase();
+    const { sexo, lote, raza } = filtrosActivosMvz;
+
+    let vacasFiltradas = [...listaMvzGanadoCompleta];
+
+    if (busqueda) {
+        vacasFiltradas = vacasFiltradas.filter(v => 
+            v.numero_siniiga?.toLowerCase().includes(busqueda) ||
+            v.numero_pierna?.toLowerCase().includes(busqueda)
+        );
+    }
+    if (sexo) { vacasFiltradas = vacasFiltradas.filter(v => v.sexo === sexo); }
+    if (lote) { vacasFiltradas = vacasFiltradas.filter(v => v.lote == lote); }
+    if (raza) { vacasFiltradas = vacasFiltradas.filter(v => v.raza === raza); }
+
+    const btnSexo = document.getElementById('filtro-btn-sexo-mvz');
+    const btnLote = document.getElementById('filtro-btn-lote-mvz');
+    const btnRaza = document.getElementById('filtro-btn-raza-mvz');
+
+    if (btnSexo) btnSexo.classList.toggle('activo', !!sexo);
+    if (btnLote) btnLote.classList.toggle('activo', !!lote);
+    if (btnRaza) btnRaza.classList.toggle('activo', !!raza);
+
+    const totalVacasEl = document.getElementById('total-vacas-header-mvz');
+    if (totalVacasEl) {
+        totalVacasEl.textContent = vacasFiltradas.length;
+    }
+    
+    renderizarListaDeVacasMvz(vacasFiltradas); // Llama a la versión MVZ
+}
+
+/**
+ * (NUEVA) Dibuja el HTML de la lista de vacas del MVZ
+ */
+function renderizarListaDeVacasMvz(vacas) {
+    const container = document.getElementById('lista-vacas-container-mvz');
+    if (!container) return;
+
+    if (!vacas || vacas.length === 0) {
+        container.innerHTML = '<p class="text-center text-gray-500 mt-8 bg-white p-6 rounded-xl shadow-md">No se encontraron animales con esos filtros.</p>';
+        return;
+    }
+
+    container.innerHTML = vacas.map(vaca => `
+        <div class="bg-white rounded-xl shadow-md overflow-hidden">
+            <img src="${vaca.foto_url || 'https://via.placeholder.com/300x200'}" alt="Foto de ${vaca.nombre}" class="w-full h-40 object-cover">
+            <div class="p-4">
+                <div class="flex justify-between items-start">
+                    <h3 class="text-xl font-bold text-gray-900">${vaca.nombre}</h3>
+                    <div class="flex items-center space-x-3">
+                        <button onclick='handleEditarVacaMvz(${JSON.stringify(vaca)})' class="text-gray-500 hover:text-blue-600" title="Editar"><i class="fa-solid fa-pencil"></i></button>
+                        <button onclick='handleEliminarVacaMvz(${vaca.id})' class="text-gray-500 hover:text-red-600" title="Eliminar"><i class="fa-solid fa-trash-can"></i></button>
+                    </div>
+                </div>
+                <div class="text-sm text-gray-600 mt-2 space-y-1">
+                    <p><strong>Raza:</strong> ${vaca.raza || 'N/A'}</p>
+                    <p><strong>Lote:</strong> ${vaca.lote || 'Sin asignar'}</p>
+                    <p><strong>ID (Arete):</strong> #${vaca.numero_siniiga}</p>
+                </div>
+                <button onclick="window.verHistorialVaca(${vaca.id}, '${vaca.nombre}')" class="w-full bg-green-100 text-green-800 font-semibold p-2 rounded-lg mt-4 hover:bg-green-200 transition">
+                    Ver Detalles
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+
+/**
+ * (NUEVAS) Funciones de Modal y Guardado para el MVZ
+ * Estas funciones REUTILIZAN el modal HTML ('modal-agregar-vaca')
+ * pero usan la lógica de guardado/borrado del MVZ.
+ */
+
+function abrirModalVacaMvz() {
+    // Llama a la función original del propietario, pero la reconfigura
+    abrirModalVaca(); // Abre y resetea el modal
+    
+    // Sobreescribe los botones para que llamen a las funciones del MVZ
+    document.getElementById('modal-vaca-titulo').textContent = `Registrar Animal en ${currentRancho.nombre}`;
+    document.getElementById('btn-guardar-siguiente-vaca').onclick = () => handleGuardarVacaMvz(false);
+    document.getElementById('btn-finalizar-registro-vaca').onclick = () => handleGuardarVacaMvz(true);
+}
+
+function handleEditarVacaMvz(vaca) {
+    // Llama a la función original del propietario para llenar el modal
+    window.handleEditarVaca(vaca); // Reutiliza toda la lógica de llenado
+
+    // Sobreescribe el botón de guardar para que llame a la función del MVZ
+    document.getElementById('modal-vaca-titulo').textContent = `Editar Animal de ${currentRancho.nombre}`;
+    document.getElementById('btn-finalizar-registro-vaca').onclick = () => handleGuardarVacaMvz(true);
+}
+
+async function handleEliminarVacaMvz(vacaId) {
+    if (!confirm('¿Estás seguro de que quieres eliminar este animal? Esta acción no se puede deshacer.')) return;
+    
+    try {
+        // Llama a la función de borrado original, la RLS de Supabase se encargará
+        // (Asumiremos que la RLS para DELETE se actualizará en el Paso 5)
+        await window.handleEliminarVaca(vacaId); 
+        // Recarga la lista del MVZ
+        aplicarFiltrosDeGanadoMvz(); 
+    } catch (error) {
+        alert(error.message || 'Error inesperado al eliminar la vaca.');
+    }
+}
+
+/**
+ * (NUEVA) Función CLAVE: Guardar Vaca (llamada por el MVZ)
+ */
+async function handleGuardarVacaMvz(cerrarAlFinalizar) {
+    const form = document.getElementById('form-agregar-vaca');
+    const btnSiguiente = document.getElementById('btn-guardar-siguiente-vaca');
+    const btnFinalizar = document.getElementById('btn-finalizar-registro-vaca');
+
+    if (btnSiguiente) btnSiguiente.disabled = true;
+    if (btnFinalizar) btnFinalizar.disabled = true;
+    mostrarMensaje('vaca-mensaje', 'Procesando...', false); 
+
+    const nombre = form.querySelector('#vaca-nombre').value;
+    const siniiga = form.querySelector('#vaca-siniiga').value;
+
+    if (!nombre || !siniiga) {
+        mostrarMensaje('vaca-mensaje', 'Nombre y SINIIGA son obligatorios.');
+        if (btnSiguiente) btnSiguiente.disabled = false;
+        if (btnFinalizar) btnFinalizar.disabled = false;
+        return;
+    }
+
+    const vacaId = form.querySelector('#vaca-id-input').value;
+    const isUpdating = vacaId && vacaId !== '';
+
+    // ¡¡¡ LA DIFERENCIA CLAVE ESTÁ AQUÍ !!!
+    // Usamos los IDs del rancho activo del MVZ, no del currentUser
+    const ranchoIdParaGuardar = currentRancho.id;
+    const propietarioIdParaGuardar = currentRancho.propietario_id;
+
+    if (!ranchoIdParaGuardar || !propietarioIdParaGuardar) {
+         mostrarMensaje('vaca-mensaje', 'Error: No se pudo identificar el rancho o propietario. Intenta recargar.');
+         return;
+    }
+    // ¡¡¡ FIN DE LA DIFERENCIA !!!
+
+    let fotoUrl = null; 
+
+    try {
+        const fotoInput = form.querySelector('#vaca-foto');
+        const file = fotoInput.files[0];
+        if (file) {
+            const filePath = `vacas/${propietarioIdParaGuardar}_${Date.now()}`; // Sube a la carpeta del propietario
+            const { error: uploadError } = await sb.storage
+                .from('fotos-ganado')
+                .upload(filePath, file);
+            if (uploadError) throw new Error(`Error al subir foto: ${uploadError.message}`);
+            const { data: urlData } = sb.storage.from('fotos-ganado').getPublicUrl(filePath);
+            fotoUrl = urlData.publicUrl;
+        } else if (isUpdating) {
+            const vacaActual = listaMvzGanadoCompleta.find(v => v.id == vacaId);
+            fotoUrl = vacaActual?.foto_url; 
+        }
+
+        const datosVaca = {
+            nombre: nombre,
+            numero_siniiga: siniiga,
+            numero_pierna: form.querySelector('#vaca-pierna').value || null,
+            sexo: form.querySelector('#vaca-sexo').value || null,
+            raza: form.querySelector('#vaca-raza').value || null,
+            fecha_nacimiento: form.querySelector('#vaca-nacimiento').value || null,
+            padre: form.querySelector('#vaca-padre').value || null,
+            madre: form.querySelector('#vaca-madre').value || null,
+            origen: form.querySelector('#vaca-origen').value || null,
+            lote: form.querySelector('#vaca-lote').value || null,
+            ...(fotoUrl && { foto_url: fotoUrl })
+        };
+
+        if (!isUpdating) {
+            datosVaca.id_usuario = propietarioIdParaGuardar; // El dueño
+            datosVaca.rancho_id = ranchoIdParaGuardar; // El rancho
+            datosVaca.estado = 'Activa';
+        }
+
+        let dbResult;
+        if (isUpdating) {
+            dbResult = await sb.from('vacas').update(datosVaca).eq('id', vacaId).select().single();
+        } else {
+            dbResult = await sb.from('vacas').insert(datosVaca).select().single();
+        }
+
+        const { data: vacaGuardada, error: dbError } = dbResult;
+        if (dbError) throw dbError; // La RLS de Supabase (Paso 5) debe permitir esto
+
+        mostrarMensaje('vaca-mensaje', `¡Animal ${isUpdating ? 'actualizado' : 'guardado'}!`, false);
+
+        // Actualiza la lista local del MVZ
+        if (isUpdating) {
+            const index = listaMvzGanadoCompleta.findIndex(v => v.id == vacaId);
+            if (index > -1) listaMvzGanadoCompleta[index] = vacaGuardada;
+        } else {
+            listaMvzGanadoCompleta.unshift(vacaGuardada);
+        }
+        aplicarFiltrosDeGanadoMvz(); // Redibuja la lista del MVZ
+        
+        const totalVacasEl = document.getElementById('total-vacas-header-mvz');
+        if(totalVacasEl) totalVacasEl.textContent = listaMvzGanadoCompleta.length || 0;
+
+
+        if (isUpdating || cerrarAlFinalizar) {
+             setTimeout(() => {
+                document.getElementById('modal-agregar-vaca')?.classList.add('hidden');
+             }, 1200);
+        } else {
+            // "Guardar y Siguiente"
+             setTimeout(() => {
+                form.reset();
+                document.getElementById('file-name-display').innerHTML = '<span class="font-semibold">Click para subir</span> o arrastra';
+                if(document.getElementById('vaca-edad')) document.getElementById('vaca-edad').value = '';
+                document.getElementById('sexo-selector')?.querySelector('.bg-brand-green')?.classList.remove('bg-brand-green', 'text-white');
+                form.querySelector('#vaca-nombre').focus();
+                mostrarMensaje('vaca-mensaje', 'Listo para el siguiente animal.', false);
+             }, 1200);
+        }
+
+    } catch (error) {
+        console.error("Error en handleGuardarVacaMvz:", error);
+        mostrarMensaje('vaca-mensaje', error.message || 'Error inesperado. Revisa los permisos.', true);
+    } finally {
+        setTimeout(() => {
+            if (btnSiguiente) btnSiguiente.disabled = false;
+            if (btnFinalizar) btnFinalizar.disabled = false;
+        }, 1200);
+    }
+}
+
     // =================================================================
     // DEFINICIONES DE DATOS (PROCEDIMIENTOS, RAZAS)
     // =================================================================
@@ -1334,53 +1716,76 @@ async function renderizarVistaEstadisticas() {
     const accionesContainerTop = document.getElementById('acciones-rapidas-container');
     if (accionesContainerTop) accionesContainerTop.innerHTML = ''; // safe init
 
-    async function initActividadesMvzListeners() {
-    const modoCont = document.getElementById('modo-seleccion-container');
-    const ranchoActions = document.getElementById('rancho-actions-container');
-    loteActividadActual = []; // Reinicia el lote actual
+// =================================================================
+// REEMPLAZA ESTA FUNCIÓN (initActividadesMvzListeners)
+// =================================================================
+async function initActividadesMvzListeners() {
+    const modoCont = document.getElementById('modo-seleccion-container');
+    const ranchoActions = document.getElementById('rancho-actions-container');
+    loteActividadActual = []; 
 
-    // Lógica para cargar el rancho fijado al iniciar
-    const pinnedRanchoData = localStorage.getItem('pinnedRancho');
-    if (pinnedRanchoData) {
-        try {
-            const rancho = JSON.parse(pinnedRanchoData);
-            if (rancho && rancho.id && rancho.nombre) {
-                currentRancho = rancho;
-                iniciarActividadUI();
-                await cargarVacasParaMVZ();
-                return; // Importante: Salta la pantalla de selección de modo
-            }
-        } catch (e) {
-            localStorage.removeItem('pinnedRancho'); // Limpia si hay datos corruptos
-        }
-    }
+    // Lógica para cargar el rancho fijado
+    const pinnedRanchoData = localStorage.getItem('pinnedRancho');
+    if (pinnedRanchoData) {
+        try {
+            const rancho = JSON.parse(pinnedRanchoData);
+            if (rancho && rancho.id && rancho.nombre) {
+                
+                // --- INICIO: VERIFICAR PERMISO DEL RANCHO FIJADO ---
+                let permisoNivel = 'basico'; // Por defecto
+                if (rancho.id !== null) { // Solo consulta si no es 'Independiente'
+                    const { data: permiso, error: permisoError } = await sb
+                        .from('rancho_mvz_permisos')
+                        .select('permisos')
+                        .eq('rancho_id', rancho.id)
+                        .eq('mvz_id', currentUser.id)
+                        .maybeSingle();
+                    
+                    if (permisoError) throw permisoError;
+                    if (permiso) permisoNivel = permiso.permisos;
+                }
+                // --- FIN: VERIFICAR PERMISO ---
 
-    // Si no hay rancho fijado, muestra la selección de modo de trabajo
-    if (modoCont) modoCont.classList.remove('hidden');
-    if (ranchoActions) ranchoActions.classList.add('hidden');
+                currentRancho = rancho;
+                currentRancho.permission_level = permisoNivel; // <-- ¡AQUÍ ESTÁ LA MAGIA!
+                
+                iniciarActividadUI();
+                await cargarVacasParaMVZ();
+                return; // Salta la pantalla de selección de modo
+            }
+        } catch (e) {
+            localStorage.removeItem('pinnedRancho'); 
+        }
+    }
 
-    const btnShow = document.getElementById('btn-show-rancho-registrado');
-    if (btnShow) btnShow.onclick = () => {
-        const container = document.getElementById('rancho-access-container');
-        if (container) container.classList.toggle('hidden');
-    };
-    const btnInd = document.getElementById('btn-iniciar-independiente');
-    if (btnInd) btnInd.onclick = () => {
-        currentRancho = { id: null, nombre: 'Trabajo Independiente' };
-        iniciarActividadUI();
-    };
-    const btnValidar = document.getElementById('btn-validar-rancho');
-    if (btnValidar) btnValidar.onclick = handleValidarRancho;
+    // Si no hay rancho fijado, muestra la selección de modo
+    if (modoCont) modoCont.classList.remove('hidden');
+    if (ranchoActions) ranchoActions.classList.add('hidden');
+
+    const btnShow = document.getElementById('btn-show-rancho-registrado');
+    if (btnShow) btnShow.onclick = () => {
+        const container = document.getElementById('rancho-access-container');
+        if (container) container.classList.toggle('hidden');
+    };
+    const btnInd = document.getElementById('btn-iniciar-independiente');
+    if (btnInd) btnInd.onclick = () => {
+        currentRancho = { id: null, nombre: 'Trabajo Independiente', permission_level: 'admin' }; // Modo independiente siempre es admin
+        iniciarActividadUI();
+    };
+    const btnValidar = document.getElementById('btn-validar-rancho');
+    if (btnValidar) btnValidar.onclick = handleValidarRancho;
 }
 
-// Reemplaza handleValidarRancho
+// =================================================================
+// REEMPLAZA ESTA FUNCIÓN (handleValidarRancho)
+// =================================================================
 async function handleValidarRancho() {
     const codigoEl = document.getElementById('codigo-rancho');
     const codigo = codigoEl ? codigoEl.value.trim().toUpperCase() : '';
     if (!codigo) { mostrarMensaje('mensaje-rancho', 'El código no puede estar vacío.'); return; }
     
     try {
-        // 1. Buscamos el rancho por su código (RLS debe permitir lecturas públicas)
+        // 1. Buscamos el rancho por su código
         const { data: rancho, error: ranchoError } = await sb
             .from('ranchos')
             .select('*')
@@ -1390,33 +1795,41 @@ async function handleValidarRancho() {
         if (ranchoError) throw ranchoError;
         if (!rancho) throw new Error('Código de rancho no válido.');
 
-        // 2. ¡LA CONEXIÓN! Verificamos si el permiso ya existe
-        const { data: permisoExistente, error: permisoError } = await sb
+        // 2. Verificamos/Creamos el permiso
+        const { data: permiso, error: permisoError } = await sb
             .from('rancho_mvz_permisos')
-            .select('id')
+            .select('id, permisos') // <-- Pedimos los permisos
             .eq('rancho_id', rancho.id)
             .eq('mvz_id', currentUser.id)
             .maybeSingle();
 
         if (permisoError) throw permisoError;
 
-        // 3. Si el permiso NO existe, lo creamos (RLS lo permite gracias a la Política 3)
-        if (!permisoExistente) {
+        let permisoNivel = 'basico'; // Por defecto
+
+        if (!permiso) {
+            // 3. Si no existe, lo creamos con permiso 'basico'
             console.log("Creando enlace de permiso MVZ-Rancho...");
             const { error: insertPermisoError } = await sb
                 .from('rancho_mvz_permisos')
                 .insert({
                     rancho_id: rancho.id,
                     mvz_id: currentUser.id,
-                    permisos: 'basico' // Asignamos permiso básico por defecto
+                    permisos: 'basico' // Por defecto
                 });
             if (insertPermisoError) throw insertPermisoError;
-        }
+            // permisoNivel ya es 'basico'
+        } else {
+            // 4. Si ya existía, usamos el nivel de permiso guardado
+            permisoNivel = permiso.permisos; 
+        }
 
-        // 4. Continuamos (ahora RLS nos dejará leer las vacas)
+        // 5. Guardamos el rancho Y su nivel de permiso en el estado global
         currentRancho = rancho;
-        iniciarActividadUI();
-        await cargarVacasParaMVZ(); // Llama a la carga de vacas
+        currentRancho.permission_level = permisoNivel; // <-- ¡AQUÍ ESTÁ LA MAGIA!
+
+        iniciarActividadUI(); // Llama a la función que dibuja las acciones
+        await cargarVacasParaMVZ(); 
     } catch (err) {
         mostrarMensaje('mensaje-rancho', err.message || 'Error inesperado');
     }
@@ -1494,32 +1907,54 @@ function iniciarActividadUI() {
         }
     }
     
-   // Dibuja las nuevas tarjetas de acción (esta es la parte que cambia)
-    const accionesContainer = document.getElementById('acciones-rapidas-container');
-    if (accionesContainer) {
-        accionesContainer.innerHTML = ''; // Limpiamos
-        
-        // Define tus nuevas acciones con sus iconos y colores
-        const acciones = [
-            { id: 'palpacion', titulo: 'Palpación', icono: 'fa-stethoscope', color: 'bg-blue-100', textColor: 'text-blue-800' },
-            { id: 'inseminacion', titulo: 'Inseminación', icono: 'fa-syringe', color: 'bg-green-100', textColor: 'text-green-800' },
-            { id: 'transferencia', titulo: 'Transferencia', icono: 'fa-flask-vial', color: 'bg-yellow-100', textColor: 'text-yellow-800' },
-            { id: 'sincronizacion', titulo: 'Sincronización', icono: 'fa-clock-rotate-left', color: 'bg-purple-100', textColor: 'text-purple-800' },
-            { id: 'medicamentos', titulo: 'Medicamentos', icono: 'fa-pills', color: 'bg-red-100', textColor: 'text-red-800' },
-            { id: 'otros', titulo: 'Otros', icono: 'fa-ellipsis', color: 'bg-gray-100', textColor: 'text-gray-800' }
-        ];
+// Dibuja las tarjetas de acción (MODIFICADO CON LÓGICA DE PERMISOS)
+    const accionesContainer = document.getElementById('acciones-rapidas-container');
+    if (accionesContainer) {
+        accionesContainer.innerHTML = ''; // Limpiamos
+        
+        // Lista base de acciones
+        const acciones = [
+            { id: 'palpacion', titulo: 'Palpación', icono: 'fa-stethoscope', color: 'bg-blue-100', textColor: 'text-blue-800', type: 'actividad' },
+            { id: 'inseminacion', titulo: 'Inseminación', icono: 'fa-syringe', color: 'bg-green-100', textColor: 'text-green-800', type: 'actividad' },
+            { id: 'transferencia', titulo: 'Transferencia', icono: 'fa-flask-vial', color: 'bg-yellow-100', textColor: 'text-yellow-800', type: 'actividad' },
+            { id: 'sincronizacion', titulo: 'Sincronización', icono: 'fa-clock-rotate-left', color: 'bg-purple-100', textColor: 'text-purple-800', type: 'actividad' },
+            { id: 'medicamentos', titulo: 'Medicamentos', icono: 'fa-pills', color: 'bg-red-100', textColor: 'text-red-800', type: 'actividad' },
+            { id: 'otros', titulo: 'Otros', icono: 'fa-ellipsis', color: 'bg-gray-100', textColor: 'text-gray-800', type: 'actividad' }
+        ];
 
-        acciones.forEach(accion => {
-            const card = document.createElement('button');
-            card.className = `p-4 rounded-2xl shadow-sm text-left flex flex-col justify-between h-28 ${accion.color}`;
-            card.onclick = () => abrirModalActividad(accion.id);
-            card.innerHTML = `
-                <i class="fa-solid ${accion.icono} text-2xl ${accion.textColor} mb-2"></i>
-                <span class="font-bold text-md ${accion.textColor}">${accion.titulo}</span>
-            `;
-            accionesContainer.appendChild(card);
-        });
-    }
+        // --- ¡AQUÍ ESTÁ LA MAGIA! ---
+        // Si el permiso es 'admin', añade el botón de "Administrar Ganado" al principio de la lista
+        if (currentRancho && currentRancho.permission_level === 'admin') {
+            acciones.unshift({ // .unshift() lo añade al INICIO
+                id: 'mvz-ganado', 
+                titulo: 'Administrar Ganado', 
+                icono: 'fa-solid fa-cow', // Icono de Vaca
+                color: 'bg-gray-800', // Color distintivo (ej. gris oscuro)
+                textColor: 'text-white',
+                type: 'navegacion' // Tipo diferente para manejar el clic
+            });
+        }
+        // --- FIN DE LA MAGIA ---
+
+        // Dibuja todas las tarjetas (incluyendo la nueva si se añadió)
+        acciones.forEach(accion => {
+            const card = document.createElement('button');
+            card.className = `p-4 rounded-2xl shadow-sm text-left flex flex-col justify-between h-28 ${accion.color}`;
+            
+            // Maneja el clic de forma diferente
+            if (accion.type === 'navegacion') {
+                card.onclick = () => navigateTo(accion.id); // Navega a la nueva vista
+            } else {
+                card.onclick = () => abrirModalActividad(accion.id); // Abre el modal de actividad
+            }
+
+            card.innerHTML = `
+                <i class="fa-solid ${accion.icono} text-2xl ${accion.textColor} mb-2"></i>
+                <span class="font-bold text-md ${accion.textColor}">${accion.titulo}</span>
+            `;
+            accionesContainer.appendChild(card);
+        });
+    }
     
     renderizarHistorialMVZ();
 }

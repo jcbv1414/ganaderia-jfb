@@ -296,6 +296,44 @@
     </button>
 </template>  
 
+<template id="template-mvz-ganado">
+   <div class="p-5" style="background-color: #203a43;">
+        <header class="flex justify-between items-center">
+                        <div class="flex items-center space-x-3">
+                <button onclick="navigateTo('actividades-mvz')" class="text-2xl text-white mr-2">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </button>
+                                <h1 class="text-2xl font-bold text-white" id="mvz-ganado-rancho-nombre">Ganado</h1>
+            </div>
+
+                        <span id="total-vacas-header-mvz" class="bg-brand-green text-white text-base px-3 py-1 rounded-lg font-bold shadow-md">0</span>
+                    </header>
+    </div>
+    </div>
+
+    <div class="p-5 -mt-8 relative z-20">
+        <div class="bg-white p-4 rounded-xl shadow-lg mb-6">
+            <div class="relative mb-4">
+                <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                <input type="text" id="filtro-busqueda-ganado-mvz" placeholder="Buscar por Arete o No. de Pierna..." class="w-full p-3 pl-10 border border-gray-200 rounded-lg bg-gray-50">
+            </div>
+            <div class="flex items-center justify-around bg-gray-100 p-2 rounded-lg">
+                <button id="filtro-btn-sexo-mvz" class="filtro-btn flex-1 text-gray-700 font-semibold py-2 rounded-lg">Sexo</button>
+                <button id="filtro-btn-lote-mvz" class="filtro-btn flex-1 text-gray-700 font-semibold py-2 rounded-lg">Lote</button>
+                <button id="filtro-btn-raza-mvz" class="filtro-btn flex-1 text-gray-700 font-semibold py-2 rounded-lg">Raza</button>
+            </div>
+        </div>
+
+        <div id="lista-vacas-container-mvz" class="space-y-4">
+            <p class="text-center text-gray-500">Cargando ganado...</p>
+        </div>
+    </div>
+
+    <button id="btn-abrir-modal-vaca-mvz" class="fab">
+        <i class="fa-solid fa-plus"></i>
+    </button>
+</template>
+
 <template id="template-importar-ganado">
     <div class="p-5">
         <header class="flex items-center mb-6">
