@@ -789,7 +789,7 @@ function abrirModalVacaMvz() {
     document.getElementById('btn-finalizar-registro-vaca').onclick = () => handleGuardarVacaMvz(true);
 }
 
-function handleEditarVacaMvz(vaca) {
+window.handleEditarVacaMvz = function(vaca) {
     // Llama a la función original del propietario para llenar el modal
     window.handleEditarVaca(vaca); // Reutiliza toda la lógica de llenado
 
@@ -798,19 +798,36 @@ function handleEditarVacaMvz(vaca) {
     document.getElementById('btn-finalizar-registro-vaca').onclick = () => handleGuardarVacaMvz(true);
 }
 
-async function handleEliminarVacaMvz(vacaId) {
+// =================================================================
+// REEMPLAZA ESTA FUNCIÓN COMPLETA (Eliminar Vaca MVZ)
+// =================================================================
+window.handleEliminarVacaMvz = async function(vacaId) {
     if (!confirm('¿Estás seguro de que quieres eliminar este animal? Esta acción no se puede deshacer.')) return;
-    
+
     try {
-        // Llama a la función de borrado original, la RLS de Supabase se encargará
-        // (Asumiremos que la RLS para DELETE se actualizará en el Paso 5)
-        await window.handleEliminarVaca(vacaId); 
-        // Recarga la lista del MVZ
+        // 1. Llama a Supabase para borrar
+        // (La RLS que configuramos ('Propietarios y MVZ-Admin pueden eliminar') lo permitirá)
+        const { error } = await sb
+            .from('vacas')
+            .delete()
+            .eq('id', vacaId);
+
+        if (error) throw error; // Lanza error si Supabase falla
+
+        // 2. Actualiza la lista LOCAL del MVZ (listaMvzGanadoCompleta)
+        listaMvzGanadoCompleta = listaMvzGanadoCompleta.filter(v => v.id !== vacaId);
+
+        // 3. Vuelve a dibujar la lista del MVZ con los filtros actuales
         aplicarFiltrosDeGanadoMvz(); 
+
+        showToast('Animal eliminado correctamente.'); // Da feedback
+
     } catch (error) {
+        console.error("Error en handleEliminarVacaMvz:", error);
         alert(error.message || 'Error inesperado al eliminar la vaca.');
     }
 }
+// =================================================================
 
 /**
  * (NUEVA) Función CLAVE: Guardar Vaca (llamada por el MVZ)
@@ -1939,7 +1956,7 @@ function iniciarActividadUI() {
         // Dibuja todas las tarjetas (incluyendo la nueva si se añadió)
         acciones.forEach(accion => {
             const card = document.createElement('button');
-            card.className = `p-4 rounded-2xl shadow-sm text-left flex flex-col justify-between h-28 ${accion.color}`;
+            card.className = `p-4 rounded-2xl shadow-sm text-left flex flex-col ${accion.color}`;
             
             // Maneja el clic de forma diferente
             if (accion.type === 'navegacion') {
