@@ -1953,21 +1953,26 @@ function iniciarActividadUI() {
         }
         // --- FIN DE LA MAGIA ---
 
-        // Dibuja todas las tarjetas (incluyendo la nueva si se añadió)
+// Dibuja todas las tarjetas (incluyendo la nueva si se añadió)
         acciones.forEach(accion => {
             const card = document.createElement('button');
-            card.className = `p-4 rounded-2xl shadow-sm text-left flex flex-col ${accion.color}`;
             
-            // Maneja el clic de forma diferente
-            if (accion.type === 'navegacion') {
-                card.onclick = () => navigateTo(accion.id); // Navega a la nueva vista
-            } else {
-                card.onclick = () => abrirModalActividad(accion.id); // Abre el modal de actividad
-            }
+            // --- CLASES MODIFICADAS ---
+            // Quitamos text-left, flex-col y añadimos centrado y altura fija
+            card.className = `p-4 rounded-2xl shadow-sm flex flex-col items-center justify-center h-28 ${accion.color}`;
 
+            // Maneja el clic de forma diferente
+            if (accion.type === 'navegacion') {
+                card.onclick = () => navigateTo(accion.id); // Navega a la nueva vista
+            } else {
+                card.onclick = () => abrirModalActividad(accion.id); // Abre el modal de actividad
+            }
+
+            // --- HTML MODIFICADO ---
+            // Hacemos el icono un poco más grande y centramos el texto
             card.innerHTML = `
-                <i class="fa-solid ${accion.icono} text-2xl ${accion.textColor} mb-2"></i>
-                <span class="font-bold text-md ${accion.textColor}">${accion.titulo}</span>
+                <i class="fa-solid ${accion.icono} text-3xl ${accion.textColor}"></i>
+                <span class="font-bold text-md text-center mt-3 ${accion.textColor}">${accion.titulo}</span>
             `;
             accionesContainer.appendChild(card);
         });
